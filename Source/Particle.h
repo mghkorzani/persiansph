@@ -32,7 +32,7 @@ class Particle
 public:
 
     // Constructor
-    Particle(Vec3_t const & x0, Vec3_t const & v0, double Mass, double h0, bool Fixed=false);
+    Particle(Vec3_t const & x0, Vec3_t const & v0, double Mass0, double h0, bool Fixed=false);
 
 
     // Data
@@ -45,7 +45,7 @@ public:
     double Pressure;                ///< Pressure at the position of the particle
     double Density;                 ///< Density at the position of the particle
     double Densityb;                ///< Previous density for the Verlet integrator
-    double Density0;                ///< Initial density  of the particle
+    double Mass;                    ///< Mass of the particle
     double dDensity;                ///< Rate of density change in time
     double h;                       ///< Smoothing length of the particle
 
@@ -59,17 +59,16 @@ public:
 
 };
 
-inline Particle::Particle(Vec3_t const & x0, Vec3_t const & v0, double Mass, double h0,bool Fixed)
+inline Particle::Particle(Vec3_t const & x0, Vec3_t const & v0, double Mass0, double h0,bool Fixed)
 {
     x = x0;
     xb = x;
     v = v0;
     Density = 1000.0;
     Densityb = Density;
-    Density0 = Mass;
+    Mass = Mass0;
     IsFree = !Fixed;
     h = h0;
-    // Maziar Added for initial value problem in eclipse
     dDensity=0.0;
     Pressure=0.0;
 }
