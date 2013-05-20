@@ -27,12 +27,12 @@ int main(int argc, char **argv) try
 	dom.Gravity = 0.0,-9.81,0.0;
 
 	dom.AddBoxLength(Vec3_t ( 0.0 , 0.0 ,0.0  ), 50,  0,  0,  50,  1 ,  1, 465.4, 0.5, true);
-	dom.AddBoxLength(Vec3_t ( 0.0 , 1.0 ,0.0  ), 0 , 50,  0, 1  ,  50,  1, 465.4, 0.5, true);
+	dom.AddBoxLength(Vec3_t ( 0.0 , 0.0 ,0.0  ), 50,  0,  0,  50,  1 ,  1, 465.4, 0.5, true);
 	dom.AddBoxLength(Vec3_t ( 0.0 , 51.0,0.0  ), 50,  0,  0,  50,  1 ,  1, 465.4, 0.5, true);
 	dom.AddBoxLength(Vec3_t ( 49.0, 1.0 ,0.0  ), 0 , 50,  0, 1  ,  50,  1, 465.4, 0.5, true);
 	dom.AddRandomBox(Vec3_t ( 0.5 , 0.5 ,0.0  ), 20, 40,  0, 20 ,  40,  1, 465.4, 0.5);
 //	dom.WriteXDMF("test02");
-	dom.Solve(/*tf*/50.0,/*dt*/0.001,/*dtOut*/0.05,"test02");
+	dom.Solve(/*tf*/60.0,/*dt*/0.001,/*dtOut*/0.05,"test02");
 	return 0;
 }
 MECHSYS_CATCH
