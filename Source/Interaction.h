@@ -61,12 +61,12 @@ inline void Interaction::CalcForce(double dt)
     double dj = P2->Density;
     double mi = P1->Mass;
     double mj = P2->Mass;
-    double Pi = P1->Pressure = Pressure(di);
-	double Pj = P2->Pressure = Pressure(dj);
+    double Pi = P1->Pressure = Pressure(di,P1->RefDensity);
+	double Pj = P2->Pressure = Pressure(dj,P1->RefDensity);
     Vec3_t vij = P2->v - P1->v;
     Vec3_t rij = P2->x - P1->x;
     double MUij = h*dot(vij,rij)/(dot(rij,rij)+0.01*h*h);                                                ///<(2.75) Li, Liu Book
-    double Cij = 0.5*(SoundSpeed(di)+SoundSpeed(dj));
+    double Cij = 0.5*(SoundSpeed(di,P1->RefDensity)+SoundSpeed(dj,P1->RefDensity));
     double PIij;
     if (dot(vij,rij)<0) PIij = (-alpha*Cij*MUij+beta*MUij*MUij)/(0.5*(di+dj));                          ///<(2.74) Li, Liu Book
     else                PIij = 0.0;

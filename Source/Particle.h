@@ -32,22 +32,25 @@ class Particle
 public:
 
     // Constructor
-    Particle(Vec3_t const & x0, Vec3_t const & v0, double Mass0, double h0, bool Fixed=false);
+    Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double Mass0, double Density0, double R0, double h0, bool Fixed=false);
 
 
     // Data
     bool   IsFree;                  ///< Check the particle if it is free to move or not
-    Vec3_t xo;                      ///< Previous position of the particle for the Verlet algorithm
+    Vec3_t xo;                      ///< Previous position of the particle to check if it needs to move
     Vec3_t x;                       ///< Position of the particle
-    Vec3_t xb;                      ///< Previous position by verlet algorithm
+    Vec3_t xb;                      ///< Previous position for Verlet algorithm
     Vec3_t v;                       ///< Velocity of the particle
     Vec3_t a;                       ///< Acceleration of the particle
     double Pressure;                ///< Pressure at the position of the particle
     double Density;                 ///< Density at the position of the particle
-    double Densityb;                ///< Previous density for the Verlet integrator
+    double Densityb;                ///< Previous density for the Verlet algorithm
+    double RefDensity;				///< Reference Density of Particle
     double Mass;                    ///< Mass of the particle
     double dDensity;                ///< Rate of density change in time
     double h;                       ///< Smoothing length of the particle
+    double R;                       ///< Radius of the particle
+    int    ID;						///< an Integer value to identify type of the particles
 
 
     // Methods
@@ -59,18 +62,21 @@ public:
 
 };
 
-inline Particle::Particle(Vec3_t const & x0, Vec3_t const & v0, double Mass0, double h0,bool Fixed)
+inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double Mass0, double Density0, double R0, double h0,bool Fixed)
 {
     x = x0;
     xb = x;
     v = v0;
-    Density = 1000.0;
+    Density = Density0;
+    RefDensity = Density0;
     Densityb = Density;
     Mass = Mass0;
     IsFree = !Fixed;
     h = h0;
+    R = R0;
     dDensity=0.0;
     Pressure=0.0;
+    ID = Tag;
 }
 
 inline void Particle::Move (double dt)

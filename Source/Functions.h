@@ -43,20 +43,16 @@ inline double GradKernel(double r, double h)
     else                 return 0.0;
 }
 
-inline double Pressure(double rho)
+inline double Pressure(double Density, double Density0)
 {
 	double v2 = 2*9.81*20;
-	double rho0 = 1000.0;
-	double B = 100*rho0*v2/7;
-	return B*(pow(rho/rho0,7)-1);
+	return (100*Density0*v2/7)*(pow(Density/Density0,7)-1);
 }
 
-inline double SoundSpeed(double rho)
+inline double SoundSpeed(double Density, double Density0)
 {
 	double v2 = 2*9.81*20;
-	double rho0 = 1000.0;
-	double B = 100*rho0*v2/7;
-	return sqrt(7*B*(pow(rho/rho0,6)/rho0));
+	return sqrt(7*(100*Density0*v2/7)*(pow(Density/Density0,6)/Density0));
 }
 
 }; // namespace SPH

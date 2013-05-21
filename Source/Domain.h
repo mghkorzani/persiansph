@@ -20,9 +20,10 @@
 #define MECHSYS_SPH_DOMAIN_H
 
 // Std Lib
-#include <stdio.h>        /// for NULL
+#include <stdio.h>			/// for NULL
+#include <algorithm>		/// for min,max
 
-// For run from command line
+
 #include <Interaction.h>
 
 // HDF File Output
@@ -44,11 +45,12 @@ public:
     ~Domain ();
 
     // Methods
-    void AddBoxLength        (Vec3_t const &V, double Lx, double Ly, double Lz,
-                                       size_t nx, size_t ny, size_t nz, double rho0, double h, bool Fixed);                   ///< Add a box of particles with length (calculate radius of particles)
-    void AddBox              (Vec3_t const & x, size_t nx, size_t ny, size_t nz, double R, double rho0, double h, bool Fixed);///< Add a box of particles (should specify radius of particles)
-    void AddRandomBox        (Vec3_t const &V, double Lx, double Ly, double Lz,
-                                       size_t nx, size_t ny, size_t nz, double rho0, double h, size_t RandomSeed=100);         ///< Add box of random positioned particles (calculate radius of particles)
+    void AddBox              (int tag, Vec3_t const & x, size_t nx, size_t ny, size_t nz,
+    		                  double R, double Mass, double Density, double h, bool Fixed);                                    ///< Add a box of particles (should specify radius of particles)
+    void AddBoxLength        (int tag, Vec3_t const &V, double Lx, double Ly, double Lz, size_t nx, size_t ny, size_t nz,
+    		                  double Mass, double Density, double h, bool Fixed);                                              ///< Add a box of particles with length (calculate radius of particles)
+    void AddRandomBox        (int tag, Vec3_t const &V, double Lx, double Ly, double Lz, size_t nx, size_t ny, size_t nz,
+    		                  double Mass, double Density, double h, size_t RandomSeed=100);                                   ///< Add box of random positioned particles (calculate radius of particles)
     void StartAcceleration   (Vec3_t const & a = Vec3_t(0.0,0.0,0.0));                                                         ///< Add a fixed acceleration
     void ComputeAcceleration (double dt);                                                                                      ///< Compute the acceleration due to the other particles
     void Move                (double dt);                                                                                      ///< Compute the acceleration due to the other particles
@@ -61,9 +63,9 @@ public:
 
     // Data
     Vec3_t                  Gravity;        ///< Gravity acceleration
-    Array <Particle*>       Particles;      ///< Array of SPH particles
-    Array <Interaction*>    Interactions;   ///< Array of SPH interactions
-    Array <Interaction*>    PInteractions;  ///< Array of SPH possible interactions
+    Array <Particle*>       Particles;      ///< Array of particles
+    Array <Interaction*>    Interactions;   ///< Array of interactions
+    Array <Interaction*>    PInteractions;  ///< Array of possible interactions
     double                  Time;           ///< The simulation Time
     double                  Alpha;          ///< Parameter for Verlet lists
     size_t                  idx_out;        ///< Index for output purposes
@@ -89,23 +91,32 @@ inline Domain::~Domain ()
 
 
 // Methods
-inline void Domain::AddBox(Vec3_t const & V, size_t nx, size_t ny, size_t nz, double R, double rho0, double h, bool Fixed)
+inline void Domain::AddBox(int tag, Vec3_t const & V, size_t nx, size_t ny, size_t nz, double R, double Mass, double Density, double h, bool Fixed)
 {
-    Vec3_t C(V);
-    //C -= Vec3_t((nx-1)*R,(ny-1)*R,(nz-1)*R);
+    std::cout << "\n--------------Generating particles by AddBox with defined radius-----------------------------------" << std::endl;
+
     for (size_t i = 0;i<nx;i++)
     for (size_t j = 0;j<ny;j++)
     for (size_t k = 0;k<nz;k++)
     {
         Vec3_t x(2*i*R,2*j*R,2*k*R);
-        x +=C;
-        Particles.Push(new Particle(x,Vec3_t(0,0,0),rho0,h,Fixed));
+        x +=V;
+        if (Mass == 0.0)
+        	Particles.Push(new Particle(tag,x,Vec3_t(0,0,0),4/3*M_PI*R*R*R*Density,Density,R,h,Fixed));
+        else
+        	Particles.Push(new Particle(tag,x,Vec3_t(0,0,0),Mass,Density,R,h,Fixed));
     }
+    std::cout << "\n  Total No. of particles   = " << Particles.Size() << std::endl;
 }
 
-inline void Domain::AddBoxLength(Vec3_t const & V, double Lx, double Ly, double Lz, size_t nx, size_t ny, size_t nz, double rho0, double h, bool Fixed)
+inline void Domain::AddBoxLength(int tag, Vec3_t const & V, double Lx, double Ly, double Lz, size_t nx, size_t ny, size_t nz, double Mass, double Density, double h, bool Fixed)
 {
-    for (size_t i=0; i<nx; i++)
+    std::cout << "\n--------------Generating particles by AddBoxLength with defined length-----------------------------" << std::endl;
+
+	double R = (std::min(Lx/(2*nx),Ly/(2*ny))>0) ? std::min(Lx/(2*nx),Ly/(2*ny)) : std::max(Lx/(2*nx),Ly/(2*ny));
+    R = (std::min(R,Lz/(2*nz))>0) ? std::min(R,Lz/(2*nz)) : std::max(R,Lz/(2*nz));
+
+	for (size_t i=0; i<nx; i++)
     {
         for (size_t j=0; j<ny; j++)
         {
@@ -114,16 +125,26 @@ inline void Domain::AddBoxLength(Vec3_t const & V, double Lx, double Ly, double 
                 double x = V(0)+i*Lx/nx;
                 double y = V(1)+j*Ly/ny;
                 double z = V(2)+k*Lz/nz;
-                Particles.Push(new Particle(Vec3_t(x,y,z),Vec3_t(0,0,0),rho0,h,Fixed));
+                if (Mass == 0.0)
+                	Particles.Push(new Particle(tag,Vec3_t(x,y,z),Vec3_t(0,0,0),4/3*M_PI*R*R*R*Density,Density,R,h,Fixed));
+                else
+                	Particles.Push(new Particle(tag,Vec3_t(x,y,z),Vec3_t(0,0,0),Mass,Density,R,h,Fixed));
             }
         }
     }
+    std::cout << "\n  Total No. of particles   = " << Particles.Size() << std::endl;
 }
 
-inline void Domain::AddRandomBox(Vec3_t const & V, double Lx, double Ly, double Lz, size_t nx, size_t ny, size_t nz, double rho0, double h, size_t RandomSeed)
+inline void Domain::AddRandomBox(int tag, Vec3_t const & V, double Lx, double Ly, double Lz, size_t nx, size_t ny, size_t nz, double Mass, double Density, double h, size_t RandomSeed)
 {
     Util::Stopwatch stopwatch;
-    printf("\n%s--- Generating random packing of spheres ----------------------------------------%s\n",TERM_CLR1,TERM_RST);
+    std::cout << "\n--------------Generating random packing of particles by AddRandomBox-------------------------------" << std::endl;
+
+    double R = (std::min(Lx/(2*nx),Ly/(2*ny))>0) ? std::min(Lx/(2*nx),Ly/(2*ny)) : std::max(Lx/(2*nx),Ly/(2*ny));
+    R = (std::min(R,Lz/(2*nz))>0) ? std::min(R,Lz/(2*nz)) : std::max(R,Lz/(2*nz));
+
+	std::cout << R << std::endl;
+
     double qin = 0.95;
     srand(RandomSeed);
     for (size_t i=0; i<nx; i++)
@@ -135,11 +156,14 @@ inline void Domain::AddRandomBox(Vec3_t const & V, double Lx, double Ly, double 
                 double x = V(0)+(i+0.5*qin+(1-qin)*double(rand())/RAND_MAX)*Lx/nx;
                 double y = V(1)+(j+0.5*qin+(1-qin)*double(rand())/RAND_MAX)*Ly/ny;
                 double z = V(2)+(k+0.5*qin+(1-qin)*double(rand())/RAND_MAX)*Lz/nz;
-                Particles.Push(new Particle(Vec3_t(x,y,z),Vec3_t(0,0,0),rho0,h,false));
+                if (Mass == 0.0)
+                	Particles.Push(new Particle(tag,Vec3_t(x,y,z),Vec3_t(0,0,0),4/3*M_PI*R*R*R*Density,Density,R,h,false));
+                else
+                	Particles.Push(new Particle(tag,Vec3_t(x,y,z),Vec3_t(0,0,0),Mass,Density,R,h,false));
             }
         }
     }
-    printf("%s  Num of particles   = %d%s\n",TERM_CLR2,Particles.Size(),TERM_RST);
+    std::cout << "\n  Total No. of particles   = " << Particles.Size() << std::endl;
 }
 
 inline void Domain::StartAcceleration (Vec3_t const & a)
@@ -222,15 +246,19 @@ inline void Domain::WriteXDMF (char const * FileKey)
     float * Posvec   = new float[3*Particles.Size()];
     float * Velvec   = new float[3*Particles.Size()];
     float * Pressure = new float[  Particles.Size()];
+    float * Radius   = new float[  Particles.Size()];
+    int   * Tag      = new int  [  Particles.Size()];
     for (size_t i=0;i<Particles.Size();i++)
     {
-        Posvec[3*i  ] = float(Particles[i]->x(0));
-        Posvec[3*i+1] = float(Particles[i]->x(1));
-        Posvec[3*i+2] = float(Particles[i]->x(2));
-        Velvec[3*i  ] = float(Particles[i]->v(0));
-        Velvec[3*i+1] = float(Particles[i]->v(1));
-        Velvec[3*i+2] = float(Particles[i]->v(2));
-        Pressure[i  ] = float(Particles[i]->Pressure);
+        Posvec  [3*i  ] = float(Particles[i]->x(0));
+        Posvec  [3*i+1] = float(Particles[i]->x(1));
+        Posvec  [3*i+2] = float(Particles[i]->x(2));
+        Velvec  [3*i  ] = float(Particles[i]->v(0));
+        Velvec  [3*i+1] = float(Particles[i]->v(1));
+        Velvec  [3*i+2] = float(Particles[i]->v(2));
+        Pressure[i    ] = float(Particles[i]->Pressure);
+        Radius  [i    ] = float(Particles[i]->R);
+        Tag     [i    ] = int  (Particles[i]->ID);
     }
 
     hsize_t dims[1];
@@ -243,11 +271,17 @@ inline void Domain::WriteXDMF (char const * FileKey)
     dims[0] = Particles.Size();
     dsname.Printf("Pressure");
     H5LTmake_dataset_float(file_id,dsname.CStr(),1,dims,Pressure);
+    dsname.Printf("Radius");
+    H5LTmake_dataset_float(file_id,dsname.CStr(),1,dims,Radius);
+    dsname.Printf("Tag");
+    H5LTmake_dataset_int(file_id,dsname.CStr(),1,dims,Tag);
 
 
     delete [] Posvec;
     delete [] Velvec;
     delete [] Pressure;
+    delete [] Radius;
+    delete [] Tag;
 
 
     //Closing the file
@@ -278,6 +312,16 @@ inline void Domain::WriteXDMF (char const * FileKey)
     oss << "        " << fn.CStr() <<":/Pressure \n";
     oss << "       </DataItem>\n";
     oss << "     </Attribute>\n";
+    oss << "     <Attribute Name=\"Radius\" AttributeType=\"Scalar\" Center=\"Node\">\n";
+    oss << "       <DataItem Dimensions=\"" << Particles.Size() << "\" NumberType=\"Float\" Precision=\"4\"  Format=\"HDF\">\n";
+    oss << "        " << fn.CStr() <<":/Radius \n";
+    oss << "       </DataItem>\n";
+    oss << "     </Attribute>\n";
+    oss << "     <Attribute Name=\"Tag\" AttributeType=\"Scalar\" Center=\"Node\">\n";
+    oss << "       <DataItem Dimensions=\"" << Particles.Size() << "\" NumberType=\"Int\" Format=\"HDF\">\n";
+    oss << "        " << fn.CStr() <<":/Tag \n";
+    oss << "       </DataItem>\n";
+    oss << "     </Attribute>\n";
     oss << "   </Grid>\n";
     oss << " </Domain>\n";
     oss << "</Xdmf>\n";
@@ -293,7 +337,7 @@ inline void Domain::WriteXDMF (char const * FileKey)
 inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheFileKey)
 {
     Util::Stopwatch stopwatch;
-    printf("\n%s--- Solving --------------------------------------------------%s\n",TERM_CLR1,TERM_RST);
+    std::cout << "\n--------------Solving------------------------------------------------------------------------------" << std::endl;
 
     idx_out = 0;
     double tout = Time;
