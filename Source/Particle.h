@@ -21,6 +21,7 @@
 
 // Std lib
 #include <iostream>
+#include <cstring>
 
 // MechSys
 #include <mechsys/linalg/matvec.h>
@@ -49,6 +50,7 @@ public:
     double Mass;                    ///< Mass of the particle
     double dDensity;                ///< Rate of density change in time
     double h;                       ///< Smoothing length of the particle
+    double hr;                      ///< Reference smoothing length of the particle
     double R;                       ///< Radius of the particle
     int    ID;						///< an Integer value to identify type of the particles
 
@@ -72,7 +74,8 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
     Densityb = Density;
     Mass = Mass0;
     IsFree = !Fixed;
-    h = h0;
+    hr = h0;
+    h = hr;
     R = R0;
     dDensity=0.0;
     Pressure=0.0;
@@ -93,8 +96,11 @@ inline void Particle::Move (double dt)
         // Evolve density
         double dens = Density;
         Density = Densityb + 2*dt*dDensity;
-        //std::cout << Density << std::endl;
         Densityb = dens;
+
+        h = hr*sqrt(RefDensity/Density);
+//        std::cout << h << std::endl;
+
     }
 }
 

@@ -24,7 +24,7 @@
 #include <algorithm>		/// for min,max
 
 
-#include <Interaction.h>
+#include <Source/Interaction.h>
 
 // HDF File Output
 #include <hdf5.h>
@@ -67,9 +67,11 @@ public:
     Array <Interaction*>    Interactions;   ///< Array of interactions
     Array <Interaction*>    PInteractions;  ///< Array of possible interactions
     double                  Time;           ///< The simulation Time
-    double                  Alpha;          ///< Parameter for Verlet lists
     size_t                  idx_out;        ///< Index for output purposes
-
+    double 					Dimension;      ///< Dimension of the problem
+    double 					Alpha;
+    double					Beta;
+    double					MaxVel;
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////// Implementation /////
@@ -79,8 +81,8 @@ inline Domain::Domain ()
 {
     Time    = 0.0;
     Gravity = 0.0,0.0,0.0;
-    Alpha   = 0.0;
     idx_out = 0;
+
 }
 
 inline Domain::~Domain ()
@@ -201,7 +203,7 @@ inline void Domain::ResetInteractions()
         {
             // if both particles are fixed, don't create any interactor
             if (!Particles[i]->IsFree && !Particles[j]->IsFree) continue;
-            else Interactions.Push(new Interaction(Particles[i],Particles[j]));
+            else Interactions.Push(new Interaction(Particles[i],Particles[j],Dimension,Alpha,Beta,MaxVel));
         }
     }
 }
@@ -219,7 +221,7 @@ inline void Domain::ResetContacts()
     PInteractions.Resize(0);
     for (size_t i=0; i<Interactions.Size(); i++)
     {
-        if(Interactions[i]->UpdateContacts(Alpha)) PInteractions.Push(Interactions[i]);
+        if(Interactions[i]->UpdateContacts()) PInteractions.Push(Interactions[i]);
     }
 }
 
@@ -374,7 +376,7 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
         // next time position
         Time += dt;
 
-        if (MaxDisplacement()>0.05)
+        if (MaxDisplacement()>0.0)
         {
             ResetDisplacements();
             ResetContacts();
