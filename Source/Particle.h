@@ -73,6 +73,7 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
     RefDensity = Density0;
     Densityb = Density;
     Mass = Mass0;
+//  std::cout << Mass << std::endl;
     IsFree = !Fixed;
     hr = h0;
     h = hr;
@@ -92,16 +93,16 @@ inline void Particle::Move (double dt)
         v = 0.5*(xa - xb)/dt;
         xb = x;
         x = xa;
-
+    }
         // Evolve density
         double dens = Density;
         Density = Densityb + 2*dt*dDensity;
         Densityb = dens;
 
-        h = hr*sqrt(RefDensity/Density);
+//        h = hr*sqrt(RefDensity/Density);
 //        std::cout << h << std::endl;
 
-    }
+
 }
 
 inline void Particle::ResetDisplacements ()

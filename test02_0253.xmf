@@ -1,0 +1,34 @@
+<?xml version="1.0" ?>
+<!DOCTYPE Xdmf SYSTEM "Xdmf.dtd" []>
+<Xdmf Version="2.0">
+ <Domain>
+   <Grid Name="SPHCenter" GridType="Uniform">
+     <Topology TopologyType="Polyvertex" NumberOfElements="6062"/>
+     <Geometry GeometryType="XYZ">
+       <DataItem Format="HDF" NumberType="Float" Precision="4" Dimensions="6062 3" >
+        test02_0253.h5:/Position 
+       </DataItem>
+     </Geometry>
+     <Attribute Name="Velocity" AttributeType="Vector" Center="Node">
+       <DataItem Dimensions="6062 3" NumberType="Float" Precision="4" Format="HDF">
+        test02_0253.h5:/Velocity 
+       </DataItem>
+     </Attribute>
+     <Attribute Name="Pressure" AttributeType="Scalar" Center="Node">
+       <DataItem Dimensions="6062" NumberType="Float" Precision="4"  Format="HDF">
+        test02_0253.h5:/Pressure 
+       </DataItem>
+     </Attribute>
+     <Attribute Name="Radius" AttributeType="Scalar" Center="Node">
+       <DataItem Dimensions="6062" NumberType="Float" Precision="4"  Format="HDF">
+        test02_0253.h5:/Radius 
+       </DataItem>
+     </Attribute>
+     <Attribute Name="Tag" AttributeType="Scalar" Center="Node">
+       <DataItem Dimensions="6062" NumberType="Int" Format="HDF">
+        test02_0253.h5:/Tag 
+       </DataItem>
+     </Attribute>
+   </Grid>
+ </Domain>
+</Xdmf>

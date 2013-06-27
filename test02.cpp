@@ -27,17 +27,22 @@ int main(int argc, char **argv) try
 	SPH::Domain dom;
 	dom.Gravity = 0.0,-9.81,0.0;
 	dom.Dimension = 2;
-	dom.Alpha = 0.5;
-	dom.Beta = 1;
-	dom.MaxVel = sqrt(2*9.81*100);
+	dom.Alpha = 0.0;
+	dom.Beta = 0.0;
+	dom.MaxVel = sqrt(2*9.81*0.01);
 
-	dom.AddBoxLength(-1,Vec3_t ( 0.0 , 0.0 ,0.0  ), 50,  0,  0,  50,  1 ,  1, 0, 1000, 0.75, true);
-	dom.AddBoxLength(-1,Vec3_t ( 0.0 , 1.0 ,0.0  ), 0 , 50,  0, 1  ,  50,  1, 0, 1000, 0.75, true);
-	dom.AddBoxLength(-1,Vec3_t ( 0.0 , 51.0,0.0  ), 50,  0,  0,  50,  1 ,  1, 0, 1000, 0.75, true);
-	dom.AddBoxLength(-1,Vec3_t ( 49.0, 1.0 ,0.0  ), 0 , 50,  0, 1  ,  50,  1, 0, 1000, 0.75, true);
-	dom.AddRandomBox(-2,Vec3_t ( 0.5 , 0.5 ,0.0  ), 20, 40,  0, 20 ,  40,  1, 0, 1000, 0.75);
+	dom.AddBoxLength(-1,Vec3_t ( 0.001,-0.001 ,0.0  ), 0.1  ,  0,  0, 50 ,  1 ,  1, 0, 1000, 0.005, true);
+	dom.AddBoxLength(-1,Vec3_t (-0.005,-0.003 ,0.0  ), 0.112,  0,  0, 56 ,  1 ,  1, 0, 1000, 0.005, true);
+	dom.AddBoxLength(-1,Vec3_t (-0.005,-0.005 ,0.0  ), 0.112,  0,  0, 56 ,  1 ,  1, 0, 1000, 0.005, true);
+	dom.AddBoxLength(-1,Vec3_t (-0.001,-0.001 ,0.0  ), 0  ,0.3,  0, 1  , 150,  1, 0, 1000, 0.005, true);
+	dom.AddBoxLength(-1,Vec3_t (-0.003,-0.001 ,0.0  ), 0  ,0.3,  0, 1  , 150,  1, 0, 1000, 0.005, true);
+	dom.AddBoxLength(-1,Vec3_t (-0.005,-0.001 ,0.0  ), 0  ,0.3,  0, 1  , 150,  1, 0, 1000, 0.005, true);
+	dom.AddBoxLength(-1,Vec3_t ( 0.101,-0.001 ,0.0  ), 0  ,0.3,  0, 1  , 150,  1, 0, 1000, 0.005, true);
+	dom.AddBoxLength(-1,Vec3_t ( 0.103,-0.001 ,0.0  ), 0  ,0.3,  0, 1  , 150,  1, 0, 1000, 0.005, true);
+	dom.AddBoxLength(-1,Vec3_t ( 0.105,-0.001 ,0.0  ), 0  ,0.3,  0, 1  , 150,  1, 0, 1000, 0.005, true);
+	dom.AddRandomBox(-2,Vec3_t ( 0.0  , 0.0   ,0.0  ), 0.1,0.01,  0, 50 , 5,  1, 0, 1000, 0.005);
 //	dom.WriteXDMF("test02");
-	dom.Solve(/*tf*/60.0,/*dt*/0.001,/*dtOut*/0.05,"test02");
+	dom.Solve(/*tf*/3.0,/*dt*/0.0001,/*dtOut*/0.005,"test02");
 	return 0;
 }
 MECHSYS_CATCH
