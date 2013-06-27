@@ -65,8 +65,8 @@ inline Interaction::Interaction (Particle * Pt1, Particle * Pt2,size_t dim, doub
 
 inline void Interaction::CalcForce(double dt)
 {
-	P2->h = P2->hr*pow((P2->RefDensity/P2->Density),1/2);
-	h  = 2*P1->h*P2->h/(P1->h+P2->h);
+	//P2->h = P2->hr*pow((P2->RefDensity/P2->Density),1/2);
+	//h  = 2*P1->h*P2->h/(P1->h+P2->h);
 
 	double di = P1->Density;
     double dj = P2->Density;
@@ -122,20 +122,20 @@ inline double Interaction::GradKernel(double r, double h)
 	double C;
 	switch (Dim)
     {case 1:
-       C = 2.0/(3.0*h);
+       C = 2.0/(3.0*h*h);
        break;
     case 2:
-       C = 10.0/(7.0*h*h*M_PI);
+       C = 10.0/(7.0*h*h*h*M_PI);
        break;
     case 3:
-       C = 1.0/(h*h*h*M_PI);
+       C = 1.0/(h*h*h*h*M_PI);
        break;
     default:
        std::cout << "Please correct dimension for kernel and run again, otherwise 3D is used" << std::endl;
-       C = 1.0/(h*h*h*M_PI);
+       C = 1.0/(h*h*h*h*M_PI);
     }
     double q = r/h;
-    if ((q>=0.0)&&(q<1)) return C*(1-3.0*q+(9.0/4.0)*q*q);
+    if ((q>=0.0)&&(q<1)) return C*(-3.0*q+(9.0/4.0)*q*q);
     else if (q<=2)       return C*(-1*(3.0/4.0)*(2-q)*(2-q));
     else                 return 0.0;
 }

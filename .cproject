@@ -1,7 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<?fileVersion 4.0.0?>
-
-<cproject storage_type_id="org.eclipse.cdt.core.XmlProjectDescriptionStorage">
+<?fileVersion 4.0.0?><cproject storage_type_id="org.eclipse.cdt.core.XmlProjectDescriptionStorage">
 	<storageModule moduleId="org.eclipse.cdt.core.settings">
 		<cconfiguration id="cdt.managedbuild.config.gnu.exe.debug.829054585">
 			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="cdt.managedbuild.config.gnu.exe.debug.829054585" moduleId="org.eclipse.cdt.core.settings" name="Debug">
@@ -22,14 +20,14 @@
 							<targetPlatform id="cdt.managedbuild.target.gnu.platform.exe.debug.423507959" name="Debug Platform" superClass="cdt.managedbuild.target.gnu.platform.exe.debug"/>
 							<builder buildPath="${workspace_loc:/SPH/Debug}" id="cdt.managedbuild.target.gnu.builder.exe.debug.413648291" keepEnvironmentInBuildfile="false" managedBuildOn="true" name="Gnu Make Builder" superClass="cdt.managedbuild.target.gnu.builder.exe.debug"/>
 							<tool id="cdt.managedbuild.tool.gnu.archiver.base.831899797" name="GCC Archiver" superClass="cdt.managedbuild.tool.gnu.archiver.base"/>
-							<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.1274044068" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug">
+							<tool command="g++" commandLinePattern="${COMMAND} ${FLAGS} ${OUTPUT_FLAG} ${OUTPUT_PREFIX}${OUTPUT} ${INPUTS}" id="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.1274044068" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug">
 								<option id="gnu.cpp.compiler.exe.debug.option.optimization.level.746366457" name="Optimization Level" superClass="gnu.cpp.compiler.exe.debug.option.optimization.level" value="gnu.cpp.compiler.optimization.level.none" valueType="enumerated"/>
 								<option id="gnu.cpp.compiler.exe.debug.option.debugging.level.365891630" name="Debug Level" superClass="gnu.cpp.compiler.exe.debug.option.debugging.level" value="gnu.cpp.compiler.debugging.level.max" valueType="enumerated"/>
 								<option id="gnu.cpp.compiler.option.include.paths.1336138286" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" valueType="includePath">
-									<listOptionValue builtIn="false" value="/home/uqmghol1/mechsys"/>
-									<listOptionValue builtIn="false" value="/home/uqmghol1/sph-scouring"/>
-									<listOptionValue builtIn="false" value="/home/uqmghol1/pkg/blitz-0.9/blitz"/>
-									<listOptionValue builtIn="false" value="/home/uqmghol1/pkg/blitz-0.9"/>
+									<listOptionValue builtIn="false" value="/home/sergio/mechsys"/>
+									<listOptionValue builtIn="false" value="/home/sergio/sph-scouring"/>
+									<listOptionValue builtIn="false" value="/home/sergio/pkg/blitz-0.9/blitz"/>
+									<listOptionValue builtIn="false" value="/home/sergio/pkg/blitz-0.9"/>
 								</option>
 								<option id="gnu.cpp.compiler.option.include.files.695372981" name="Include files (-include)" superClass="gnu.cpp.compiler.option.include.files"/>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.187253995" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
@@ -85,10 +83,10 @@
 								<option id="gnu.cpp.compiler.exe.release.option.optimization.level.1003527472" name="Optimization Level" superClass="gnu.cpp.compiler.exe.release.option.optimization.level" value="gnu.cpp.compiler.optimization.level.most" valueType="enumerated"/>
 								<option id="gnu.cpp.compiler.exe.release.option.debugging.level.1298270231" name="Debug Level" superClass="gnu.cpp.compiler.exe.release.option.debugging.level" value="gnu.cpp.compiler.debugging.level.none" valueType="enumerated"/>
 								<option id="gnu.cpp.compiler.option.include.paths.1415930681" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" valueType="includePath">
-									<listOptionValue builtIn="false" value="/home/uqmghol1/mechsys"/>
-									<listOptionValue builtIn="false" value="/home/uqmghol1/sph-scouring"/>
-									<listOptionValue builtIn="false" value="/home/uqmghol1/pkg/blitz-0.9"/>
-									<listOptionValue builtIn="false" value="/home/uqmghol1/pkg/blitz-0.9/blitz"/>
+									<listOptionValue builtIn="false" value="/home/sergio/mechsys"/>
+									<listOptionValue builtIn="false" value="/home/sergio/sph-scouring"/>
+									<listOptionValue builtIn="false" value="/home/sergio/pkg/blitz-0.9"/>
+									<listOptionValue builtIn="false" value="/home/sergio/pkg/blitz-0.9/blitz"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.1401729402" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 							</tool>
@@ -139,6 +137,8 @@
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.managedbuilder.core.GCCManagedMakePerProjectProfileC"/>
 		</scannerConfigBuildInfo>
 	</storageModule>
-	<storageModule moduleId="refreshScope"/>
+	<storageModule moduleId="refreshScope" versionNumber="1">
+		<resource resourceType="PROJECT" workspacePath="/SPH"/>
+	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.internal.ui.text.commentOwnerProjectMappings"/>
 </cproject>

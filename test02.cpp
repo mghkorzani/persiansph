@@ -26,10 +26,10 @@ int main(int argc, char **argv) try
 {
 	SPH::Domain dom;
 	dom.Gravity = 0.0,-9.81,0.0;
-	dom.Dimension = 2;
-	dom.Alpha = 0.0;
-	dom.Beta = 0.0;
-	dom.MaxVel = sqrt(2*9.81*0.01);
+	dom.Dimension = 3;
+	dom.Alpha = 0.5;
+	dom.Beta = 1.0;
+	dom.MaxVel = sqrt(2*9.81*0.1);
 
 	dom.AddBoxLength(-1,Vec3_t ( 0.001,-0.001 ,0.0  ), 0.1  ,  0,  0, 50 ,  1 ,  1, 0, 1000, 0.005, true);
 	dom.AddBoxLength(-1,Vec3_t (-0.005,-0.003 ,0.0  ), 0.112,  0,  0, 56 ,  1 ,  1, 0, 1000, 0.005, true);
