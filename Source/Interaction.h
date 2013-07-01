@@ -65,22 +65,21 @@ inline Interaction::Interaction (Particle * Pt1, Particle * Pt2,size_t dim, doub
 
 inline void Interaction::CalcForce(double dt)
 {
-
 	double di = P1->Density;
     double dj = P2->Density;
     double mi = P1->Mass;
     double mj = P2->Mass;
     double Pi = P1->Pressure = Pressure(di,P1->RefDensity);
 	double Pj = P2->Pressure = Pressure(dj,P1->RefDensity);
-    Vec3_t vij = P2->v - P1->v;
-    Vec3_t rij = P2->x - P1->x;
+    Vec3_t vij = P1->v - P2->v;
+    Vec3_t rij = P1->x - P2->x;
     double MUij = h*dot(vij,rij)/(dot(rij,rij)+0.01*h*h);                                                ///<(2.75) Li, Liu Book
     double Cij = 0.5*(SoundSpeed(di,P1->RefDensity)+SoundSpeed(dj,P1->RefDensity));
     double PIij;
     if (dot(vij,rij)<0) PIij = (-alpha*Cij*MUij+beta*MUij*MUij)/(0.5*(di+dj));                          ///<(2.74) Li, Liu Book
     else                PIij = 0.0;
-    P1->a += mj*(Pi/(di*di)+Pj/(dj*dj)+PIij)*GradKernel(norm(rij),h)*(rij/norm(rij));                     ///<(2.73) Li, Liu Book
-    P2->a -= mi*(Pi/(di*di)+Pj/(dj*dj)+PIij)*GradKernel(norm(rij),h)*(rij/norm(rij));
+    P1->a += -1*mj*(Pi/(di*di)+Pj/(dj*dj)+PIij)*GradKernel(norm(rij),h)*(rij/norm(rij));                     ///<(2.73) Li, Liu Book
+    P2->a -= -1*mi*(Pi/(di*di)+Pj/(dj*dj)+PIij)*GradKernel(norm(rij),h)*(rij/norm(rij));
     P1->dDensity += (di*mj/dj)*dot(vij,(rij/norm(rij)))*GradKernel(norm(rij),h);                                  ///<(2.58) Li, Liu Book
     P2->dDensity += (dj*mi/di)*dot(vij,(rij/norm(rij)))*GradKernel(norm(rij),h);
 }

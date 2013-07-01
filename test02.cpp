@@ -27,7 +27,7 @@ int main(int argc, char **argv) try
 	SPH::Domain dom;
 	dom.Gravity = 0.0,-9.81,0.0;
 	dom.Dimension = 3;
-	dom.Alpha = 0.5;
+	dom.Alpha = 1.0;
 	dom.Beta = 1.0;
 	dom.MaxVel = sqrt(2*9.81*0.1);
 
