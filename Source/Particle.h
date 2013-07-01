@@ -99,9 +99,6 @@ inline void Particle::Move (double dt)
         Density = Densityb + 2*dt*dDensity;
         Densityb = dens;
 
-//        h = hr*sqrt(RefDensity/Density);
-//        std::cout << h << std::endl;
-
 
 }
 

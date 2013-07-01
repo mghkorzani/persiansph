@@ -56,7 +56,7 @@ inline Interaction::Interaction (Particle * Pt1, Particle * Pt2,size_t dim, doub
 {
     P1 = Pt1;
     P2 = Pt2;
-    h  = 2*P1->h*P2->h/(P1->h+P2->h);                                  ///< It should be revised
+    h  = P1->h;                                  ///< It should be revised
     Dim= dim;
     alpha = VisAlpha;
     beta = VisBeta;
@@ -65,8 +65,6 @@ inline Interaction::Interaction (Particle * Pt1, Particle * Pt2,size_t dim, doub
 
 inline void Interaction::CalcForce(double dt)
 {
-	//P2->h = P2->hr*pow((P2->RefDensity/P2->Density),1/2);
-	//h  = 2*P1->h*P2->h/(P1->h+P2->h);
 
 	double di = P1->Density;
     double dj = P2->Density;
@@ -81,10 +79,10 @@ inline void Interaction::CalcForce(double dt)
     double PIij;
     if (dot(vij,rij)<0) PIij = (-alpha*Cij*MUij+beta*MUij*MUij)/(0.5*(di+dj));                          ///<(2.74) Li, Liu Book
     else                PIij = 0.0;
-    P1->a += mj*(Pi/(di*di)+Pj/(dj*dj)+PIij)*rij*GradKernel(norm(rij),h)/norm(rij);                     ///<(2.73) Li, Liu Book
-    P2->a -= mi*(Pi/(di*di)+Pj/(dj*dj)+PIij)*rij*GradKernel(norm(rij),h)/norm(rij);
-    P1->dDensity += mj*dot(vij,rij)*GradKernel(norm(rij),h)/norm(rij);                                  ///<(2.58) Li, Liu Book
-    P2->dDensity += mi*dot(vij,rij)*GradKernel(norm(rij),h)/norm(rij);
+    P1->a += mj*(Pi/(di*di)+Pj/(dj*dj)+PIij)*GradKernel(norm(rij),h)*(rij/norm(rij));                     ///<(2.73) Li, Liu Book
+    P2->a -= mi*(Pi/(di*di)+Pj/(dj*dj)+PIij)*GradKernel(norm(rij),h)*(rij/norm(rij));
+    P1->dDensity += (di*mj/dj)*dot(vij,(rij/norm(rij)))*GradKernel(norm(rij),h);                                  ///<(2.58) Li, Liu Book
+    P2->dDensity += (dj*mi/di)*dot(vij,(rij/norm(rij)))*GradKernel(norm(rij),h);
 }
 
 inline bool Interaction::UpdateContacts ()
