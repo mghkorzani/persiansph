@@ -29,7 +29,7 @@ int main(int argc, char **argv) try
 	dom.Dimension = 3;
 	dom.Alpha = 1.0;
 	dom.Beta = 1.0;
-	dom.MaxVel = sqrt(2*9.81*0.1);
+	dom.MaxVel = sqrt(2*9.81*0.05);
 
 	dom.AddBoxLength(-1,Vec3_t ( 0.001,-0.001 ,0.0  ), 0.1  ,  0,  0, 50 ,  1 ,  1, 0, 1000, 0.002, true);
 //	dom.AddBoxLength(-1,Vec3_t (-0.005,-0.003 ,0.0  ), 0.112,  0,  0, 56 ,  1 ,  1, 0, 1000, 0.005, true);

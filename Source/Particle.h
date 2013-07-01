@@ -38,7 +38,6 @@ public:
 
     // Data
     bool   IsFree;                  ///< Check the particle if it is free to move or not
-    Vec3_t xo;                      ///< Previous position of the particle to check if it needs to move
     Vec3_t x;                       ///< Position of the particle
     Vec3_t xb;                      ///< Previous position for Verlet algorithm
     Vec3_t v;                       ///< Velocity of the particle
@@ -59,8 +58,6 @@ public:
     void Move (double dt);                                                  ///< Update the important quantities of the simulation
     void StartAccel (Vec3_t acc = Vec3_t(0.0,0.0,0.0)) {a = acc;};          ///< Start the acceleration of the particle with one predefined value
     void Translate  (Vec3_t const & V) {x+=V; xb+=V;};                      ///< Translate a SPH particle a vector V
-    void ResetDisplacements ();                                             ///< Reset the displacement for the Verlet algorithm
-    double MaxDisplacement ();                                              ///< Find the maximum displacement
 
 };
 
@@ -93,23 +90,12 @@ inline void Particle::Move (double dt)
         v = 0.5*(xa - xb)/dt;
         xb = x;
         x = xa;
-    }
         // Evolve density
         double dens = Density;
         Density = Densityb + 2*dt*dDensity;
         Densityb = dens;
+    }
 
-
-}
-
-inline void Particle::ResetDisplacements ()
-{
-    xo = x;
-}
-
-inline double Particle::MaxDisplacement ()
-{
-    return Norm (xo-x);
 }
 
 }; // namespace SPH

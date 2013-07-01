@@ -55,9 +55,7 @@ public:
     void ComputeAcceleration (double dt);                                                                                      ///< Compute the acceleration due to the other particles
     void Move                (double dt);                                                                                      ///< Compute the acceleration due to the other particles
     void ResetInteractions();                                                                                                  ///< Reset the interaction array
-    void ResetDisplacements();                                                                                                 ///< Reset the particles displacement
     void ResetContacts();                                                                                                      ///< Reset the possible interactions
-    double MaxDisplacement();                                                                                                  ///< Find max displacement of particles
     void Solve               (double tf, double dt, double dtOut, char const * TheFileKey);                                    ///< The solving function
     void WriteXDMF           (char const * FileKey);                                                                           ///< Save a XDMF file for visualization
 
@@ -208,14 +206,6 @@ inline void Domain::ResetInteractions()
     }
 }
 
-inline void Domain::ResetDisplacements()
-{
-    for (size_t i=0; i<Particles.Size(); i++)
-    {
-        Particles[i]->ResetDisplacements();
-    }
-}
-
 inline void Domain::ResetContacts()
 {
     PInteractions.Resize(0);
@@ -223,17 +213,6 @@ inline void Domain::ResetContacts()
     {
         if(Interactions[i]->UpdateContacts()) PInteractions.Push(Interactions[i]);
     }
-}
-
-inline double Domain::MaxDisplacement()
-{
-    double md = 0.0;
-    for (size_t i=0; i<Particles.Size(); i++)
-    {
-        double mpd = Particles[i]->MaxDisplacement();
-        if (mpd > md) md = mpd;
-    }
-    return md;
 }
 
 inline void Domain::WriteXDMF (char const * FileKey)
@@ -346,7 +325,6 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
 
 
     ResetInteractions();
-    ResetDisplacements();
     ResetContacts();
 
 
@@ -376,11 +354,7 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
         // next time position
         Time += dt;
 
-        if (MaxDisplacement()>0.0)
-        {
-            ResetDisplacements();
-            ResetContacts();
-        }
+        ResetContacts();
         
     }
 }
