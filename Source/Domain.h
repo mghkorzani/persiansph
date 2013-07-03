@@ -335,10 +335,7 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
         StartAcceleration(Gravity);
         ComputeAcceleration(dt);
 
-        // Move each particle
-        Move(dt);
-
-        // output
+         // output
         if (Time>=tout)
         {
             if (TheFileKey!=NULL)
@@ -350,6 +347,10 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
             idx_out++;
             tout += dtOut;
         }
+
+         // Move each particle
+         Move(dt);
+
 
         // next time position
         Time += dt;
