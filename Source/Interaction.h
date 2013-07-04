@@ -69,8 +69,20 @@ inline void Interaction::CalcForce(double dt)
     double dj = P2->Density;
     double mi = P1->Mass;
     double mj = P2->Mass;
-    double Pi = P1->Pressure = Pressure(di,P1->RefDensity);
-	double Pj = P2->Pressure = Pressure(dj,P1->RefDensity);
+
+    double Pi;
+    double Pj;
+    if (P1->IsFree)
+    {
+    	if (P2->IsFree)
+    	{
+    	Pi = P1->Pressure = Pressure(di,P1->RefDensity);
+    	Pj = P2->Pressure = Pressure(dj,P2->RefDensity);
+    	}
+    	else Pi = Pj = P1->Pressure = Pressure(di,P1->RefDensity);
+    }
+    else Pi = Pj = P2->Pressure = Pressure(dj,P2->RefDensity);
+
     Vec3_t vij = P1->v - P2->v;
     Vec3_t rij = P1->x - P2->x;
     double MUij = h*dot(vij,rij)/(dot(rij,rij)+0.01*h*h);                                                ///<(2.75) Li, Liu Book
