@@ -26,6 +26,9 @@
 // MechSys
 #include <mechsys/linalg/matvec.h>
 
+//Pthreads
+#include <pthread.h>
+
 namespace SPH {
 
 class Particle

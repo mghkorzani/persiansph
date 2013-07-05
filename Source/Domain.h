@@ -34,6 +34,8 @@
 
 namespace SPH {
 
+
+
 class Domain
 {
 public:
@@ -56,8 +58,10 @@ public:
     void Move                (double dt);                                                                                      ///< Compute the acceleration due to the other particles
     void ResetInteractions();                                                                                                  ///< Reset the interaction array
     void ResetContacts();                                                                                                      ///< Reset the possible interactions
-    void Solve               (double tf, double dt, double dtOut, char const * TheFileKey);                                    ///< The solving function
+    void Solve               (double tf, double dt, double dtOut, char const * TheFileKey, size_t Nproc);                      ///< The solving function
     void WriteXDMF           (char const * FileKey);                                                                           ///< Save a XDMF file for visualization
+    void Save                (char const * FileKey);                                                         				   ///< Save the domain form a file
+    void Load                (char const * FileKey);                                                         				   ///< Load the domain form a file
 
     // Data
     Vec3_t                  Gravity;        ///< Gravity acceleration
@@ -70,7 +74,64 @@ public:
     double 					Alpha;
     double					Beta;
     double					MaxVel;
+    double					AutoSaveInt;		///< Automatic save interval
 };
+
+/// A structure for the multi-thread data
+struct MtData
+{
+    size_t                       ProcRank; ///< Rank of the thread
+    size_t                         N_Proc; ///< Total number of threads
+    SPH::Domain *                     Dom; ///< Pointer to the lbm domain
+    Vec3_t                            Acc; ///< Prefixed acceleration for the particles
+    double						   Deltat; ///< Prefixed dt for the interactions
+};
+
+void * GlobalStartAcceleration(void * Data)
+{
+    SPH::MtData & dat = (*static_cast<SPH::MtData *>(Data));
+    Array<SPH::Particle * > * P = &dat.Dom->Particles;
+	size_t Ni = P->Size()/dat.N_Proc;
+    size_t In = dat.ProcRank*Ni;
+    size_t Fn;
+    dat.ProcRank == dat.N_Proc-1 ? Fn = P->Size() : Fn = (dat.ProcRank+1)*Ni;
+	for (size_t i=In;i<Fn;i++)
+	{
+		(*P)[i]->a = dat.Acc;
+		(*P)[i]->dDensity = 0.0;
+	}
+    return NULL;
+}
+
+void * GlobalComputeAcceleration(void * Data)
+{
+    SPH::MtData & dat = (*static_cast<SPH::MtData *>(Data));
+    Array<SPH::Interaction * > * P = &dat.Dom->PInteractions;
+	size_t Ni = P->Size()/dat.N_Proc;
+    size_t In = dat.ProcRank*Ni;
+    size_t Fn;
+    dat.ProcRank == dat.N_Proc-1 ? Fn = P->Size() : Fn = (dat.ProcRank+1)*Ni;
+	for (size_t i=In;i<Fn;i++)
+	{
+		(*P)[i]->CalcForce(dat.Deltat);
+	}
+    return NULL;
+}
+
+void * GlobalMove(void * Data)
+{
+    SPH::MtData & dat = (*static_cast<SPH::MtData *>(Data));
+    Array<SPH::Particle * > * P = &dat.Dom->Particles;
+	size_t Ni = P->Size()/dat.N_Proc;
+    size_t In = dat.ProcRank*Ni;
+    size_t Fn;
+    dat.ProcRank == dat.N_Proc-1 ? Fn = P->Size() : Fn = (dat.ProcRank+1)*Ni;
+	for (size_t i=In;i<Fn;i++)
+	{
+		(*P)[i]->Move(dat.Deltat);
+			}
+    return NULL;
+}
 
 /////////////////////////////////////////////////////////////////////////////////////////// Implementation /////
 
@@ -229,6 +290,7 @@ inline void Domain::WriteXDMF (char const * FileKey)
     float * Pressure = new float[  Particles.Size()];
     float * Radius   = new float[  Particles.Size()];
     int   * Tag      = new int  [  Particles.Size()];
+
     for (size_t i=0;i<Particles.Size();i++)
     {
         Posvec  [3*i  ] = float(Particles[i]->x(0));
@@ -315,27 +377,206 @@ inline void Domain::WriteXDMF (char const * FileKey)
     of.close();
 }
 
-inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheFileKey)
+inline void Domain::Save (char const * FileKey)
+{
+    // Opening the file for writing
+    String fn(FileKey);
+    fn.append(".hdf5");
+
+    hid_t file_id;
+    file_id = H5Fcreate(fn.CStr(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+
+    // Storing the number of particles in the domain
+    int data[1];
+    data[0]=Particles.Size();
+    hsize_t dims[1];
+    dims[0]=1;
+    H5LTmake_dataset_int(file_id,"/NP",1,dims,data);
+
+    for (size_t i=0; i<Particles.Size(); i++)
+    {
+        // Creating the string and the group for each particle
+        hid_t group_id;
+        String par;
+        par.Printf("/Particle_%08d",i);
+        group_id = H5Gcreate2(file_id, par.CStr(), H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+
+
+        // Storing some scalar variables
+        double dat[1];
+        dat[0] = Particles[i]->Mass;
+        H5LTmake_dataset_double(group_id,"Mass",1,dims,dat);
+        dat[0] = Particles[i]->Density;
+        H5LTmake_dataset_double(group_id,"Rho",1,dims,dat);
+        dat[0] = Particles[i]->hr;
+        H5LTmake_dataset_double(group_id,"h",1,dims,dat);
+        dat[0] = Particles[i]->R;
+        H5LTmake_dataset_double(group_id,"Radius",1,dims,dat);
+
+        int tag[1];
+        tag[0] = Particles[i]->ID;
+        H5LTmake_dataset_int(group_id,"Tag",1,dims,tag);
+
+        // Change  to integer for fixity
+        int IsFree[1];
+        if (Particles[i]->IsFree == true) IsFree[0]=1;
+        		else IsFree[0]=0;
+        H5LTmake_dataset_int(group_id,"IsFree",1,dims,IsFree);
+
+        // Storing vectorial variables
+        double cd[3];
+        hsize_t dd[1];
+        dd[0] = 3;
+
+        cd[0]=Particles[i]->x(0);
+        cd[1]=Particles[i]->x(1);
+        cd[2]=Particles[i]->x(2);
+        H5LTmake_dataset_double(group_id,"x",1,dd,cd);
+
+        cd[0]=Particles[i]->v(0);
+        cd[1]=Particles[i]->v(1);
+        cd[2]=Particles[i]->v(2);
+        H5LTmake_dataset_double(group_id,"v",1,dd,cd);
+    }
+
+    H5Fflush(file_id,H5F_SCOPE_GLOBAL);
+    H5Fclose(file_id);
+}
+
+inline void Domain::Load (char const * FileKey)
+{
+
+    // Opening the file for reading
+    String fn(FileKey);
+    fn.append(".hdf5");
+    if (!Util::FileExists(fn)) throw new Fatal("File <%s> not found",fn.CStr());
+    printf("\n%s--- Loading file %s --------------------------------------------%s\n",TERM_CLR1,fn.CStr(),TERM_RST);
+    hid_t file_id;
+    file_id = H5Fopen(fn.CStr(), H5F_ACC_RDONLY, H5P_DEFAULT);
+
+    // Number of particles in the domain
+    int data[1];
+    H5LTread_dataset_int(file_id,"/NP",data);
+    size_t NP = data[0];
+
+    // Loading the particles
+    for (size_t i=0; i<NP; i++)
+    {
+
+        // Creating the string and the group for each particle
+        hid_t group_id;
+        String par;
+        par.Printf("/Particle_%08d",i);
+        group_id = H5Gopen2(file_id, par.CStr(),H5P_DEFAULT);
+
+        Particles.Push(new Particle(0,Vec3_t(0,0,0),Vec3_t(0,0,0),0,0,0,0,false));
+
+        // Loading vectorial variables
+        double cd[3];
+        H5LTread_dataset_double(group_id,"x",cd);
+        Particles[Particles.Size()-1]->x = Vec3_t(cd[0],cd[1],cd[2]);
+        Particles[Particles.Size()-1]->xb = Vec3_t(cd[0],cd[1],cd[2]);			// Because of the constructor in Particle
+
+        H5LTread_dataset_double(group_id,"v",cd);
+        Particles[Particles.Size()-1]->v = Vec3_t(cd[0],cd[1],cd[2]);
+
+        // Loading the scalar quantities of the particle
+        double dat[1];
+        H5LTread_dataset_double(group_id,"Mass",dat);
+        Particles[Particles.Size()-1]->Mass = dat[0];
+
+        H5LTread_dataset_double(group_id,"Rho",dat);
+        Particles[Particles.Size()-1]->Density = dat[0];
+        Particles[Particles.Size()-1]->RefDensity = dat[0];			// Because of the constructor in Particle
+        Particles[Particles.Size()-1]->Densityb = dat[0];			// Because of the constructor in Particle
+
+        H5LTread_dataset_double(group_id,"h",dat);
+        Particles[Particles.Size()-1]->hr = dat[0];
+        Particles[Particles.Size()-1]->h = dat[0];			// Because of the constructor in Particle
+
+        H5LTread_dataset_double(group_id,"Radius",dat);
+        Particles[Particles.Size()-1]->R = dat[0];
+
+        int datint[1];
+        H5LTread_dataset_int(group_id,"Tag",datint);
+        Particles[Particles.Size()-1]->ID = datint[0];
+
+        H5LTread_dataset_int(group_id,"IsFree",datint);
+        if (datint[0] == 1) Particles[Particles.Size()-1]->IsFree=true;
+        		else Particles[Particles.Size()-1]->IsFree=false;
+    }
+
+
+    H5Fclose(file_id);
+    printf("\n%s--- Done --------------------------------------------%s\n",TERM_CLR2,TERM_RST);
+}
+
+inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheFileKey, size_t Nproc)
 {
     Util::Stopwatch stopwatch;
     std::cout << "\n--------------Solving------------------------------------------------------------------------------" << std::endl;
 
-    idx_out = 0;
+    idx_out = 1;
     double tout = Time;
 
+    size_t save_out = 1;
+    double sout = AutoSaveInt;
 
     ResetInteractions();
     ResetContacts();
 
+	SPH::MtData MTD[Nproc];
+	for (size_t i=0;i<Nproc;i++)
+	{
+	   MTD[i].N_Proc   = Nproc;
+	   MTD[i].ProcRank = i;
+	   MTD[i].Dom      = this;
+	   MTD[i].Acc      = Gravity;
+	   MTD[i].Deltat   = dt;
+	}
+	pthread_t thrs[Nproc];
 
     while (Time<tf)
     {
 
     	// Calculate the acceleration for each particle
-        StartAcceleration(Gravity);
-        ComputeAcceleration(dt);
 
-         // output
+    	for (size_t i=0;i<Nproc;i++)
+    	{
+    	   pthread_create(&thrs[i], NULL, GlobalStartAcceleration, &MTD[i]);
+    	}
+    	for (size_t i=0;i<Nproc;i++)
+    	{
+    	   pthread_join(thrs[i], NULL);
+    	}
+
+    	//StartAcceleration(Gravity);
+
+    	for (size_t i=0;i<Nproc;i++)
+    	{
+    	   pthread_create(&thrs[i], NULL, GlobalComputeAcceleration, &MTD[i]);
+    	}
+    	for (size_t i=0;i<Nproc;i++)
+    	{
+    	   pthread_join(thrs[i], NULL);
+    	}
+
+
+    	//ComputeAcceleration(dt);
+
+        // Move each particle
+    	for (size_t i=0;i<Nproc;i++)
+    	{
+    	   pthread_create(&thrs[i], NULL, GlobalMove, &MTD[i]);
+    	}
+    	for (size_t i=0;i<Nproc;i++)
+    	{
+    	   pthread_join(thrs[i], NULL);
+    	}
+
+    	//Move(dt);
+
+        // output
         if (Time>=tout)
         {
             if (TheFileKey!=NULL)
@@ -343,13 +584,28 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
                     String fn;
                     fn.Printf    ("%s_%04d", TheFileKey, idx_out);
                     WriteXDMF    (fn.CStr());
+                    std::cout << "\n" << "Output No. " << idx_out << " at " << Time << " has been generated" << std::endl;
             }
             idx_out++;
             tout += dtOut;
         }
 
-         // Move each particle
-         Move(dt);
+        // Auto Save
+       if (AutoSaveInt>0)
+       {
+        if (Time>=sout)
+       {
+           if (TheFileKey!=NULL)
+           {
+                   String fn;
+                   fn.Printf    ("Auto Save_%s_%04d", TheFileKey, save_out);
+                   Save   		(fn.CStr());
+                   std::cout << "\n" << "Auto Save No. " << save_out << " at " << Time << " has been generated" << std::endl;
+           }
+           save_out++;
+           sout += AutoSaveInt;
+       }
+       }
 
 
         // next time position
