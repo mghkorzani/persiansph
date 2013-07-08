@@ -536,6 +536,7 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
     idx_out = 1;
     double tout = Time;
 
+    size_t save_out = 1;
     double sout = AutoSaveInt;
 
     ResetInteractions();
@@ -612,10 +613,11 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
            if (TheFileKey!=NULL)
            {
                    String fn;
-                   fn.Printf    ("Auto Save", TheFileKey);
+                   fn.Printf    ("Auto Save_%s_%04d", TheFileKey, save_out);
                    Save   		(fn.CStr());
-                   std::cout << "\n" << "Auto Save at " << Time << " has been generated" << std::endl;
+                   std::cout << "\n" << "Auto Save No. " << save_out << " at " << Time << " has been generated" << std::endl;
            }
+       save_out++;
        sout += AutoSaveInt;
        }
        }
