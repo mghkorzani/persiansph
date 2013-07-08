@@ -65,6 +65,8 @@ inline Interaction::Interaction (Particle * Pt1, Particle * Pt2,size_t dim, doub
 
 inline void Interaction::CalcForce(double dt)
 {
+	if (Norm(P2->x-P1->x)<=P1->h+P2->h)
+	{
 	double di = P1->Density;
     double dj = P2->Density;
     double mi = P1->Mass;
@@ -90,10 +92,17 @@ inline void Interaction::CalcForce(double dt)
     double PIij;
     if (dot(vij,rij)<0) PIij = (-alpha*Cij*MUij+beta*MUij*MUij)/(0.5*(di+dj));                          ///<(2.74) Li, Liu Book
     else                PIij = 0.0;
+
+    pthread_mutex_lock(&P1->lck);
     P1->a += -1*mj*(Pi/(di*di)+Pj/(dj*dj)+PIij)*GradKernel(norm(rij),h)*(rij/norm(rij));                     ///<(2.73) Li, Liu Book
-    P2->a -= -1*mi*(Pi/(di*di)+Pj/(dj*dj)+PIij)*GradKernel(norm(rij),h)*(rij/norm(rij));
     P1->dDensity += (di*mj/dj)*dot(vij,(rij/norm(rij)))*GradKernel(norm(rij),h);                                  ///<(2.58) Li, Liu Book
+    pthread_mutex_unlock(&P1->lck);
+
+    pthread_mutex_lock(&P2->lck);
+    P2->a -= -1*mi*(Pi/(di*di)+Pj/(dj*dj)+PIij)*GradKernel(norm(rij),h)*(rij/norm(rij));
     P2->dDensity += (dj*mi/di)*dot(vij,(rij/norm(rij)))*GradKernel(norm(rij),h);
+    pthread_mutex_unlock(&P2->lck);
+	}
 }
 
 inline bool Interaction::UpdateContacts ()

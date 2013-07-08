@@ -82,7 +82,7 @@ struct MtData
 {
     size_t                       ProcRank; ///< Rank of the thread
     size_t                         N_Proc; ///< Total number of threads
-    SPH::Domain *                     Dom; ///< Pointer to the lbm domain
+    SPH::Domain *                     Dom; ///< Pointer to the SPH domain
     Vec3_t                            Acc; ///< Prefixed acceleration for the particles
     double						   Deltat; ///< Prefixed dt for the interactions
 };
@@ -106,7 +106,7 @@ void * GlobalStartAcceleration(void * Data)
 void * GlobalComputeAcceleration(void * Data)
 {
     SPH::MtData & dat = (*static_cast<SPH::MtData *>(Data));
-    Array<SPH::Interaction * > * P = &dat.Dom->PInteractions;
+    Array<SPH::Interaction * > * P = &dat.Dom->Interactions;
 	size_t Ni = P->Size()/dat.N_Proc;
     size_t In = dat.ProcRank*Ni;
     size_t Fn;
@@ -238,7 +238,8 @@ inline void Domain::StartAcceleration (Vec3_t const & a)
 
 inline void Domain::ComputeAcceleration (double dt)
 {
-    for (size_t i=0; i<PInteractions.Size(); i++) PInteractions[i]->CalcForce(dt);
+//    for (size_t i=0; i<PInteractions.Size(); i++) PInteractions[i]->CalcForce(dt);
+	for (size_t i=0; i<Interactions.Size(); i++) Interactions[i]->CalcForce(dt);
 }
 
 inline void Domain::Move (double dt)
@@ -540,7 +541,6 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
     {
 
     	// Calculate the acceleration for each particle
-
     	for (size_t i=0;i<Nproc;i++)
     	{
     	   pthread_create(&thrs[i], NULL, GlobalStartAcceleration, &MTD[i]);
@@ -550,7 +550,7 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
     	   pthread_join(thrs[i], NULL);
     	}
 
-    	//StartAcceleration(Gravity);
+//    	StartAcceleration(Gravity);
 
     	for (size_t i=0;i<Nproc;i++)
     	{
@@ -560,9 +560,8 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
     	{
     	   pthread_join(thrs[i], NULL);
     	}
+//    	ComputeAcceleration(dt);
 
-
-    	//ComputeAcceleration(dt);
 
         // Move each particle
     	for (size_t i=0;i<Nproc;i++)
@@ -573,8 +572,8 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
     	{
     	   pthread_join(thrs[i], NULL);
     	}
+//    	Move(dt);
 
-    	//Move(dt);
 
         // output
         if (Time>=tout)
@@ -606,13 +605,12 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
            sout += AutoSaveInt;
        }
        }
+//       std::cout << "Finish step" << std::endl;
 
+       Time += dt;
 
-        // next time position
-        Time += dt;
+        //ResetContacts();
 
-        ResetContacts();
-        
     }
 }
 

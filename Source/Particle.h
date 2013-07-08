@@ -55,6 +55,7 @@ public:
     double hr;                      ///< Reference smoothing length of the particle
     double R;                       ///< Radius of the particle
     int    ID;						///< an Integer value to identify type of the particles
+    pthread_mutex_t lck;            ///< to protect variables in multi threading
 
 
     // Methods
@@ -81,6 +82,7 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
     dDensity=0.0;
     Pressure=0.0;
     ID = Tag;
+    pthread_mutex_init(&lck,NULL);
 }
 
 inline void Particle::Move (double dt)
