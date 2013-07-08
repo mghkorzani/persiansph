@@ -58,7 +58,7 @@ public:
     void Move                (double dt);                                                                                      ///< Compute the acceleration due to the other particles
     void ResetInteractions();                                                                                                  ///< Reset the interaction array
     void ResetContacts();                                                                                                      ///< Reset the possible interactions
-    void Domain::DelParticles(Array<int> const & Tags);																		   ///< Delete particles by tags
+    void DelParticles(Array<int> const & Tags);																		   ///< Delete particles by tags
     void Solve               (double tf, double dt, double dtOut, char const * TheFileKey, size_t Nproc);                      ///< The solving function
     void WriteXDMF           (char const * FileKey);                                                                           ///< Save a XDMF file for visualization
     void Save                (char const * FileKey);                                                         				   ///< Save the domain form a file
