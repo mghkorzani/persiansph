@@ -58,6 +58,7 @@ public:
     void Move                (double dt);                                                                                      ///< Compute the acceleration due to the other particles
     void ResetInteractions();                                                                                                  ///< Reset the interaction array
     void ResetContacts();                                                                                                      ///< Reset the possible interactions
+    void Domain::DelParticles(Array<int> const & Tags);																		   ///< Delete particles by tags
     void Solve               (double tf, double dt, double dtOut, char const * TheFileKey, size_t Nproc);                      ///< The solving function
     void WriteXDMF           (char const * FileKey);                                                                           ///< Save a XDMF file for visualization
     void Save                (char const * FileKey);                                                         				   ///< Save the domain form a file
@@ -246,6 +247,21 @@ inline void Domain::Move (double dt)
 {
     for (size_t i=0; i<Particles.Size(); i++) Particles[i]->Move(dt);
 }
+
+inline void Domain::DelParticles (Array<int> const & Tags)
+{
+    Array<int> idxs; // indices to be deleted
+    for (size_t i=0; i<Particles.Size(); ++i)
+    {
+        for (size_t j=0; j<Tags.Size(); ++j)
+        {
+            if (Particles[i]->ID==Tags[j]) idxs.Push(i);
+        }
+    }
+    if (idxs.Size()<1) throw new Fatal("Domain::DelParticles: Could not find any particle to be deleted");
+    Particles.DelItems (idxs);
+}
+
 
 inline void Domain::ResetInteractions()
 {
