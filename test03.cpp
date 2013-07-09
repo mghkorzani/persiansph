@@ -29,25 +29,22 @@ int main(int argc, char **argv) try
         dom.Dimension = 3;
         dom.Alpha = 1.0;
         dom.Beta = 1.0;
-        dom.MaxVel = sqrt(2*9.81*0.0095);
+        dom.MaxVel = sqrt(2*9.81*0.01);
         dom.AutoSaveInt = 1.0;
         size_t Nproc = 8;
 
-        dom.AddBoxLength(1,Vec3_t ( 0.001,-0.001 ,0.0  ),0.044,  0,  0, 22 ,  1 ,  1, 0, 1000, 0.002, true);
-        dom.AddBoxLength(1,Vec3_t (-0.002,-0.002 ,0.0  ),0.046,  0,  0, 23 ,  1 ,  1, 0, 1000, 0.002, true);
-        dom.AddBoxLength(2,Vec3_t ( 0.045,-0.001 ,0.0  ),0.012,  0,  0,  6 ,  1 ,  1, 0, 1000, 0.002, true);
-        dom.AddBoxLength(2,Vec3_t ( 0.044,-0.002 ,0.0  ),0.014,  0,  0,  7 ,  1 ,  1, 0, 1000, 0.002, true);
-        dom.AddBoxLength(1,Vec3_t ( 0.057,-0.001 ,0.0  ),0.044,  0,  0, 22 ,  1 ,  1, 0, 1000, 0.002, true);
-        dom.AddBoxLength(1,Vec3_t ( 0.058,-0.002 ,0.0  ),0.046,  0,  0, 23 ,  1 ,  1, 0, 1000, 0.002, true);
-        dom.AddBoxLength(1,Vec3_t (-0.001,-0.001 ,0.0  ), 0.0 ,0.3,  0, 1  , 150,  1, 0, 1000, 0.002, true);
-        dom.AddBoxLength(1,Vec3_t (-0.002, 0.0   ,0.0  ), 0.0 ,0.3,  0, 1  , 150,  1, 0, 1000, 0.002, true);
-        dom.AddBoxLength(1,Vec3_t ( 0.101,-0.001 ,0.0  ), 0.0 ,0.3,  0, 1  , 150,  1, 0, 1000, 0.002, true);
-        dom.AddBoxLength(1,Vec3_t ( 0.102, 0.0   ,0.0  ), 0.0 ,0.3,  0, 1  , 150,  1, 0, 1000, 0.002, true);
-        dom.AddRandomBox(3,Vec3_t ( 0.0  , 0.0   ,0.0  ), 0.1,0.2,  0, 50 , 100,  1, 0, 1000, 0.002);
+        dom.Load("Auto Save_test02_0002");
+        dom.AddBoxLength(4,Vec3_t (-0.049,-0.151,0.0 ), 0.2 ,  0 ,  0, 100,  1,  1, 0, 1000, 0.002, true);
+        dom.AddBoxLength(4,Vec3_t (-0.052,-0.152,0.0 ),0.206,  0 ,  0, 103,  1,  1, 0, 1000, 0.002, true);
+        dom.AddBoxLength(5,Vec3_t (-0.051,-0.151,0.0 ), 0.0 ,0.15,  0, 1  , 75,  1, 0, 1000, 0.002, true);
+        dom.AddBoxLength(5,Vec3_t (-0.052,-0.150,0.0 ), 0.0 ,0.15,  0, 1  , 75,  1, 0, 1000, 0.002, true);
+        dom.AddBoxLength(6,Vec3_t ( 0.151,-0.151,0.0 ), 0.0 ,0.15,  0, 1  , 75,  1, 0, 1000, 0.002, true);
+        dom.AddBoxLength(6,Vec3_t ( 0.152,-0.150,0.0 ), 0.0 ,0.15,  0, 1  , 75,  1, 0, 1000, 0.002, true);
+        dom.DelParticles(2);
 
-//      dom.WriteXDMF("test02");
+//        dom.WriteXDMF("test02");
 
-        dom.Solve(/*tf*/30.0,/*dt*/0.0001,/*dtOut*/0.005,"test02",Nproc);
+        dom.Solve(/*tf*/5.0,/*dt*/0.0001,/*dtOut*/0.005,"test02",Nproc);
         return 0;
 }
 MECHSYS_CATCH
