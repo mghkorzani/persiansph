@@ -493,8 +493,8 @@ inline void Domain::Load (char const * FileKey)
         Particles[Particles.Size()-1]->x = Vec3_t(cd[0],cd[1],cd[2]);
         Particles[Particles.Size()-1]->xb = Vec3_t(cd[0],cd[1],cd[2]);			// Because of the constructor in Particle
 
-        H5LTread_dataset_double(group_id,"v",cd);
-        Particles[Particles.Size()-1]->v = Vec3_t(cd[0],cd[1],cd[2]);
+//        H5LTread_dataset_double(group_id,"v",cd);
+//        Particles[Particles.Size()-1]->v = Vec3_t(cd[0],cd[1],cd[2]);
 
         // Loading the scalar quantities of the particle
         double dat[1];
