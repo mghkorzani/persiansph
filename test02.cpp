@@ -29,9 +29,9 @@ int main(int argc, char **argv) try
         dom.Dimension = 3;
         dom.Alpha = 1.0;
         dom.Beta = 1.0;
-        dom.MaxVel = sqrt(2*9.81*0.0095);
+        dom.MaxVel = sqrt(2*9.81*0.00985);
         dom.AutoSaveInt = 1.0;
-        size_t Nproc = 8;
+        size_t Nproc = 64;
 
         dom.AddBoxLength(1,Vec3_t ( 0.001,-0.001 ,0.0  ),0.044,  0,  0, 22 ,  1 ,  1, 0, 1000, 0.002, true);
         dom.AddBoxLength(1,Vec3_t (-0.002,-0.002 ,0.0  ),0.046,  0,  0, 23 ,  1 ,  1, 0, 1000, 0.002, true);
@@ -43,7 +43,7 @@ int main(int argc, char **argv) try
         dom.AddBoxLength(1,Vec3_t (-0.002, 0.0   ,0.0  ), 0.0 ,0.3,  0, 1  , 150,  1, 0, 1000, 0.002, true);
         dom.AddBoxLength(1,Vec3_t ( 0.101,-0.001 ,0.0  ), 0.0 ,0.3,  0, 1  , 150,  1, 0, 1000, 0.002, true);
         dom.AddBoxLength(1,Vec3_t ( 0.102, 0.0   ,0.0  ), 0.0 ,0.3,  0, 1  , 150,  1, 0, 1000, 0.002, true);
-        dom.AddRandomBox(3,Vec3_t ( 0.0  , 0.0   ,0.0  ), 0.1,0.2,  0, 50 , 100,  1, 0, 1000, 0.002);
+        dom.AddRandomBox(3,Vec3_t ( 0.0  , 0.0   ,0.0  ),0.1,0.200,  0, 50 , 100,  1, 0, 1000, 0.002);
 
 //      dom.WriteXDMF("test02");
 

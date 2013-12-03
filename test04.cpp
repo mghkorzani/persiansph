@@ -42,9 +42,25 @@ int main(int argc, char **argv) try
         dom.AddBoxLength(1,Vec3_t ( 0.202,-0.075,0.0 ), 0.0 ,0.10,  0, 1  , 50,  1, 0, 1000, 0.002, true);
         dom.DelParticles(2);
 
-//        dom.WriteXDMF("test02");
+        for (size_t i=0; i< dom.Particles.Size(); i++)
+        {
+//        	std::cout << i << std::endl;
+        	if (dom.Particles[i]->ID>1)
+			{
+        		if (dom.Particles[i]->x(1)<=0.02) dom.Particles[i]->ID=9;
+        		else if  (dom.Particles[i]->x(1)<=0.04) dom.Particles[i]->ID=-9;
+        		else if  (dom.Particles[i]->x(1)<=0.06) dom.Particles[i]->ID=4;
+        		else if  (dom.Particles[i]->x(1)<=0.08) dom.Particles[i]->ID=-4;
+        		else if  (dom.Particles[i]->x(1)<=0.10) dom.Particles[i]->ID=6;
+        		else if  (dom.Particles[i]->x(1)<=0.12) dom.Particles[i]->ID=-6;
+        		else if  (dom.Particles[i]->x(1)<=0.14) dom.Particles[i]->ID=8;
+        		else dom.Particles[i]->ID=-8;
+//        		std::cout << dom.Particles[i]->ID << std::endl;
+			}
+        }
+//        dom.WriteXDMF("test04");
 
-        dom.Solve(/*tf*/15.0,/*dt*/0.00005,/*dtOut*/0.0005,"test03",Nproc);
+        dom.Solve(/*tf*/15.0,/*dt*/0.00005,/*dtOut*/0.005,"test04",Nproc);
         return 0;
 }
 MECHSYS_CATCH
