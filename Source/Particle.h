@@ -22,6 +22,7 @@
 // Std lib
 #include <iostream>
 #include <cstring>
+#include <cmath>
 
 // MechSys
 #include <mechsys/linalg/matvec.h>
@@ -41,27 +42,28 @@ public:
 
     // Data
     bool   IsFree;                  ///< Check the particle if it is free to move or not
-    Vec3_t x;                       ///< Position of the particle
-    Vec3_t xb;                      ///< Previous position for Verlet algorithm
-    Vec3_t v;                       ///< Velocity of the particle
-    Vec3_t a;                       ///< Acceleration of the particle
+    Vec3_t  x;                       ///< Position of the particle
+    Vec3_t  xb;                      ///< Previous position for Verlet algorithm
+    Vec3_t  v;                       ///< Velocity of the particle
+    Vec3_t  a;                       ///< Acceleration of the particle
     double Pressure;                ///< Pressure at the position of the particle
     double Density;                 ///< Density at the position of the particle
     double Densityb;                ///< Previous density for the Verlet algorithm
-    double RefDensity;				///< Reference Density of Particle
+    double RefDensity;				 ///< Reference Density of Particle
     double Mass;                    ///< Mass of the particle
     double dDensity;                ///< Rate of density change in time
     double h;                       ///< Smoothing length of the particle
     double hr;                      ///< Reference smoothing length of the particle
     double R;                       ///< Radius of the particle
-    int    ID;						///< an Integer value to identify type of the particles
-    pthread_mutex_t lck;            ///< to protect variables in multi threading
+    int    ID;						 ///< an Integer value to identify type of the particles
+    int    LL;						 ///< Linked-List variable to show next particle in list of a cell
+    Vec3_t CC;					  	 ///< Current cell No for the particle (linked-list)
+    pthread_mutex_t lck;             ///< To protect variables in multi-threading
 
 
     // Methods
     void Move (double dt);                                                  ///< Update the important quantities of the simulation
-    void StartAccel (Vec3_t acc = Vec3_t(0.0,0.0,0.0)) {a = acc;};          ///< Start the acceleration of the particle with one predefined value
-    void Translate  (Vec3_t const & V) {x+=V; xb+=V;};                      ///< Translate a SPH particle a vector V
+    bool CellUpdate  (Vec3_t CellSize);                      				  ///< Translate a SPH particle a vector V
 
 };
 
@@ -74,7 +76,6 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
     RefDensity = Density0;
     Densityb = Density;
     Mass = Mass0;
-//  std::cout << Mass << std::endl;
     IsFree = !Fixed;
     hr = h0;
     h = hr;
@@ -82,6 +83,7 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
     dDensity=0.0;
     Pressure=0.0;
     ID = Tag;
+    CC=0.0;
     pthread_mutex_init(&lck,NULL);
 }
 
@@ -95,12 +97,18 @@ inline void Particle::Move (double dt)
         v = 0.5*(xa - xb)/dt;
         xb = x;
         x = xa;
+
         // Evolve density
         double dens = Density;
         Density = Densityb + 2*dt*dDensity;
         Densityb = dens;
     }
+}
 
+inline bool Particle::CellUpdate (Vec3_t CellSize)
+{
+    if (CC == floor (x(0)/CellSize(0)) , floor (x(1)/CellSize(1)), floor (x(2)/CellSize(2))) return false;
+    else return true;
 }
 
 }; // namespace SPH

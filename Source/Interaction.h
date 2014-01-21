@@ -19,8 +19,6 @@
 #ifndef MECHSYS_SPH_INTERACTION_H
 #define MECHSYS_SPH_INTERACTION_H
 
-// Std lib
-#include <cmath>
 
 #include <Source/Particle.h>
 
@@ -127,6 +125,7 @@ inline double Interaction::Kernel(double r,double h)
     default:
        std::cout << "Please correct dimension for kernel and run again, otherwise 3D is used" << std::endl;
        C = 1.0/(h*h*h*M_PI);
+       break;
     }
 
     double q = r/h;
@@ -151,6 +150,7 @@ inline double Interaction::GradKernel(double r, double h)
     default:
        std::cout << "Please correct dimension for kernel and run again, otherwise 3D is used" << std::endl;
        C = 1.0/(h*h*h*h*M_PI);
+       break;
     }
     double q = r/h;
     if ((q>=0.0)&&(q<1)) return C*(-3.0*q+(9.0/4.0)*q*q);

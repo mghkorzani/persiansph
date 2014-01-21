@@ -31,6 +31,7 @@
 #include <hdf5_hl.h>
 
 #include <mechsys/util/stopwatch.h>
+#include <mechsys/util/string.h>
 
 namespace SPH {
 
@@ -47,35 +48,44 @@ public:
     ~Domain ();
 
     // Methods
-    void AddBox              (int tag, Vec3_t const & x, size_t nx, size_t ny, size_t nz,
+    void AddBox                (int tag, Vec3_t const & x, size_t nx, size_t ny, size_t nz,
     		                  double R, double Mass, double Density, double h, bool Fixed);                                    ///< Add a box of particles (should specify radius of particles)
-    void AddBoxLength        (int tag, Vec3_t const &V, double Lx, double Ly, double Lz, size_t nx, size_t ny, size_t nz,
+    void AddBoxLength         (int tag, Vec3_t const &V, double Lx, double Ly, double Lz, size_t nx, size_t ny, size_t nz,
     		                  double Mass, double Density, double h, bool Fixed);                                              ///< Add a box of particles with length (calculate radius of particles)
-    void AddRandomBox        (int tag, Vec3_t const &V, double Lx, double Ly, double Lz, size_t nx, size_t ny, size_t nz,
-    		                  double Mass, double Density, double h, size_t RandomSeed=100);                                   ///< Add box of random positioned particles (calculate radius of particles)
+    void AddRandomBox         (int tag, Vec3_t const &V, double Lx, double Ly, double Lz, size_t nx, size_t ny, size_t nz,
+    		                  double Mass, double Density, double h, size_t RandomSeed=100);                                    ///< Add box of random positioned particles (calculate radius of particles)
     void StartAcceleration   (Vec3_t const & a = Vec3_t(0.0,0.0,0.0));                                                         ///< Add a fixed acceleration
-    void ComputeAcceleration (double dt);                                                                                      ///< Compute the acceleration due to the other particles
-    void Move                (double dt);                                                                                      ///< Compute the acceleration due to the other particles
+    void ComputeAcceleration (double dt);                                                                                     ///< Compute the acceleration due to the other particles
+    void Move                  (double dt);                                                                                     ///< Compute the acceleration due to the other particles
     void ResetInteractions();                                                                                                  ///< Reset the interaction array
-    void ResetContacts();                                                                                                      ///< Reset the possible interactions
-    void DelParticles        (int const & Tags);														     				   ///< Delete particles by tags
-    void Solve               (double tf, double dt, double dtOut, char const * TheFileKey, size_t Nproc);                      ///< The solving function
+    void ResetContacts();                                                                                                       ///< Reset the possible interactions
+    void DelParticles        (int const & Tags);														     				      ///< Delete particles by tags
+    void Solve                (double tf, double dt, double dtOut, char const * TheFileKey, size_t Nproc);                   ///< The solving function
     void WriteXDMF           (char const * FileKey);                                                                           ///< Save a XDMF file for visualization
-    void Save                (char const * FileKey);                                                         				   ///< Save the domain form a file
-    void Load                (char const * FileKey);                                                         				   ///< Load the domain form a file
+    void Save                 (char const * FileKey);                                                         				  ///< Save the domain form a file
+    void Load                 (char const * FileKey);                                                         				  ///< Load the domain form a file
+    void CellInitiate        ();                                                         										  ///< Size of the domain as a rectangular, make cell and HOC
+    void CellReset 	       ();                                                         										  ///< Reset HOC to initial value of -1
+    void ListGenerate	       ();                                                         										  ///< Generate linked-list
+    void ListUpdate 	       ();                                                         										  ///< Checks if linked-list needs to be updated
 
     // Data
     Vec3_t                  Gravity;        ///< Gravity acceleration
     Array <Particle*>       Particles;      ///< Array of particles
     Array <Interaction*>    Interactions;   ///< Array of interactions
     Array <Interaction*>    PInteractions;  ///< Array of possible interactions
-    double                  Time;           ///< The simulation Time
+    double                 Time;           ///< The simulation Time
     size_t                  idx_out;        ///< Index for output purposes
     double 					Dimension;      ///< Dimension of the problem
     double 					Alpha;
     double					Beta;
     double					MaxVel;
-    double					AutoSaveInt;		///< Automatic save interval
+    double					AutoSaveInt;	///< Automatic save interval
+    Vec3_t                  TRPR;           ///< Top right-hand point at rear of the domain as a Rectangular
+    Vec3_t                  BLPF;           ///< Bottom left-hand point At front side of the domain as a Rectangular
+    Vec3_t                  CellSize;       ///< Calculated cell size according to (cell size >= 2h)
+    int		                CellNo[3];      ///< No. of cells for linked list
+    int					*** HOC;			///< Array of (Head of Chain) for each cell
 };
 
 /// A structure for the multi-thread data
@@ -140,9 +150,8 @@ void * GlobalMove(void * Data)
 inline Domain::Domain ()
 {
     Time    = 0.0;
-    Gravity = 0.0,0.0,0.0;
+    Gravity = 0.0;
     idx_out = 0;
-
 }
 
 inline Domain::~Domain ()
@@ -167,7 +176,7 @@ inline void Domain::AddBox(int tag, Vec3_t const & V, size_t nx, size_t ny, size
         	Particles.Push(new Particle(tag,x,Vec3_t(0,0,0),4/3*M_PI*R*R*R*Density,Density,R,h,Fixed));
         else
         	Particles.Push(new Particle(tag,x,Vec3_t(0,0,0),Mass,Density,R,h,Fixed));
-    }
+     }
     std::cout << "\n  Total No. of particles   = " << Particles.Size() << std::endl;
 }
 
@@ -205,7 +214,7 @@ inline void Domain::AddRandomBox(int tag, Vec3_t const & V, double Lx, double Ly
     double R = (std::min(Lx/(2*nx),Ly/(2*ny))>0) ? std::min(Lx/(2*nx),Ly/(2*ny)) : std::max(Lx/(2*nx),Ly/(2*ny));
     R = (std::min(R,Lz/(2*nz))>0) ? std::min(R,Lz/(2*nz)) : std::max(R,Lz/(2*nz));
 
-	std::cout << R << std::endl;
+	std::cout << "\n Radius of Particle = " << R << std::endl;
 
     double qin = 0.95;
     srand(RandomSeed);
@@ -226,6 +235,91 @@ inline void Domain::AddRandomBox(int tag, Vec3_t const & V, double Lx, double Ly
         }
     }
     std::cout << "\n  Total No. of particles   = " << Particles.Size() << std::endl;
+}
+
+inline void Domain::CellInitiate ()
+{
+    double h=0.0;
+	for (size_t i=0; i<Particles.Size(); i++)
+    {
+        if (Particles[i]->x(0) > TRPR(0)) TRPR(0) = Particles[i]->x(0);
+        if (Particles[i]->x(1) > TRPR(1)) TRPR(1) = Particles[i]->x(1);
+        if (Particles[i]->x(2) > TRPR(2)) TRPR(2) = Particles[i]->x(2);
+
+        if (Particles[i]->x(0) < BLPF(0)) BLPF(0) = Particles[i]->x(0);
+        if (Particles[i]->x(1) < BLPF(1)) BLPF(1) = Particles[i]->x(1);
+        if (Particles[i]->x(2) < BLPF(2)) BLPF(2) = Particles[i]->x(2);
+
+        if (Particles[i]->h > h) h=Particles[i]->h;
+    }
+    if ((BLPF(0) < 0.0) | (BLPF(0) < 0.0) | (BLPF(0) < 0.0))
+    	{
+    	std::cout << "\nProblem to allocate Cells !!!!!!!!!!!!!" << std::endl;
+    	std::cout << "Particle with minus coordinate" << std::endl;
+    	abort();
+    	}
+
+    CellNo[0] = (int) (floor((TRPR(0)-BLPF(0))/(2*h)));
+    CellNo[1] = (int) (floor((TRPR(1)-BLPF(1))/(2*h)));
+    CellNo[2] = (int) (floor((TRPR(2)-BLPF(2))/(2*h)));
+    CellSize  = Vec3_t ((TRPR(0)-BLPF(0))/CellNo[0],(TRPR(1)-BLPF(1))/CellNo[1],(TRPR(2)-BLPF(2))/CellNo[2]);
+
+    HOC = new int**[(int) CellNo[0]];
+    for(int i =0; i<CellNo[0]; i++){
+       HOC[i] = new int*[CellNo[1]];
+       for(int j =0; j<CellNo[1]; j++){
+           HOC[i][j] = new int[CellNo[2]];
+           for(int k = 0; k<CellNo[2];k++){
+              HOC[i][j][k] = -1;
+           }
+       }
+    }
+
+}
+
+inline void Domain::CellReset ()
+{
+    for(int i =0; i<CellNo[0]; i++){
+       for(int j =0; j<CellNo[1]; j++){
+           for(int k = 0; k<CellNo[2];k++){
+              HOC[i][j][k] = -1;
+           }
+       }
+    }
+
+}
+
+inline void Domain::ListGenerate ()
+{
+	int i,j,k;
+	double temp;
+    for (size_t a=0; a<Particles.Size(); a++)
+    {
+        i= (int) Particles[a]->x(0) / CellSize(0);
+        j= (int) Particles[a]->x(1) / CellSize(1);
+        k= (int) Particles[a]->x(2) / CellSize(2);
+        temp = HOC[i][j][k];
+        HOC[i][j][k] = a;
+        Particles[a]->LL = temp;
+    }
+
+}
+
+inline void Domain::ListUpdate()
+{
+    for (size_t i=0; i<Particles.Size(); i++)
+    {
+	if (Particles[i]->CellUpdate(CellSize))
+		{
+		CellReset();
+	    for (size_t a=0; a<Particles.Size(); a++)
+	    	{
+	        Particles[a]->LL = -1;
+	    	}
+	    ListGenerate();
+	    break;
+		}
+    }
 }
 
 inline void Domain::StartAcceleration (Vec3_t const & a)
