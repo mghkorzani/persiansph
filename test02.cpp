@@ -45,9 +45,10 @@ int main(int argc, char **argv) try
         dom.AddBoxLength(1,Vec3_t ( 1.102, 1.0   ,0.0  ), 0.0 ,0.3,  0, 1  , 150,  1, 0, 1000, 0.002, true);
         dom.AddRandomBox(3,Vec3_t ( 1.0  , 1.0   ,0.0  ),0.1,0.200,  0, 50 , 100,  1, 0, 1000, 0.002);
 
-        dom.CellInitiate();
+//        dom.CellInitiate();
+//        dom.ListGenerate();
 //        dom.WriteXDMF("test02");
-//        dom.Solve(/*tf*/30.0,/*dt*/0.0001,/*dtOut*/0.005,"test02",Nproc);
+        dom.Solve(/*tf*/30.0,/*dt*/0.0001,/*dtOut*/0.005,"test02",Nproc);
         return 0;
 }
 MECHSYS_CATCH

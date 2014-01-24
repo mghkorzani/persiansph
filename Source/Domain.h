@@ -54,20 +54,24 @@ public:
     		                  double Mass, double Density, double h, bool Fixed);                                              ///< Add a box of particles with length (calculate radius of particles)
     void AddRandomBox         (int tag, Vec3_t const &V, double Lx, double Ly, double Lz, size_t nx, size_t ny, size_t nz,
     		                  double Mass, double Density, double h, size_t RandomSeed=100);                                    ///< Add box of random positioned particles (calculate radius of particles)
-    void StartAcceleration   (Vec3_t const & a = Vec3_t(0.0,0.0,0.0));                                                         ///< Add a fixed acceleration
-    void ComputeAcceleration (double dt);                                                                                     ///< Compute the acceleration due to the other particles
-    void Move                  (double dt);                                                                                     ///< Compute the acceleration due to the other particles
-    void ResetInteractions();                                                                                                  ///< Reset the interaction array
-    void ResetContacts();                                                                                                       ///< Reset the possible interactions
+
+//    void StartAcceleration   (Vec3_t const & a = Vec3_t(0.0,0.0,0.0));                                                         ///< Add a fixed acceleration
+//    void ComputeAcceleration (double dt);                                                                                     ///< Compute the acceleration due to the other particles
+//    void Move                  (double dt);                                                                                     ///< Compute the acceleration due to the other particles
+
+    void InitiateInteractions();                                                                                               ///< Reset the interaction array
+    void UpdateInteractions ();																								  ///< Update possible interaction list
     void DelParticles        (int const & Tags);														     				      ///< Delete particles by tags
     void Solve                (double tf, double dt, double dtOut, char const * TheFileKey, size_t Nproc);                   ///< The solving function
-    void WriteXDMF           (char const * FileKey);                                                                           ///< Save a XDMF file for visualization
-    void Save                 (char const * FileKey);                                                         				  ///< Save the domain form a file
-    void Load                 (char const * FileKey);                                                         				  ///< Load the domain form a file
     void CellInitiate        ();                                                         										  ///< Size of the domain as a rectangular, make cell and HOC
     void CellReset 	       ();                                                         										  ///< Reset HOC to initial value of -1
     void ListGenerate	       ();                                                         										  ///< Generate linked-list
-    void ListUpdate 	       ();                                                         										  ///< Checks if linked-list needs to be updated
+    void ListandInteractionUpdate();                                                         										  ///< Checks if linked-list needs to be updated
+    void NeighbourSearch	   (int q1, int q2, int q3);																		  ///< Find neighbour particle and make interaction for cell(q1,q2,q3)
+
+    void WriteXDMF           (char const * FileKey);                                                                           ///< Save a XDMF file for visualization
+    void Save                 (char const * FileKey);                                                         				  ///< Save the domain form a file
+    void Load                 (char const * FileKey);                                                         				  ///< Load the domain form a file
 
     // Data
     Vec3_t                  Gravity;        ///< Gravity acceleration
@@ -86,6 +90,8 @@ public:
     Vec3_t                  CellSize;       ///< Calculated cell size according to (cell size >= 2h)
     int		                CellNo[3];      ///< No. of cells for linked list
     int					*** HOC;			///< Array of (Head of Chain) for each cell
+    int					 ** ExInteract;		///< Array to save existing interaction No. of "Interactions" to use in "PInteractions"
+
 };
 
 /// A structure for the multi-thread data
@@ -117,7 +123,7 @@ void * GlobalStartAcceleration(void * Data)
 void * GlobalComputeAcceleration(void * Data)
 {
     SPH::MtData & dat = (*static_cast<SPH::MtData *>(Data));
-    Array<SPH::Interaction * > * P = &dat.Dom->Interactions;
+    Array<SPH::Interaction * > * P = &dat.Dom->PInteractions;
 	size_t Ni = P->Size()/dat.N_Proc;
     size_t In = dat.ProcRank*Ni;
     size_t Fn;
@@ -239,7 +245,11 @@ inline void Domain::AddRandomBox(int tag, Vec3_t const & V, double Lx, double Ly
 
 inline void Domain::CellInitiate ()
 {
-    double h=0.0;
+    // Calculate Domain Size
+	double h=0.0;
+	BLPF = Particles[0]->x;
+	TRPR = Particles[0]->x;
+
 	for (size_t i=0; i<Particles.Size(); i++)
     {
         if (Particles[i]->x(0) > TRPR(0)) TRPR(0) = Particles[i]->x(0);
@@ -259,11 +269,27 @@ inline void Domain::CellInitiate ()
     	abort();
     	}
 
+    // Calculate Cells Properties
     CellNo[0] = (int) (floor((TRPR(0)-BLPF(0))/(2*h)));
     CellNo[1] = (int) (floor((TRPR(1)-BLPF(1))/(2*h)));
     CellNo[2] = (int) (floor((TRPR(2)-BLPF(2))/(2*h)));
     CellSize  = Vec3_t ((TRPR(0)-BLPF(0))/CellNo[0],(TRPR(1)-BLPF(1))/CellNo[1],(TRPR(2)-BLPF(2))/CellNo[2]);
 
+    if (CellNo[2]==0) CellNo[2]=1;
+//    std::cout << "h= " << h << std::endl;
+//    std::cout << "cell size = " << CellSize << std::endl;
+//    std::cout << "BLPF x= " << BLPF(0) << std::endl;
+//    std::cout << "BLPF y= " << BLPF(1) << std::endl;
+//    std::cout << "BLPF z= " << BLPF(2) << std::endl;
+//    std::cout << "TRPR x= " << TRPR(0) << std::endl;
+//    std::cout << "TRPR y= " << TRPR(1) << std::endl;
+//    std::cout << "TRPR z= " << TRPR(2) << std::endl;
+//
+//    std::cout << "cell No x = " << CellNo[0] << std::endl;
+//    std::cout << "cell No y = " << CellNo[1] << std::endl;
+//    std::cout << "cell No z = " << CellNo[2] << std::endl;
+
+    // Initiate Head of Chain array for Linked-List
     HOC = new int**[(int) CellNo[0]];
     for(int i =0; i<CellNo[0]; i++){
        HOC[i] = new int*[CellNo[1]];
@@ -271,6 +297,8 @@ inline void Domain::CellInitiate ()
            HOC[i][j] = new int[CellNo[2]];
            for(int k = 0; k<CellNo[2];k++){
               HOC[i][j][k] = -1;
+//              std::cout << i <<j << k << std::endl;
+
            }
        }
     }
@@ -291,21 +319,25 @@ inline void Domain::CellReset ()
 
 inline void Domain::ListGenerate ()
 {
+
 	int i,j,k;
+	k=0;
 	double temp;
     for (size_t a=0; a<Particles.Size(); a++)
     {
-        i= (int) Particles[a]->x(0) / CellSize(0);
-        j= (int) Particles[a]->x(1) / CellSize(1);
-        k= (int) Particles[a]->x(2) / CellSize(2);
+        i= (int) (Particles[a]->x(0) - BLPF(0)) / CellSize(0);
+        j= (int) (Particles[a]->x(1) - BLPF(1)) / CellSize(1);
+//        k= (int) Particles[a]->x(2) / CellSize(2);
+
         temp = HOC[i][j][k];
         HOC[i][j][k] = a;
         Particles[a]->LL = temp;
+        std::cout << HOC[i][j][k] <<"  "<< Particles[a]->LL <<std::endl;
     }
 
 }
 
-inline void Domain::ListUpdate()
+inline void Domain::ListandInteractionUpdate()
 {
     for (size_t i=0; i<Particles.Size(); i++)
     {
@@ -317,72 +349,340 @@ inline void Domain::ListUpdate()
 	        Particles[a]->LL = -1;
 	    	}
 	    ListGenerate();
+	    UpdateInteractions();
 	    break;
 		}
     }
 }
 
-inline void Domain::StartAcceleration (Vec3_t const & a)
-{
-    for (size_t i=0; i<Particles.Size(); i++)
-    {
-        Particles[i]->a = a;
-        Particles[i]->dDensity = 0.0;
-    }
-}
-
-inline void Domain::ComputeAcceleration (double dt)
-{
-//    for (size_t i=0; i<PInteractions.Size(); i++) PInteractions[i]->CalcForce(dt);
-	for (size_t i=0; i<Interactions.Size(); i++) Interactions[i]->CalcForce(dt);
-}
-
-inline void Domain::Move (double dt)
-{
-    for (size_t i=0; i<Particles.Size(); i++) Particles[i]->Move(dt);
-}
+//inline void Domain::StartAcceleration (Vec3_t const & a)
+//{
+//    for (size_t i=0; i<Particles.Size(); i++)
+//    {
+//        Particles[i]->a = a;
+//        Particles[i]->dDensity = 0.0;
+//    }
+//}
+//
+//inline void Domain::ComputeAcceleration (double dt)
+//{
+////    for (size_t i=0; i<PInteractions.Size(); i++) PInteractions[i]->CalcForce(dt);
+//	for (size_t i=0; i<Interactions.Size(); i++) Interactions[i]->CalcForce(dt);
+//}
+//
+//inline void Domain::Move (double dt)
+//{
+//    for (size_t i=0; i<Particles.Size(); i++) Particles[i]->Move(dt);
+//}
 
 inline void Domain::DelParticles (int const & Tags)
 {
     Array<int> idxs; // indices to be deleted
     for (size_t i=0; i<Particles.Size(); ++i)
-    {
-                if (Particles[i]->ID==Tags) idxs.Push(i);
-    }
+    	{
+        if (Particles[i]->ID==Tags) idxs.Push(i);
+    	}
     if (idxs.Size()<1) throw new Fatal("Domain::DelParticles: Could not find any particle to be deleted");
     Particles.DelItems (idxs);
     std::cout << "\n" << "Particles with Tag No. " << Tags << " has been deleted" << std::endl;
 
 }
 
-
-inline void Domain::ResetInteractions()
+inline void Domain::NeighbourSearch(int q1, int q2, int q3)
 {
-    // delete old interactors
+	int temp1, temp2;
+	temp1 = HOC[q1][q2][q3];
+
+	while (temp1 != -1)
+	{
+
+		// The current cell  => self interactions
+		temp2 = Particles[temp1]->LL;
+		while (temp2 != -1)
+		{
+			if (ExInteract [temp1][temp2] == -1)
+			{
+				Interactions.Push(new Interaction(Particles[temp1],Particles[temp2],Dimension,Alpha,Beta,MaxVel));
+				ExInteract [temp1][temp2] = Interactions.size() - 1;
+				ExInteract [temp2][temp1] = Interactions.size() - 1;
+				PInteractions.Push(Interactions[ ExInteract [temp1][temp2] ]);
+			}
+			else
+			{
+				PInteractions.Push(Interactions[ ExInteract [temp1][temp2] ]);
+				}
+			temp2 = Particles[temp2]->LL;
+		}
+
+
+		// (q1 + 1, q2 , q3)
+		if (q1+1< CellNo[0])
+		{
+			temp2 = HOC[q1+1][q2][q3];
+			while (temp2 != -1)
+			{
+				if (ExInteract [temp1][temp2] == -1)
+				{
+					Interactions.Push(new Interaction(Particles[temp1],Particles[temp2],Dimension,Alpha,Beta,MaxVel));
+					ExInteract [temp1][temp2] = Interactions.size() - 1;
+					ExInteract [temp2][temp1] = Interactions.size() - 1;
+					PInteractions.Push(Interactions[ ExInteract [temp1][temp2] ]);
+				}
+				else
+				{
+					PInteractions.Push(Interactions[ ExInteract [temp1][temp2] ]);
+				}
+				temp2 = Particles[temp2]->LL;
+			}
+		}
+
+		// (q1 + a, q2 + 1, q3) & a[-1,1]
+		if (q2+1< CellNo[1])
+		{
+			for (int i = q1-1; i <= q1+1; i++)
+			{
+				if (i<CellNo[0] && i>=0)
+				{
+					temp2 = HOC[i][q2+1][q3];
+					while (temp2 != -1)
+					{
+						if (ExInteract [temp1][temp2] == -1)
+						{
+							Interactions.Push(new Interaction(Particles[temp1],Particles[temp2],Dimension,Alpha,Beta,MaxVel));
+							ExInteract [temp1][temp2] = Interactions.size() - 1;
+							ExInteract [temp2][temp1] = Interactions.size() - 1;
+							PInteractions.Push(Interactions[ ExInteract [temp1][temp2] ]);
+						}
+						else
+						{
+							PInteractions.Push(Interactions[ ExInteract [temp1][temp2] ]);
+						}
+					temp2 = Particles[temp2]->LL;
+					}
+				}
+			}
+		}
+
+		// (q1 + a, q2 + b, q3 + 1) & a,b[-1,1] => all 9 cells above the current cell
+		if (q3+1< CellNo[2])
+		{
+			for (int j=q2-1; j<=q2+1; j++)
+			{
+				for (int i=q1-1; i<=q1+1; i++)
+				{
+					if (i<CellNo[0] && i>=0 && j<CellNo[1] && j>=0)
+					{
+						temp2 = HOC[i][j][q3+1];
+						while (temp2 != -1)
+						{
+							if (ExInteract [temp1][temp2] == -1)
+							{
+								Interactions.Push(new Interaction(Particles[temp1],Particles[temp2],Dimension,Alpha,Beta,MaxVel));
+								ExInteract [temp1][temp2] = Interactions.size() - 1;
+								ExInteract [temp2][temp1] = Interactions.size() - 1;
+								PInteractions.Push(Interactions[ ExInteract [temp1][temp2] ]);
+							}
+							else
+							{
+								PInteractions.Push(Interactions[ ExInteract [temp1][temp2] ]);
+							}
+							temp2 = Particles[temp2]->LL;
+						}
+					}
+				}
+			}
+		}
+
+		temp1 = Particles[temp1]->LL;
+	}
+}
+
+inline void Domain::InitiateInteractions()
+{
+    // Initiate ExInteract
+	ExInteract = new int*[Particles.Size()];
+    for(size_t i =0; i<Particles.Size(); i++)
+    	{
+    	ExInteract[i] = new int[Particles.Size()];
+    	for(size_t j =0; j<Particles.Size(); j++)
+    		{
+    		ExInteract[i][j] = -1;
+    		}
+    	}
+
+	// Delete old interactions
     for (size_t i=0; i<Interactions.Size(); ++i)
     {
         if (Interactions[i]!=NULL) delete Interactions[i];
     }
+    PInteractions.Resize(0);
 
-    // new interactors
-    Interactions.Resize(0);
-    for (size_t i=0; i<Particles.Size()-1; i++)
+    for (int q3=0; q3<CellNo[2]; q3++)
     {
-        for (size_t j=i+1; j<Particles.Size(); j++)
+        for (int q2=0; q2<CellNo[1]; q2++)
         {
-            // if both particles are fixed, don't create any interactor
-            if (!Particles[i]->IsFree && !Particles[j]->IsFree) continue;
-            else Interactions.Push(new Interaction(Particles[i],Particles[j],Dimension,Alpha,Beta,MaxVel));
+            for (int q1=0; q1<CellNo[0]; q1++)
+            {
+            	if (HOC[q1][q2][q3]==-1) continue;
+            	else  NeighbourSearch(q1,q2,q3);
+            }
+
         }
+
     }
 }
 
-inline void Domain::ResetContacts()
+inline void Domain::UpdateInteractions()
 {
     PInteractions.Resize(0);
-    for (size_t i=0; i<Interactions.Size(); i++)
+
+    for (int q3=0; q3<CellNo[2]; q3++)
     {
-        if(Interactions[i]->UpdateContacts()) PInteractions.Push(Interactions[i]);
+        for (int q2=0; q2<CellNo[1]; q2++)
+        {
+            for (int q1=0; q1<CellNo[0]; q1++)
+            {
+            	if (HOC[q1][q2][q3]==-1) continue;
+            	else  NeighbourSearch(q1,q2,q3);
+            }
+
+        }
+
+    }
+}
+
+//inline void Domain::ResetInteractions()
+//{
+//    // delete old interactors
+//    for (size_t i=0; i<Interactions.Size(); ++i)
+//    {
+//        if (Interactions[i]!=NULL) delete Interactions[i];
+//    }
+//
+//    // new interactors
+//    Interactions.Resize(0);
+//    for (size_t i=0; i<Particles.Size()-1; i++)
+//    {
+//        for (size_t j=i+1; j<Particles.Size(); j++)
+//        {
+//            // if both particles are fixed, don't create any interactor
+//            if (!Particles[i]->IsFree && !Particles[j]->IsFree) continue;
+//            else Interactions.Push(new Interaction(Particles[i],Particles[j],Dimension,Alpha,Beta,MaxVel));
+//        }
+//    }
+//}
+//
+//inline void Domain::ResetContacts()
+//{
+//    PInteractions.Resize(0);
+//    for (size_t i=0; i<Interactions.Size(); i++)
+//    {
+//        if(Interactions[i]->UpdateContacts()) PInteractions.Push(Interactions[i]);
+//    }
+//}
+
+inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheFileKey, size_t Nproc)
+{
+    Util::Stopwatch stopwatch;
+    std::cout << "\n--------------Solving------------------------------------------------------------------------------" << std::endl;
+
+    idx_out = 1;
+    double tout = Time;
+
+    size_t save_out = 1;
+    double sout = AutoSaveInt;
+
+    CellInitiate();
+    ListGenerate();
+    InitiateInteractions();
+
+//    ResetInteractions();
+//    ResetContacts();
+
+	SPH::MtData MTD[Nproc];
+	for (size_t i=0;i<Nproc;i++)
+	{
+	   MTD[i].N_Proc   = Nproc;
+	   MTD[i].ProcRank = i;
+	   MTD[i].Dom      = this;
+	   MTD[i].Acc      = Gravity;
+	   MTD[i].Deltat   = dt;
+	}
+	pthread_t thrs[Nproc];
+
+    while (Time<tf)
+    {
+
+    	// Calculate the acceleration for each particle
+    	for (size_t i=0;i<Nproc;i++)
+    	{
+    	   pthread_create(&thrs[i], NULL, GlobalStartAcceleration, &MTD[i]);
+    	}
+    	for (size_t i=0;i<Nproc;i++)
+    	{
+    	   pthread_join(thrs[i], NULL);
+    	}
+
+//    	StartAcceleration(Gravity);
+
+    	for (size_t i=0;i<Nproc;i++)
+    	{
+    	   pthread_create(&thrs[i], NULL, GlobalComputeAcceleration, &MTD[i]);
+    	}
+    	for (size_t i=0;i<Nproc;i++)
+    	{
+    	   pthread_join(thrs[i], NULL);
+    	}
+//    	ComputeAcceleration(dt);
+
+
+        // Move each particle
+    	for (size_t i=0;i<Nproc;i++)
+    	{
+    	   pthread_create(&thrs[i], NULL, GlobalMove, &MTD[i]);
+    	}
+    	for (size_t i=0;i<Nproc;i++)
+    	{
+    	   pthread_join(thrs[i], NULL);
+    	}
+//    	Move(dt);
+
+
+        // output
+        if (Time>=tout)
+        {
+            if (TheFileKey!=NULL)
+            	{
+                String fn;
+                fn.Printf    ("%s_%04d", TheFileKey, idx_out);
+                WriteXDMF    (fn.CStr());
+                std::cout << "\n" << "Output No. " << idx_out << " at " << Time << " has been generated" << std::endl;
+            	}
+            idx_out++;
+            tout += dtOut;
+        }
+
+        // Auto Save
+       if (AutoSaveInt>0)
+       {
+    	   if (Time>=sout)
+    	   {
+    		   if (TheFileKey!=NULL)
+    		   {
+               String fn;
+               fn.Printf    ("Auto Save_%s_%04d", TheFileKey, save_out);
+               Save   		(fn.CStr());
+               std::cout << "\n" << "Auto Save No. " << save_out << " at " << Time << " has been generated" << std::endl;
+    		   }
+    		save_out++;
+    		sout += AutoSaveInt;
+    	   }
+       }
+
+       Time += dt;
+
+       ListandInteractionUpdate();
+
     }
 }
 
@@ -619,108 +919,6 @@ inline void Domain::Load (char const * FileKey)
 
     H5Fclose(file_id);
     printf("\n%s--- Done --------------------------------------------%s\n",TERM_CLR2,TERM_RST);
-}
-
-inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheFileKey, size_t Nproc)
-{
-    Util::Stopwatch stopwatch;
-    std::cout << "\n--------------Solving------------------------------------------------------------------------------" << std::endl;
-
-    idx_out = 1;
-    double tout = Time;
-
-    size_t save_out = 1;
-    double sout = AutoSaveInt;
-
-    ResetInteractions();
-    ResetContacts();
-
-	SPH::MtData MTD[Nproc];
-	for (size_t i=0;i<Nproc;i++)
-	{
-	   MTD[i].N_Proc   = Nproc;
-	   MTD[i].ProcRank = i;
-	   MTD[i].Dom      = this;
-	   MTD[i].Acc      = Gravity;
-	   MTD[i].Deltat   = dt;
-	}
-	pthread_t thrs[Nproc];
-
-    while (Time<tf)
-    {
-
-    	// Calculate the acceleration for each particle
-    	for (size_t i=0;i<Nproc;i++)
-    	{
-    	   pthread_create(&thrs[i], NULL, GlobalStartAcceleration, &MTD[i]);
-    	}
-    	for (size_t i=0;i<Nproc;i++)
-    	{
-    	   pthread_join(thrs[i], NULL);
-    	}
-
-//    	StartAcceleration(Gravity);
-
-    	for (size_t i=0;i<Nproc;i++)
-    	{
-    	   pthread_create(&thrs[i], NULL, GlobalComputeAcceleration, &MTD[i]);
-    	}
-    	for (size_t i=0;i<Nproc;i++)
-    	{
-    	   pthread_join(thrs[i], NULL);
-    	}
-//    	ComputeAcceleration(dt);
-
-
-        // Move each particle
-    	for (size_t i=0;i<Nproc;i++)
-    	{
-    	   pthread_create(&thrs[i], NULL, GlobalMove, &MTD[i]);
-    	}
-    	for (size_t i=0;i<Nproc;i++)
-    	{
-    	   pthread_join(thrs[i], NULL);
-    	}
-//    	Move(dt);
-
-
-        // output
-        if (Time>=tout)
-        {
-            if (TheFileKey!=NULL)
-            {
-                    String fn;
-                    fn.Printf    ("%s_%04d", TheFileKey, idx_out);
-                    WriteXDMF    (fn.CStr());
-                    std::cout << "\n" << "Output No. " << idx_out << " at " << Time << " has been generated" << std::endl;
-            }
-            idx_out++;
-            tout += dtOut;
-        }
-
-        // Auto Save
-       if (AutoSaveInt>0)
-       {
-        if (Time>=sout)
-       {
-           if (TheFileKey!=NULL)
-           {
-                   String fn;
-                   fn.Printf    ("Auto Save_%s_%04d", TheFileKey, save_out);
-                   Save   		(fn.CStr());
-                   std::cout << "\n" << "Auto Save No. " << save_out << " at " << Time << " has been generated" << std::endl;
-           }
-       save_out++;
-       sout += AutoSaveInt;
-       }
-       }
-//       std::cout << "Finish step" << std::endl;
-
-       Time += dt;
-
-        //ResetContacts();
-
-    }
 }
 
 }; // namespace SPH
