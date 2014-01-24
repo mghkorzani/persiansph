@@ -57,13 +57,13 @@ public:
     double R;                       ///< Radius of the particle
     int    ID;						 ///< an Integer value to identify type of the particles
     int    LL;						 ///< Linked-List variable to show next particle in list of a cell
-    Vec3_t CC;					  	 ///< Current cell No for the particle (linked-list)
+    int    CC[3];					 ///< Current cell No for the particle (linked-list)
     pthread_mutex_t lck;             ///< To protect variables in multi-threading
 
 
     // Methods
-    void Move (double dt);                                                  ///< Update the important quantities of the simulation
-    bool CellUpdate  (Vec3_t CellSize);                      				  ///< Translate a SPH particle a vector V
+    void Move (double dt);                                                  ///< Update the important quantities of a particle
+    bool CellUpdate  (Vec3_t CellSize, Vec3_t BLPF);                     	  ///< Check if the particle cell needs to be updated
 
 };
 
@@ -83,7 +83,8 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
     dDensity=0.0;
     Pressure=0.0;
     ID = Tag;
-    CC=0.0;
+    CC[0]= CC[1] = CC[2] = 0;
+    LL=0;
     pthread_mutex_init(&lck,NULL);
 }
 
@@ -105,10 +106,12 @@ inline void Particle::Move (double dt)
     }
 }
 
-inline bool Particle::CellUpdate (Vec3_t CellSize)
+inline bool Particle::CellUpdate (Vec3_t CellSize, Vec3_t BLPF)
 {
-    if (CC == floor (x(0)/CellSize(0)) , floor (x(1)/CellSize(1)), floor (x(2)/CellSize(2))) return false;
-    else return true;
+	//    if (CC == (int) (x(0) - BLPF(0)) / CellSize(0), (int) (x(1) - BLPF(1)) / CellSize(1), (int) (x(2) - BLPF(2)) / CellSize(2)) return false;
+	//    else return true;
+	    if (CC[0] == (int) (x(0) - BLPF(0)) / CellSize(0) && CC[1] == (int) (x(1) - BLPF(1)) / CellSize(1) && CC[2] == 0) return false;
+	    else return true;
 }
 
 }; // namespace SPH

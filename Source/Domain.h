@@ -328,10 +328,14 @@ inline void Domain::ListGenerate ()
         i= (int) (Particles[a]->x(0) - BLPF(0)) / CellSize(0);
         j= (int) (Particles[a]->x(1) - BLPF(1)) / CellSize(1);
 //        k= (int) Particles[a]->x(2) / CellSize(2);
+        k=0;
 
         temp = HOC[i][j][k];
         HOC[i][j][k] = a;
         Particles[a]->LL = temp;
+        Particles[a]->CC[0] = i;
+        Particles[a]->CC[1] = j;
+        Particles[a]->CC[2] = k;
         std::cout << HOC[i][j][k] <<"  "<< Particles[a]->LL <<std::endl;
     }
 
@@ -341,7 +345,7 @@ inline void Domain::ListandInteractionUpdate()
 {
     for (size_t i=0; i<Particles.Size(); i++)
     {
-	if (Particles[i]->CellUpdate(CellSize))
+	if (Particles[i]->CellUpdate(CellSize,BLPF))
 		{
 		CellReset();
 	    for (size_t a=0; a<Particles.Size(); a++)
