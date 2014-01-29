@@ -31,6 +31,7 @@ int main(int argc, char **argv) try
         dom.Beta = 1.0;
         dom.MaxVel = sqrt(2*9.81*0.00985);
         dom.AutoSaveInt = 1.0;
+        dom.Cellfac= 15;
         size_t Nproc = 8;
 
         dom.AddBoxLength(1,Vec3_t ( 1.001, 0.999 ,0.0  ),0.044,  0,  0, 22 ,  1 ,  1, 0, 1000, 0.002, true);
@@ -48,7 +49,7 @@ int main(int argc, char **argv) try
 //        dom.CellInitiate();
 //        dom.ListGenerate();
 //        dom.WriteXDMF("test02");
-        dom.Solve(/*tf*/30.0,/*dt*/0.0001,/*dtOut*/0.005,"test02",Nproc);
+        dom.Solve(/*tf*/0.2,/*dt*/0.0001,/*dtOut*/0.005,"test02",Nproc);
         return 0;
 }
 MECHSYS_CATCH

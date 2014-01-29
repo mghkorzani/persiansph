@@ -91,7 +91,7 @@ public:
     int		                CellNo[3];      ///< No. of cells for linked list
     int					*** HOC;			///< Array of (Head of Chain) for each cell
     int					 ** ExInteract;		///< Array to save existing interaction No. of "Interactions" to use in "PInteractions"
-
+    double 					Cellfac;		///< Factor which should be multiplied by h to change the size of cells (min 2)
 };
 
 /// A structure for the multi-thread data
@@ -270,9 +270,9 @@ inline void Domain::CellInitiate ()
     	}
 
     // Calculate Cells Properties
-    CellNo[0] = (int) (floor((TRPR(0)-BLPF(0))/(2*h)));
-    CellNo[1] = (int) (floor((TRPR(1)-BLPF(1))/(2*h)));
-    CellNo[2] = (int) (floor((TRPR(2)-BLPF(2))/(2*h)));
+    CellNo[0] = (int) (floor((TRPR(0)-BLPF(0))/(Cellfac*h)));
+    CellNo[1] = (int) (floor((TRPR(1)-BLPF(1))/(Cellfac*h)));
+    CellNo[2] = (int) (floor((TRPR(2)-BLPF(2))/(Cellfac*h)));
     CellSize  = Vec3_t ((TRPR(0)-BLPF(0))/CellNo[0],(TRPR(1)-BLPF(1))/CellNo[1],(TRPR(2)-BLPF(2))/CellNo[2]);
 
     if (CellNo[2]==0) CellNo[2]=1;
@@ -285,9 +285,9 @@ inline void Domain::CellInitiate ()
 //    std::cout << "TRPR y= " << TRPR(1) << std::endl;
 //    std::cout << "TRPR z= " << TRPR(2) << std::endl;
 //
-//    std::cout << "cell No x = " << CellNo[0] << std::endl;
-//    std::cout << "cell No y = " << CellNo[1] << std::endl;
-//    std::cout << "cell No z = " << CellNo[2] << std::endl;
+    std::cout << "No of Cells in X Direction = " << CellNo[0] << std::endl;
+    std::cout << "No of Cells in Y Direction = " << CellNo[1] << std::endl;
+    std::cout << "No of Cells in Z Direction = " << CellNo[2] << std::endl;
 
     // Initiate Head of Chain array for Linked-List
     HOC = new int**[(int) CellNo[0]];
@@ -336,7 +336,7 @@ inline void Domain::ListGenerate ()
         Particles[a]->CC[0] = i;
         Particles[a]->CC[1] = j;
         Particles[a]->CC[2] = k;
-        std::cout << HOC[i][j][k] <<"  "<< Particles[a]->LL <<std::endl;
+//        std::cout << HOC[i][j][k] <<"  "<< Particles[a]->LL <<std::endl;
     }
 
 }
