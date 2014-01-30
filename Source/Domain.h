@@ -69,6 +69,10 @@ public:
     void ListandInteractionUpdate();                                                         										  ///< Checks if linked-list needs to be updated
     void NeighbourSearch	   (int q1, int q2, int q3);																		  ///< Find neighbour particle and make interaction for cell(q1,q2,q3)
 
+    void StartAcceleration  (Vec3_t const & a);
+    void ComputeAcceleration(double dt);
+    void Move 				   (double dt);
+
     void WriteXDMF           (char const * FileKey);                                                                           ///< Save a XDMF file for visualization
     void Save                 (char const * FileKey);                                                         				  ///< Save the domain form a file
     void Load                 (char const * FileKey);                                                         				  ///< Load the domain form a file
@@ -93,63 +97,6 @@ public:
     int					 ** ExInteract;		///< Array to save existing interaction No. of "Interactions" to use in "PInteractions"
     double 					Cellfac;		///< Factor which should be multiplied by h to change the size of cells (min 2)
 };
-
-/// A structure for the multi-thread data
-struct MtData
-{
-    size_t                       ProcRank; ///< Rank of the thread
-    size_t                         N_Proc; ///< Total number of threads
-    SPH::Domain *                     Dom; ///< Pointer to the SPH domain
-    Vec3_t                            Acc; ///< Prefixed acceleration for the particles
-    double						   Deltat; ///< Prefixed dt for the interactions
-};
-
-void * GlobalStartAcceleration(void * Data)
-{
-    SPH::MtData & dat = (*static_cast<SPH::MtData *>(Data));
-    Array<SPH::Particle * > * P = &dat.Dom->Particles;
-	size_t Ni = P->Size()/dat.N_Proc;
-    size_t In = dat.ProcRank*Ni;
-    size_t Fn;
-    dat.ProcRank == dat.N_Proc-1 ? Fn = P->Size() : Fn = (dat.ProcRank+1)*Ni;
-	for (size_t i=In;i<Fn;i++)
-	{
-		(*P)[i]->a = dat.Acc;
-		(*P)[i]->dDensity = 0.0;
-	}
-    return NULL;
-}
-
-void * GlobalComputeAcceleration(void * Data)
-{
-    SPH::MtData & dat = (*static_cast<SPH::MtData *>(Data));
-    Array<SPH::Interaction * > * P = &dat.Dom->PInteractions;
-	size_t Ni = P->Size()/dat.N_Proc;
-    size_t In = dat.ProcRank*Ni;
-    size_t Fn;
-    dat.ProcRank == dat.N_Proc-1 ? Fn = P->Size() : Fn = (dat.ProcRank+1)*Ni;
-	for (size_t i=In;i<Fn;i++)
-	{
-		(*P)[i]->CalcForce(dat.Deltat);
-	}
-    return NULL;
-}
-
-void * GlobalMove(void * Data)
-{
-    SPH::MtData & dat = (*static_cast<SPH::MtData *>(Data));
-    Array<SPH::Particle * > * P = &dat.Dom->Particles;
-	size_t Ni = P->Size()/dat.N_Proc;
-    size_t In = dat.ProcRank*Ni;
-    size_t Fn;
-    dat.ProcRank == dat.N_Proc-1 ? Fn = P->Size() : Fn = (dat.ProcRank+1)*Ni;
-	for (size_t i=In;i<Fn;i++)
-	{
-		(*P)[i]->Move(dat.Deltat);
-			}
-    return NULL;
-}
-
 /////////////////////////////////////////////////////////////////////////////////////////// Implementation /////
 
 // Constructor
@@ -245,7 +192,7 @@ inline void Domain::AddRandomBox(int tag, Vec3_t const & V, double Lx, double Ly
 
 inline void Domain::CellInitiate ()
 {
-    // Calculate Domain Size
+	// Calculate Domain Size
 	double h=0.0;
 	BLPF = Particles[0]->x;
 	TRPR = Particles[0]->x;
@@ -319,7 +266,6 @@ inline void Domain::CellReset ()
 
 inline void Domain::ListGenerate ()
 {
-
 	int i,j,k;
 	k=0;
 	double temp;
@@ -359,25 +305,27 @@ inline void Domain::ListandInteractionUpdate()
     }
 }
 
-//inline void Domain::StartAcceleration (Vec3_t const & a)
-//{
-//    for (size_t i=0; i<Particles.Size(); i++)
-//    {
-//        Particles[i]->a = a;
-//        Particles[i]->dDensity = 0.0;
-//    }
-//}
-//
-//inline void Domain::ComputeAcceleration (double dt)
-//{
-////    for (size_t i=0; i<PInteractions.Size(); i++) PInteractions[i]->CalcForce(dt);
-//	for (size_t i=0; i<Interactions.Size(); i++) Interactions[i]->CalcForce(dt);
-//}
-//
-//inline void Domain::Move (double dt)
-//{
-//    for (size_t i=0; i<Particles.Size(); i++) Particles[i]->Move(dt);
-//}
+inline void Domain::StartAcceleration (Vec3_t const & a)
+{
+	#pragma omp parallel for
+	for (size_t i=0; i<Particles.Size(); i++)
+    {
+        Particles[i]->a = a;
+        Particles[i]->dDensity = 0.0;
+    }
+}
+
+inline void Domain::ComputeAcceleration (double dt)
+{
+	#pragma omp parallel for
+	for (size_t i=0; i<PInteractions.Size(); i++) PInteractions[i]->CalcForce(dt);
+}
+
+inline void Domain::Move (double dt)
+{
+   	#pragma omp parallel for
+	for (size_t i=0; i<Particles.Size(); i++) Particles[i]->Move(dt);
+}
 
 inline void Domain::DelParticles (int const & Tags)
 {
@@ -503,7 +451,7 @@ inline void Domain::NeighbourSearch(int q1, int q2, int q3)
 
 inline void Domain::InitiateInteractions()
 {
-    // Initiate ExInteract
+	// Initiate ExInteract
 	ExInteract = new int*[Particles.Size()];
     for(size_t i =0; i<Particles.Size(); i++)
     	{
@@ -525,14 +473,12 @@ inline void Domain::InitiateInteractions()
     {
         for (int q2=0; q2<CellNo[1]; q2++)
         {
-            for (int q1=0; q1<CellNo[0]; q1++)
+        	for (int q1=0; q1<CellNo[0]; q1++)
             {
             	if (HOC[q1][q2][q3]==-1) continue;
             	else  NeighbourSearch(q1,q2,q3);
             }
-
         }
-
     }
 }
 
@@ -555,36 +501,6 @@ inline void Domain::UpdateInteractions()
     }
 }
 
-//inline void Domain::ResetInteractions()
-//{
-//    // delete old interactors
-//    for (size_t i=0; i<Interactions.Size(); ++i)
-//    {
-//        if (Interactions[i]!=NULL) delete Interactions[i];
-//    }
-//
-//    // new interactors
-//    Interactions.Resize(0);
-//    for (size_t i=0; i<Particles.Size()-1; i++)
-//    {
-//        for (size_t j=i+1; j<Particles.Size(); j++)
-//        {
-//            // if both particles are fixed, don't create any interactor
-//            if (!Particles[i]->IsFree && !Particles[j]->IsFree) continue;
-//            else Interactions.Push(new Interaction(Particles[i],Particles[j],Dimension,Alpha,Beta,MaxVel));
-//        }
-//    }
-//}
-//
-//inline void Domain::ResetContacts()
-//{
-//    PInteractions.Resize(0);
-//    for (size_t i=0; i<Interactions.Size(); i++)
-//    {
-//        if(Interactions[i]->UpdateContacts()) PInteractions.Push(Interactions[i]);
-//    }
-//}
-
 inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheFileKey, size_t Nproc)
 {
     Util::Stopwatch stopwatch;
@@ -600,56 +516,12 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
     ListGenerate();
     InitiateInteractions();
 
-//    ResetInteractions();
-//    ResetContacts();
-
-	SPH::MtData MTD[Nproc];
-	for (size_t i=0;i<Nproc;i++)
-	{
-	   MTD[i].N_Proc   = Nproc;
-	   MTD[i].ProcRank = i;
-	   MTD[i].Dom      = this;
-	   MTD[i].Acc      = Gravity;
-	   MTD[i].Deltat   = dt;
-	}
-	pthread_t thrs[Nproc];
-
     while (Time<tf)
     {
 
-    	// Calculate the acceleration for each particle
-    	for (size_t i=0;i<Nproc;i++)
-    	{
-    	   pthread_create(&thrs[i], NULL, GlobalStartAcceleration, &MTD[i]);
-    	}
-    	for (size_t i=0;i<Nproc;i++)
-    	{
-    	   pthread_join(thrs[i], NULL);
-    	}
-
-//    	StartAcceleration(Gravity);
-
-    	for (size_t i=0;i<Nproc;i++)
-    	{
-    	   pthread_create(&thrs[i], NULL, GlobalComputeAcceleration, &MTD[i]);
-    	}
-    	for (size_t i=0;i<Nproc;i++)
-    	{
-    	   pthread_join(thrs[i], NULL);
-    	}
-//    	ComputeAcceleration(dt);
-
-
-        // Move each particle
-    	for (size_t i=0;i<Nproc;i++)
-    	{
-    	   pthread_create(&thrs[i], NULL, GlobalMove, &MTD[i]);
-    	}
-    	for (size_t i=0;i<Nproc;i++)
-    	{
-    	   pthread_join(thrs[i], NULL);
-    	}
-//    	Move(dt);
+    	StartAcceleration(Gravity);
+    	ComputeAcceleration(dt);
+    	Move(dt);
 
 
         // output

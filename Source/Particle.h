@@ -27,9 +27,6 @@
 // MechSys
 #include <mechsys/linalg/matvec.h>
 
-//Pthreads
-#include <pthread.h>
-
 namespace SPH {
 
 class Particle
@@ -58,7 +55,6 @@ public:
     int    ID;						 ///< an Integer value to identify type of the particles
     int    LL;						 ///< Linked-List variable to show next particle in list of a cell
     int    CC[3];					 ///< Current cell No for the particle (linked-list)
-    pthread_mutex_t lck;             ///< To protect variables in multi-threading
 
 
     // Methods
@@ -85,7 +81,6 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
     ID = Tag;
     CC[0]= CC[1] = CC[2] = 0;
     LL=0;
-    pthread_mutex_init(&lck,NULL);
 }
 
 inline void Particle::Move (double dt)
