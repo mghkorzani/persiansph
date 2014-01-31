@@ -191,12 +191,21 @@ inline void Domain::AddRandomBox(int tag, Vec3_t const & V, double Lx, double Ly
     std::cout << "\n  Total No. of particles   = " << Particles.Size() << std::endl;
 }
 
+inline void Domain::DelParticles (int const & Tags)
+{
+    Array<int> idxs; // indices to be deleted
+    for (size_t i=0; i<Particles.Size(); ++i)
+    	{
+        if (Particles[i]->ID==Tags) idxs.Push(i);
+    	}
+    if (idxs.Size()<1) throw new Fatal("Domain::DelParticles: Could not find any particle to be deleted");
+    Particles.DelItems (idxs);
+    std::cout << "\n" << "Particles with Tag No. " << Tags << " has been deleted" << std::endl;
+
+}
+
 inline void Domain::CellInitiate ()
 {
-
-//    Util::Stopwatch stopwatch;
-//    std::cout << "\nCellInitiate" << std::endl;
-
 	// Calculate Domain Size
 	double h=0.0;
 	BLPF = Particles[0]->x;
@@ -233,7 +242,6 @@ inline void Domain::CellInitiate ()
     if (CellNo[2]==0) CellNo[2]=1;
 
     std::cout << "cell size = " << CellSize << std::endl;
-
     std::cout << "No of Cells in X Direction = " << CellNo[0] << std::endl;
     std::cout << "No of Cells in Y Direction = " << CellNo[1] << std::endl;
     std::cout << "No of Cells in Z Direction = " << CellNo[2] << std::endl;
@@ -249,29 +257,10 @@ inline void Domain::CellInitiate ()
            }
        }
     }
-
-}
-
-inline void Domain::CellReset ()
-{
-//    Util::Stopwatch stopwatch;
-//    std::cout << "\nCellReset" << std::endl;
-
-    for(int i =0; i<CellNo[0]; i++){
-       for(int j =0; j<CellNo[1]; j++){
-           for(int k = 0; k<CellNo[2];k++){
-              HOC[i][j][k] = -1;
-           }
-       }
-    }
-
 }
 
 inline void Domain::ListGenerate ()
 {
-//    Util::Stopwatch stopwatch;
-//    std::cout << "\nListGenerate" << std::endl;
-
 	int i,j,k,temp=0;
 
 	for (size_t a=0; a<Particles.Size(); a++)
@@ -289,16 +278,23 @@ inline void Domain::ListGenerate ()
 	}
 }
 
+inline void Domain::CellReset ()
+{
+    for(int i =0; i<CellNo[0]; i++){
+       for(int j =0; j<CellNo[1]; j++){
+           for(int k = 0; k<CellNo[2];k++){
+              HOC[i][j][k] = -1;
+           }
+       }
+    }
+}
+
 inline void Domain::ListandInteractionUpdate()
 {
-//    Util::Stopwatch stopwatch;
-//    std::cout << "\nListandInteractionUpdate" << std::endl;
-
 	for (size_t i=0; i<Particles.Size(); i++)
     {
 	if (Particles[i]->CellUpdate(CellSize,BLPF))
 		{
-//		std::cout << "\n     cell change" << i << std::endl;
 		CellReset();
 	    for (size_t a=0; a<Particles.Size(); a++)
 	    	{
@@ -309,50 +305,6 @@ inline void Domain::ListandInteractionUpdate()
 	    break;
 		}
     }
-}
-
-inline void Domain::StartAcceleration (Vec3_t const & a)
-{
-//    Util::Stopwatch stopwatch;
-//    std::cout << "\nStartAcceleration" << std::endl;
-
-	#pragma omp parallel for
-	for (size_t i=0; i<Particles.Size(); i++)
-    {
-        Particles[i]->a = a;
-        Particles[i]->dDensity = 0.0;
-    }
-}
-
-inline void Domain::ComputeAcceleration (double dt)
-{
-//    Util::Stopwatch stopwatch;
-//    std::cout << "\nComputeAcceleration" << std::endl;
-
-	#pragma omp parallel for
-	for (size_t i=0; i<PInteractions.Size(); i++) PInteractions[i]->CalcForce(dt);
-}
-
-inline void Domain::Move (double dt)
-{
-//    Util::Stopwatch stopwatch;
-//    std::cout << "\nMove" << std::endl;
-
-	#pragma omp parallel for
-	for (size_t i=0; i<Particles.Size(); i++) Particles[i]->Move(dt);
-}
-
-inline void Domain::DelParticles (int const & Tags)
-{
-    Array<int> idxs; // indices to be deleted
-    for (size_t i=0; i<Particles.Size(); ++i)
-    	{
-        if (Particles[i]->ID==Tags) idxs.Push(i);
-    	}
-    if (idxs.Size()<1) throw new Fatal("Domain::DelParticles: Could not find any particle to be deleted");
-    Particles.DelItems (idxs);
-    std::cout << "\n" << "Particles with Tag No. " << Tags << " has been deleted" << std::endl;
-
 }
 
 inline void Domain::CreateInteraction(int a, int b)
@@ -377,7 +329,6 @@ inline void Domain::NeighbourSearch(int q1, int q2, int q3)
 
 	while (temp1 != -1)
 	{
-
 		// The current cell  => self interactions
 		temp2 = Particles[temp1]->LL;
 		while (temp2 != -1)
@@ -434,16 +385,12 @@ inline void Domain::NeighbourSearch(int q1, int q2, int q3)
 				}
 			}
 		}
-
 		temp1 = Particles[temp1]->LL;
 	}
 }
 
 inline void Domain::InitiateInteractions()
 {
-//    Util::Stopwatch stopwatch;
-//    std::cout << "\nInitiateInteractions" << std::endl;
-
 	// Initiate ExInteract
 	ExInteract = new int*[Particles.Size()];
     for(size_t i =0; i<Particles.Size(); i++)
@@ -477,9 +424,6 @@ inline void Domain::InitiateInteractions()
 
 inline void Domain::UpdateInteractions()
 {
-//    Util::Stopwatch stopwatch;
-//    std::cout << "\nUpdateInteractions" << std::endl;
-
 	PInteractions.Resize(0);
 
     for (int q3=0; q3<CellNo[2]; q3++)
@@ -492,29 +436,30 @@ inline void Domain::UpdateInteractions()
             	if (HOC[q1][q2][q3]==-1) continue;
             	else  NeighbourSearch(q1,q2,q3);
             }
-
-//			#pragma omp parallel for
-//        	for (int q1=0; q1<CellNo[0]; q1+=3)
-//            {
-//            	if (HOC[q1][q2][q3]==-1) continue;
-//            	else  NeighbourSearch(q1,q2,q3);
-//            }
-//			#pragma omp parallel for
-//        	for (int q1=1; q1<CellNo[0]; q1+=3)
-//            {
-//        		if (HOC[q1][q2][q3]==-1) continue;
-// 	            else  NeighbourSearch(q1,q2,q3);
-//            }
-//			#pragma omp parallel for
-//        	for (int q1=2; q1<CellNo[0]; q1+=3)
-//            {
-//        		if (HOC[q1][q2][q3]==-1) continue;
-//            	else  NeighbourSearch(q1,q2,q3);
-//            }
-
         }
-
     }
+}
+
+inline void Domain::StartAcceleration (Vec3_t const & a)
+{
+	#pragma omp parallel for
+	for (size_t i=0; i<Particles.Size(); i++)
+    {
+        Particles[i]->a = a;
+        Particles[i]->dDensity = 0.0;
+    }
+}
+
+inline void Domain::ComputeAcceleration (double dt)
+{
+	#pragma omp parallel for
+	for (size_t i=0; i<PInteractions.Size(); i++) PInteractions[i]->CalcForce(dt);
+}
+
+inline void Domain::Move (double dt)
+{
+	#pragma omp parallel for
+	for (size_t i=0; i<Particles.Size(); i++) Particles[i]->Move(dt);
 }
 
 inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheFileKey, size_t Nproc)
