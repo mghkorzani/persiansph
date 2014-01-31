@@ -50,7 +50,7 @@ int main(int argc, char **argv) try
 //        dom.ListGenerate();
 //        dom.InitiateInteractions();
 //        dom.WriteXDMF("test02");
-        dom.Solve(/*tf*/0.001,/*dt*/0.0001,/*dtOut*/0.01,"test02",Nproc);
+        dom.Solve(/*tf*/0.2,/*dt*/0.0001,/*dtOut*/0.005,"test02",Nproc);
         return 0;
 }
 MECHSYS_CATCH

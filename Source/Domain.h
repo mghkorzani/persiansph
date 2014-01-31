@@ -55,27 +55,28 @@ public:
     void AddRandomBox         (int tag, Vec3_t const &V, double Lx, double Ly, double Lz, size_t nx, size_t ny, size_t nz,
     		                  double Mass, double Density, double h, size_t RandomSeed=100);                                    ///< Add box of random positioned particles (calculate radius of particles)
 
-//    void StartAcceleration   (Vec3_t const & a = Vec3_t(0.0,0.0,0.0));                                                         ///< Add a fixed acceleration
-//    void ComputeAcceleration (double dt);                                                                                     ///< Compute the acceleration due to the other particles
-//    void Move                  (double dt);                                                                                     ///< Compute the acceleration due to the other particles
+    void DelParticles        (int const & Tags);														     				      ///< Delete particles by tag
 
-    void InitiateInteractions();                                                                                               ///< Reset the interaction array
-    void UpdateInteractions ();																								  ///< Update possible interaction list
-    void DelParticles        (int const & Tags);														     				      ///< Delete particles by tags
+    void StartAcceleration   (Vec3_t const & a = Vec3_t(0.0,0.0,0.0));                                                         ///< Add a fixed acceleration
+    void ComputeAcceleration (double dt);                                                                                     ///< Compute the acceleration due to the other particles
+    void Move                  (double dt);                                                                                     ///< Move particles
+
     void Solve                (double tf, double dt, double dtOut, char const * TheFileKey, size_t Nproc);                   ///< The solving function
-    void CellInitiate        ();                                                         										  ///< Size of the domain as a rectangular, make cell and HOC
-    void CellReset 	       ();                                                         										  ///< Reset HOC to initial value of -1
-    void ListGenerate	       ();                                                         										  ///< Generate linked-list
-    void ListandInteractionUpdate();                                                         										  ///< Checks if linked-list needs to be updated
-    void NeighbourSearch	   (int q1, int q2, int q3);																		  ///< Find neighbour particle and make interaction for cell(q1,q2,q3)
 
-    void StartAcceleration  (Vec3_t const & a);
-    void ComputeAcceleration(double dt);
-    void Move 				   (double dt);
+    void InitiateInteractions();                                                                                               ///< Reset the interaction array and make the first Interaction and PInteraction array
+    void CellInitiate        ();                                                         										  ///< Find the size of the domain as a rectangular, make cell and HOC
+    void ListGenerate	       ();                                                         										  ///< Generate linked-list
+
+    void NeighbourSearch	   (int q1, int q2, int q3);																		  ///< Find neighbour cells and make interaction for cell(q1,q2,q3)
+    void CreateInteraction  (int a, int b);																					  ///< Create interaction between two particles
+
+    void CellReset 	       ();                                                         										  ///< Reset HOC to initial value of -1
+    void ListandInteractionUpdate();                                                    										  ///< Checks if linked-list needs to be updated
+    void UpdateInteractions ();																								  ///< Update PInteraction (possible interaction) list
 
     void WriteXDMF           (char const * FileKey);                                                                           ///< Save a XDMF file for visualization
-    void Save                 (char const * FileKey);                                                         				  ///< Save the domain form a file
-    void Load                 (char const * FileKey);                                                         				  ///< Load the domain form a file
+    void Save                 (char const * FileKey);                                                         				  ///< Save the domain in a file
+    void Load                 (char const * FileKey);                                                         				  ///< Load the domain from a file
 
     // Data
     Vec3_t                  Gravity;        ///< Gravity acceleration
@@ -213,7 +214,9 @@ inline void Domain::CellInitiate ()
 
         if (Particles[i]->h > h) h=Particles[i]->h;
     }
+
 	TRPR += h;
+
     if ((BLPF(0) < 0.0) | (BLPF(0) < 0.0) | (BLPF(0) < 0.0))
     	{
     	std::cout << "\nProblem to allocate Cells !!!!!!!!!!!!!" << std::endl;
@@ -228,15 +231,9 @@ inline void Domain::CellInitiate ()
     CellSize  = Vec3_t ((TRPR(0)-BLPF(0))/CellNo[0],(TRPR(1)-BLPF(1))/CellNo[1],(TRPR(2)-BLPF(2))/CellNo[2]);
 
     if (CellNo[2]==0) CellNo[2]=1;
-//    std::cout << "h= " << h << std::endl;
+
     std::cout << "cell size = " << CellSize << std::endl;
-//    std::cout << "BLPF x= " << BLPF(0) << std::endl;
-//    std::cout << "BLPF y= " << BLPF(1) << std::endl;
-//    std::cout << "BLPF z= " << BLPF(2) << std::endl;
-//    std::cout << "TRPR x= " << TRPR(0) << std::endl;
-//    std::cout << "TRPR y= " << TRPR(1) << std::endl;
-//    std::cout << "TRPR z= " << TRPR(2) << std::endl;
-//
+
     std::cout << "No of Cells in X Direction = " << CellNo[0] << std::endl;
     std::cout << "No of Cells in Y Direction = " << CellNo[1] << std::endl;
     std::cout << "No of Cells in Z Direction = " << CellNo[2] << std::endl;
@@ -289,20 +286,19 @@ inline void Domain::ListGenerate ()
         Particles[a]->CC[0] = i;
         Particles[a]->CC[1] = j;
         Particles[a]->CC[2] = k;
-    }
-
+	}
 }
 
 inline void Domain::ListandInteractionUpdate()
 {
-    Util::Stopwatch stopwatch;
-    std::cout << "\nListandInteractionUpdate" << std::endl;
+//    Util::Stopwatch stopwatch;
+//    std::cout << "\nListandInteractionUpdate" << std::endl;
 
 	for (size_t i=0; i<Particles.Size(); i++)
     {
 	if (Particles[i]->CellUpdate(CellSize,BLPF))
 		{
-		std::cout << "\n     cell change" << i << std::endl;
+//		std::cout << "\n     cell change" << i << std::endl;
 		CellReset();
 	    for (size_t a=0; a<Particles.Size(); a++)
 	    	{
@@ -359,6 +355,21 @@ inline void Domain::DelParticles (int const & Tags)
 
 }
 
+inline void Domain::CreateInteraction(int a, int b)
+{
+	if (ExInteract [a][b] == -1)
+	{
+		Interactions.Push(new Interaction(Particles[a],Particles[b],Dimension,Alpha,Beta,MaxVel));
+		ExInteract [a][b] = Interactions.size() - 1;
+		ExInteract [b][a] = Interactions.size() - 1;
+		PInteractions.Push(Interactions[ ExInteract [a][b] ]);
+	}
+	else
+	{
+		PInteractions.Push(Interactions[ ExInteract [a][b] ]);
+	}
+}
+
 inline void Domain::NeighbourSearch(int q1, int q2, int q3)
 {
 	int temp1, temp2;
@@ -371,17 +382,7 @@ inline void Domain::NeighbourSearch(int q1, int q2, int q3)
 		temp2 = Particles[temp1]->LL;
 		while (temp2 != -1)
 		{
-			if (ExInteract [temp1][temp2] == -1)
-			{
-				Interactions.Push(new Interaction(Particles[temp1],Particles[temp2],Dimension,Alpha,Beta,MaxVel));
-				ExInteract [temp1][temp2] = Interactions.size() - 1;
-				ExInteract [temp2][temp1] = Interactions.size() - 1;
-				PInteractions.Push(Interactions[ ExInteract [temp1][temp2] ]);
-			}
-			else
-			{
-				PInteractions.Push(Interactions[ ExInteract [temp1][temp2] ]);
-				}
+			CreateInteraction(temp1, temp2);
 			temp2 = Particles[temp2]->LL;
 		}
 
@@ -392,17 +393,7 @@ inline void Domain::NeighbourSearch(int q1, int q2, int q3)
 			temp2 = HOC[q1+1][q2][q3];
 			while (temp2 != -1)
 			{
-				if (ExInteract [temp1][temp2] == -1)
-				{
-					Interactions.Push(new Interaction(Particles[temp1],Particles[temp2],Dimension,Alpha,Beta,MaxVel));
-					ExInteract [temp1][temp2] = Interactions.size() - 1;
-					ExInteract [temp2][temp1] = Interactions.size() - 1;
-					PInteractions.Push(Interactions[ ExInteract [temp1][temp2] ]);
-				}
-				else
-				{
-					PInteractions.Push(Interactions[ ExInteract [temp1][temp2] ]);
-				}
+				CreateInteraction(temp1, temp2);
 				temp2 = Particles[temp2]->LL;
 			}
 		}
@@ -417,18 +408,8 @@ inline void Domain::NeighbourSearch(int q1, int q2, int q3)
 					temp2 = HOC[i][q2+1][q3];
 					while (temp2 != -1)
 					{
-						if (ExInteract [temp1][temp2] == -1)
-						{
-							Interactions.Push(new Interaction(Particles[temp1],Particles[temp2],Dimension,Alpha,Beta,MaxVel));
-							ExInteract [temp1][temp2] = Interactions.size() - 1;
-							ExInteract [temp2][temp1] = Interactions.size() - 1;
-							PInteractions.Push(Interactions[ ExInteract [temp1][temp2] ]);
-						}
-						else
-						{
-							PInteractions.Push(Interactions[ ExInteract [temp1][temp2] ]);
-						}
-					temp2 = Particles[temp2]->LL;
+						CreateInteraction(temp1, temp2);
+						temp2 = Particles[temp2]->LL;
 					}
 				}
 			}
@@ -446,17 +427,7 @@ inline void Domain::NeighbourSearch(int q1, int q2, int q3)
 						temp2 = HOC[i][j][q3+1];
 						while (temp2 != -1)
 						{
-							if (ExInteract [temp1][temp2] == -1)
-							{
-								Interactions.Push(new Interaction(Particles[temp1],Particles[temp2],Dimension,Alpha,Beta,MaxVel));
-								ExInteract [temp1][temp2] = Interactions.size() - 1;
-								ExInteract [temp2][temp1] = Interactions.size() - 1;
-								PInteractions.Push(Interactions[ ExInteract [temp1][temp2] ]);
-							}
-							else
-							{
-								PInteractions.Push(Interactions[ ExInteract [temp1][temp2] ]);
-							}
+							CreateInteraction(temp1, temp2);
 							temp2 = Particles[temp2]->LL;
 						}
 					}
