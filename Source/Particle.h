@@ -103,10 +103,12 @@ inline void Particle::Move (double dt)
 
 inline bool Particle::CellUpdate (Vec3_t CellSize, Vec3_t BLPF)
 {
+	bool update;
 	//    if (CC == (int) (x(0) - BLPF(0)) / CellSize(0), (int) (x(1) - BLPF(1)) / CellSize(1), (int) (x(2) - BLPF(2)) / CellSize(2)) return false;
 	//    else return true;
-	    if (CC[0] == (int) (x(0) - BLPF(0)) / CellSize(0) && CC[1] == (int) (x(1) - BLPF(1)) / CellSize(1) && CC[2] == 0) return false;
-	    else return true;
+	    if ((CC[0] == (int) ((x(0) - BLPF(0)) / CellSize(0))) && (CC[1] == (int) ((x(1) - BLPF(1)) / CellSize(1))) && (CC[2] == 0)) update=false;
+	    else update=true;
+	    return update;
 }
 
 }; // namespace SPH

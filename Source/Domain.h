@@ -192,6 +192,10 @@ inline void Domain::AddRandomBox(int tag, Vec3_t const & V, double Lx, double Ly
 
 inline void Domain::CellInitiate ()
 {
+
+//    Util::Stopwatch stopwatch;
+//    std::cout << "\nCellInitiate" << std::endl;
+
 	// Calculate Domain Size
 	double h=0.0;
 	BLPF = Particles[0]->x;
@@ -199,7 +203,7 @@ inline void Domain::CellInitiate ()
 
 	for (size_t i=0; i<Particles.Size(); i++)
     {
-        if (Particles[i]->x(0) > TRPR(0)) TRPR(0) = Particles[i]->x(0);
+		if (Particles[i]->x(0) > TRPR(0)) TRPR(0) = Particles[i]->x(0);
         if (Particles[i]->x(1) > TRPR(1)) TRPR(1) = Particles[i]->x(1);
         if (Particles[i]->x(2) > TRPR(2)) TRPR(2) = Particles[i]->x(2);
 
@@ -209,6 +213,7 @@ inline void Domain::CellInitiate ()
 
         if (Particles[i]->h > h) h=Particles[i]->h;
     }
+	TRPR += h;
     if ((BLPF(0) < 0.0) | (BLPF(0) < 0.0) | (BLPF(0) < 0.0))
     	{
     	std::cout << "\nProblem to allocate Cells !!!!!!!!!!!!!" << std::endl;
@@ -224,7 +229,7 @@ inline void Domain::CellInitiate ()
 
     if (CellNo[2]==0) CellNo[2]=1;
 //    std::cout << "h= " << h << std::endl;
-//    std::cout << "cell size = " << CellSize << std::endl;
+    std::cout << "cell size = " << CellSize << std::endl;
 //    std::cout << "BLPF x= " << BLPF(0) << std::endl;
 //    std::cout << "BLPF y= " << BLPF(1) << std::endl;
 //    std::cout << "BLPF z= " << BLPF(2) << std::endl;
@@ -244,8 +249,6 @@ inline void Domain::CellInitiate ()
            HOC[i][j] = new int[CellNo[2]];
            for(int k = 0; k<CellNo[2];k++){
               HOC[i][j][k] = -1;
-//              std::cout << i <<j << k << std::endl;
-
            }
        }
     }
@@ -254,6 +257,9 @@ inline void Domain::CellInitiate ()
 
 inline void Domain::CellReset ()
 {
+//    Util::Stopwatch stopwatch;
+//    std::cout << "\nCellReset" << std::endl;
+
     for(int i =0; i<CellNo[0]; i++){
        for(int j =0; j<CellNo[1]; j++){
            for(int k = 0; k<CellNo[2];k++){
@@ -266,15 +272,16 @@ inline void Domain::CellReset ()
 
 inline void Domain::ListGenerate ()
 {
-	int i,j,k;
-	k=0;
-	double temp;
-    for (size_t a=0; a<Particles.Size(); a++)
+//    Util::Stopwatch stopwatch;
+//    std::cout << "\nListGenerate" << std::endl;
+
+	int i,j,k,temp=0;
+
+	for (size_t a=0; a<Particles.Size(); a++)
     {
-        i= (int) (Particles[a]->x(0) - BLPF(0)) / CellSize(0);
-        j= (int) (Particles[a]->x(1) - BLPF(1)) / CellSize(1);
-//        k= (int) Particles[a]->x(2) / CellSize(2);
-        k=0;
+		i= (int) (floor((Particles[a]->x(0) - BLPF(0)) / CellSize(0)));
+		j= (int) (floor((Particles[a]->x(1) - BLPF(1)) / CellSize(1)));
+		k= 0;
 
         temp = HOC[i][j][k];
         HOC[i][j][k] = a;
@@ -282,17 +289,20 @@ inline void Domain::ListGenerate ()
         Particles[a]->CC[0] = i;
         Particles[a]->CC[1] = j;
         Particles[a]->CC[2] = k;
-//        std::cout << HOC[i][j][k] <<"  "<< Particles[a]->LL <<std::endl;
     }
 
 }
 
 inline void Domain::ListandInteractionUpdate()
 {
-    for (size_t i=0; i<Particles.Size(); i++)
+    Util::Stopwatch stopwatch;
+    std::cout << "\nListandInteractionUpdate" << std::endl;
+
+	for (size_t i=0; i<Particles.Size(); i++)
     {
 	if (Particles[i]->CellUpdate(CellSize,BLPF))
 		{
+		std::cout << "\n     cell change" << i << std::endl;
 		CellReset();
 	    for (size_t a=0; a<Particles.Size(); a++)
 	    	{
@@ -307,6 +317,9 @@ inline void Domain::ListandInteractionUpdate()
 
 inline void Domain::StartAcceleration (Vec3_t const & a)
 {
+//    Util::Stopwatch stopwatch;
+//    std::cout << "\nStartAcceleration" << std::endl;
+
 	#pragma omp parallel for
 	for (size_t i=0; i<Particles.Size(); i++)
     {
@@ -317,13 +330,19 @@ inline void Domain::StartAcceleration (Vec3_t const & a)
 
 inline void Domain::ComputeAcceleration (double dt)
 {
+//    Util::Stopwatch stopwatch;
+//    std::cout << "\nComputeAcceleration" << std::endl;
+
 	#pragma omp parallel for
 	for (size_t i=0; i<PInteractions.Size(); i++) PInteractions[i]->CalcForce(dt);
 }
 
 inline void Domain::Move (double dt)
 {
-   	#pragma omp parallel for
+//    Util::Stopwatch stopwatch;
+//    std::cout << "\nMove" << std::endl;
+
+	#pragma omp parallel for
 	for (size_t i=0; i<Particles.Size(); i++) Particles[i]->Move(dt);
 }
 
@@ -451,6 +470,9 @@ inline void Domain::NeighbourSearch(int q1, int q2, int q3)
 
 inline void Domain::InitiateInteractions()
 {
+//    Util::Stopwatch stopwatch;
+//    std::cout << "\nInitiateInteractions" << std::endl;
+
 	// Initiate ExInteract
 	ExInteract = new int*[Particles.Size()];
     for(size_t i =0; i<Particles.Size(); i++)
@@ -484,17 +506,40 @@ inline void Domain::InitiateInteractions()
 
 inline void Domain::UpdateInteractions()
 {
-    PInteractions.Resize(0);
+//    Util::Stopwatch stopwatch;
+//    std::cout << "\nUpdateInteractions" << std::endl;
+
+	PInteractions.Resize(0);
 
     for (int q3=0; q3<CellNo[2]; q3++)
     {
         for (int q2=0; q2<CellNo[1]; q2++)
         {
-            for (int q1=0; q1<CellNo[0]; q1++)
+
+        	for (int q1=0; q1<CellNo[0]; q1++)
             {
             	if (HOC[q1][q2][q3]==-1) continue;
             	else  NeighbourSearch(q1,q2,q3);
             }
+
+//			#pragma omp parallel for
+//        	for (int q1=0; q1<CellNo[0]; q1+=3)
+//            {
+//            	if (HOC[q1][q2][q3]==-1) continue;
+//            	else  NeighbourSearch(q1,q2,q3);
+//            }
+//			#pragma omp parallel for
+//        	for (int q1=1; q1<CellNo[0]; q1+=3)
+//            {
+//        		if (HOC[q1][q2][q3]==-1) continue;
+// 	            else  NeighbourSearch(q1,q2,q3);
+//            }
+//			#pragma omp parallel for
+//        	for (int q1=2; q1<CellNo[0]; q1+=3)
+//            {
+//        		if (HOC[q1][q2][q3]==-1) continue;
+//            	else  NeighbourSearch(q1,q2,q3);
+//            }
 
         }
 
