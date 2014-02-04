@@ -209,7 +209,6 @@ inline void Domain::DelParticles (int const & Tags)
 inline void Domain::CheckParticleLeave ()
 {
 	Array <int> DelParticles;
-	Array <int> interact;
 
 	#pragma omp parallel for
 	for (size_t i=0; i<Particles.Size(); i++)
@@ -232,13 +231,12 @@ inline void Domain::CheckParticleLeave ()
 	    		}
 	    	}
 
-		PInteractions.Resize(0);
+		#pragma omp parallel for
 		for (size_t i=0; i<Interactions.Size(); i++)
 	    {
-	    	interact.Push(i);
+	    	delete [] Interactions[i];
 	    }
-		Interactions.DelItems(interact);
-		interact.Resize(0);
+		PInteractions.Resize(0);
 	    Interactions.Resize(0);
 
 	    bool update=false;
