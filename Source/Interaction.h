@@ -20,7 +20,7 @@
 #define MECHSYS_SPH_INTERACTION_H
 
 
-#include <Source/Particle.h>
+#include <Particle.h>
 
 namespace SPH {
 

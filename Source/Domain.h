@@ -24,7 +24,7 @@
 #include <algorithm>		/// for min,max
 
 
-#include <Source/Interaction.h>
+#include <Interaction.h>
 
 // HDF File Output
 #include <hdf5.h>
