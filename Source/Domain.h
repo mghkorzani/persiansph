@@ -56,6 +56,7 @@ public:
     		                  double Mass, double Density, double h, size_t RandomSeed=100);                                    ///< Add box of random positioned particles (calculate radius of particles)
 
     void DelParticles        (int const & Tags);														     				      ///< Delete particles by tag
+    void CheckParticleLeave ();																								  ///< Check if any particle are leaving the domain or not
 
     void StartAcceleration   (Vec3_t const & a = Vec3_t(0.0,0.0,0.0));                                                         ///< Add a fixed acceleration
     void ComputeAcceleration (double dt);                                                                                     ///< Compute the acceleration due to the other particles
@@ -83,6 +84,7 @@ public:
     Array <Particle*>       Particles;      ///< Array of particles
     Array <Interaction*>    Interactions;   ///< Array of interactions
     Array <Interaction*>    PInteractions;  ///< Array of possible interactions
+    Array <int>				IinSI;			///< Array to save Interaction No for fixed particles
     double                 Time;           ///< The simulation Time
     size_t                  idx_out;        ///< Index for output purposes
     double 					Dimension;      ///< Dimension of the problem
@@ -204,6 +206,56 @@ inline void Domain::DelParticles (int const & Tags)
 
 }
 
+inline void Domain::CheckParticleLeave ()
+{
+	Array <int> DelParticles;
+	Array <int> interact;
+
+	#pragma omp parallel for
+	for (size_t i=0; i<Particles.Size(); i++)
+    {
+		if ((Particles[i]->x(0) > TRPR(0)) || (Particles[i]->x(1) > TRPR(1)) || (Particles[i]->x(2) > TRPR(2)) ||
+				(Particles[i]->x(0) < BLPF(0)) || (Particles[i]->x(1) < BLPF(1)) || (Particles[i]->x(2) < BLPF(2))) DelParticles.Push(i);
+    }
+
+	if (DelParticles.Size()>0)
+	{
+		std::cout<< DelParticles.Size()<< " Particles are leaving the Domain"<<std::endl;
+
+		Particles.DelItems(DelParticles);
+
+		for(size_t i =0; i<Particles.Size(); i++)
+	    	{
+	    	for(size_t j =0; j<Particles.Size(); j++)
+	    		{
+	    		ExInteract[i][j] = -1;
+	    		}
+	    	}
+
+		PInteractions.Resize(0);
+		for (size_t i=0; i<Interactions.Size(); i++)
+	    {
+	    	interact.Push(i);
+	    }
+		Interactions.DelItems(interact);
+		interact.Resize(0);
+	    Interactions.Resize(0);
+
+	    bool update=false;
+
+		#pragma omp parallel for
+	    for (size_t i=0; i<Particles.Size(); i++)
+	    {
+		if (Particles[i]->CellUpdate(CellSize,BLPF))
+			{
+			update=true;
+			}
+	    }
+
+	    if (!update) ListandInteractionUpdate();
+	}
+}
+
 inline void Domain::CellInitiate ()
 {
 	// Calculate Domain Size
@@ -309,17 +361,25 @@ inline void Domain::ListandInteractionUpdate()
 
 inline void Domain::CreateInteraction(int a, int b)
 {
-	if (ExInteract [a][b] == -1)
-	{
-		Interactions.Push(new Interaction(Particles[a],Particles[b],Dimension,Alpha,Beta,MaxVel));
-		ExInteract [a][b] = Interactions.size() - 1;
-		ExInteract [b][a] = Interactions.size() - 1;
-		PInteractions.Push(Interactions[ ExInteract [a][b] ]);
-	}
-	else
-	{
-		PInteractions.Push(Interactions[ ExInteract [a][b] ]);
-	}
+	if (Particles[a]->IsFree || Particles[b]->IsFree)
+          {
+			if (ExInteract [a][b] == -1)
+			{
+				Interactions.Push(new Interaction(Particles[a],Particles[b],Dimension,Alpha,Beta,MaxVel));
+				ExInteract [a][b] = Interactions.size() - 1;
+				ExInteract [b][a] = Interactions.size() - 1;
+				PInteractions.Push(Interactions[ ExInteract [a][b] ]);
+			}
+			else
+			{
+				PInteractions.Push(Interactions[ ExInteract [a][b] ]);
+			}
+
+			if (!Particles[a]->IsFree || !Particles[b]->IsFree)
+			{
+				IinSI.Push(ExInteract [a][b]);
+			}
+          }
 }
 
 inline void Domain::NeighbourSearch(int q1, int q2, int q3)
@@ -329,14 +389,13 @@ inline void Domain::NeighbourSearch(int q1, int q2, int q3)
 
 	while (temp1 != -1)
 	{
-		// The current cell  => self interactions
+		// The current cell  => selfcell interactions
 		temp2 = Particles[temp1]->LL;
 		while (temp2 != -1)
 		{
 			CreateInteraction(temp1, temp2);
 			temp2 = Particles[temp2]->LL;
 		}
-
 
 		// (q1 + 1, q2 , q3)
 		if (q1+1< CellNo[0])
@@ -408,6 +467,7 @@ inline void Domain::InitiateInteractions()
         if (Interactions[i]!=NULL) delete Interactions[i];
     }
     PInteractions.Resize(0);
+    IinSI.Resize(0);
 
     for (int q3=0; q3<CellNo[2]; q3++)
     {
@@ -425,6 +485,7 @@ inline void Domain::InitiateInteractions()
 inline void Domain::UpdateInteractions()
 {
 	PInteractions.Resize(0);
+    IinSI.Resize(0);
 
     for (int q3=0; q3<CellNo[2]; q3++)
     {
@@ -453,6 +514,23 @@ inline void Domain::StartAcceleration (Vec3_t const & a)
 inline void Domain::ComputeAcceleration (double dt)
 {
 	#pragma omp parallel for
+	for (size_t i=0; i<Particles.Size(); i++) if (!Particles[i]->IsFree) Particles[i]->Pressure=0.0;
+
+	#pragma omp parallel for
+	for (size_t i=0; i<IinSI.Size(); i++)
+	{
+		if (Interactions[IinSI [i]]->P1->IsFree && !Interactions[IinSI [i]]->P2->IsFree)
+		{
+			if (Interactions[IinSI [i]]->P2->Pressure < Interactions[IinSI [i]]->P1->Pressure) Interactions[IinSI [i]]->P2->Pressure = Interactions[IinSI [i]]->P1->Pressure;
+		}
+		else
+		{
+			if (Interactions[IinSI [i]]->P1->Pressure < Interactions[IinSI [i]]->P2->Pressure) Interactions[IinSI [i]]->P1->Pressure = Interactions[IinSI [i]]->P2->Pressure;
+
+		}
+	}
+
+	#pragma omp parallel for
 	for (size_t i=0; i<PInteractions.Size(); i++) PInteractions[i]->CalcForce(dt);
 }
 
@@ -479,11 +557,9 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
 
     while (Time<tf)
     {
-
     	StartAcceleration(Gravity);
     	ComputeAcceleration(dt);
     	Move(dt);
-
 
         // output
         if (Time>=tout)
@@ -518,8 +594,8 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
 
        Time += dt;
 
+       CheckParticleLeave();
        ListandInteractionUpdate();
-
     }
 }
 

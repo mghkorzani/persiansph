@@ -28,10 +28,9 @@ class Interaction
 {
 public:
     // Constructor
-    Interaction (Particle * Pt1, Particle * Pt2,size_t dim, double VisAlpha, double VisBeta, double Vel); ///< Default constructor
+    Interaction (Particle * Pt1, Particle * Pt2,size_t dim, double VisAlpha, double VisBeta, double Vel);
 
     // Methods
-    bool UpdateContacts ();    				              ///< Find neighbour particle and make contact
     void CalcForce      (double dt = 0.0);                ///< Calculates the contact force between particles
     double Kernel       (double r,double h);	          ///< Kernel function
     double GradKernel   (double r,double h);              ///< Gradient of kernel function
@@ -79,9 +78,17 @@ inline void Interaction::CalcForce(double dt)
     	Pi = P1->Pressure = Pressure(di,P1->RefDensity);
     	Pj = P2->Pressure = Pressure(dj,P2->RefDensity);
     	}
-    	else Pi = Pj = P1->Pressure = Pressure(di,P1->RefDensity);
+    	else
+    		{
+    		Pi = P1->Pressure = Pressure(di,P1->RefDensity);
+    		Pj = P2->Pressure;
+    		}
     }
-    else Pi = Pj = P2->Pressure = Pressure(dj,P2->RefDensity);
+    else
+    	{
+    	Pj = P2->Pressure = Pressure(dj,P2->RefDensity);
+    	Pi = P1->Pressure;
+    	}
 
     Vec3_t vij = P1->v - P2->v;
     Vec3_t rij = P1->x - P2->x;
@@ -97,12 +104,6 @@ inline void Interaction::CalcForce(double dt)
     P2->a -= -1*mi*(Pi/(di*di)+Pj/(dj*dj)+PIij)*GradKernel(norm(rij),h)*(rij/norm(rij));
     P2->dDensity += (dj*mi/di)*dot(vij,(rij/norm(rij)))*GradKernel(norm(rij),h);
 	}
-}
-
-inline bool Interaction::UpdateContacts ()
-{
-    if (Norm(P2->x-P1->x)<=P1->h+P2->h) return true;
-    else return false;
 }
 
 inline double Interaction::Kernel(double r,double h)
