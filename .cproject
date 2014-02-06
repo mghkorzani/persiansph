@@ -57,8 +57,11 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
+					<fileInfo id="cdt.managedbuild.config.gnu.exe.debug.829054585.462048313" name="test02.cpp" rcbsApplicability="disable" resourcePath="test02.cpp" toolsToInvoke="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.1274044068.488566560">
+						<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.1274044068.488566560" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.1274044068"/>
+					</fileInfo>
 					<sourceEntries>
-						<entry excluding="test04.cpp|test03.cpp" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="test02.cpp|test04.cpp|test03.cpp" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
@@ -122,8 +125,11 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
+					<fileInfo id="cdt.managedbuild.config.gnu.exe.release.1951905185.221169744" name="test02.cpp" rcbsApplicability="disable" resourcePath="test02.cpp" toolsToInvoke="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.1325570310.1409315348">
+						<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.1325570310.1409315348" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.1325570310"/>
+					</fileInfo>
 					<sourceEntries>
-						<entry excluding="test04.cpp|test03.cpp" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="test02.cpp|test04.cpp|test03.cpp" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>

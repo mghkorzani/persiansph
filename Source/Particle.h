@@ -58,8 +58,8 @@ public:
 
 
     // Methods
-    void Move (double dt);                                                  ///< Update the important quantities of a particle
-    bool CellUpdate  (Vec3_t CellSize, Vec3_t BLPF);                     	  ///< Check if the particle cell needs to be updated
+    void Move (double dt, bool periodic, double domainmax, double domainmin);	///< Update the important quantities of a particle
+    bool CellUpdate  (Vec3_t CellSize, Vec3_t BLPF);								///< Check if the particle cell needs to be updated
 
 };
 
@@ -83,7 +83,7 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
     LL=0;
 }
 
-inline void Particle::Move (double dt)
+inline void Particle::Move (double dt, bool periodic, double domainmax, double domainmin)
 {
     if (IsFree)
     {
@@ -94,6 +94,11 @@ inline void Particle::Move (double dt)
         xb = x;
         x = xa;
 
+        if (periodic) if (x(0)>=domainmax)
+        {
+        	xb(0)-=(domainmax-domainmin);
+        	x(0)-=(domainmax-domainmin);
+        }
         // Evolve density
         double dens = Density;
         Density = Densityb + 2*dt*dDensity;

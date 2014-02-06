@@ -99,6 +99,7 @@ public:
     int					*** HOC;			///< Array of (Head of Chain) for each cell
     int					 ** ExInteract;		///< Array to save existing interaction No. of "Interactions" to use in "PInteractions"
     double 					Cellfac;		///< Factor which should be multiplied by h to change the size of cells (min 2)
+    bool					Periodic; 		///< It it is true, periodic boundary condition along x direction will be considered
 };
 /////////////////////////////////////////////////////////////////////////////////////////// Implementation /////
 
@@ -289,6 +290,7 @@ inline void Domain::CellInitiate ()
     CellNo[2] = (int) (floor((TRPR(2)-BLPF(2))/(Cellfac*h)));
     CellSize  = Vec3_t ((TRPR(0)-BLPF(0))/CellNo[0],(TRPR(1)-BLPF(1))/CellNo[1],(TRPR(2)-BLPF(2))/CellNo[2]);
 
+    if (Periodic) CellNo[0]++;
     if (CellNo[2]==0) CellNo[2]=1;
 
     std::cout << "cell size = " << CellSize << std::endl;
@@ -315,6 +317,7 @@ inline void Domain::ListGenerate ()
 
 	for (size_t a=0; a<Particles.Size(); a++)
     {
+
 		i= (int) (floor((Particles[a]->x(0) - BLPF(0)) / CellSize(0)));
 		j= (int) (floor((Particles[a]->x(1) - BLPF(1)) / CellSize(1)));
 		k= 0;
@@ -325,6 +328,15 @@ inline void Domain::ListGenerate ()
         Particles[a]->CC[0] = i;
         Particles[a]->CC[1] = j;
         Particles[a]->CC[2] = k;
+	}
+
+	if (Periodic)
+	{
+	       for(int j =0; j<CellNo[1]; j++){
+	           for(int k = 0; k<CellNo[2];k++){
+	              HOC[CellNo[0]-1][j][k] =  HOC[0][j][k];
+	           }
+	       }
 	}
 }
 
@@ -467,16 +479,33 @@ inline void Domain::InitiateInteractions()
     PInteractions.Resize(0);
     IinSI.Resize(0);
 
-    for (int q3=0; q3<CellNo[2]; q3++)
+    if (!Periodic)
     {
-        for (int q2=0; q2<CellNo[1]; q2++)
-        {
-        	for (int q1=0; q1<CellNo[0]; q1++)
-            {
-            	if (HOC[q1][q2][q3]==-1) continue;
-            	else  NeighbourSearch(q1,q2,q3);
-            }
-        }
+		for (int q3=0; q3<CellNo[2]; q3++)
+		{
+			for (int q2=0; q2<CellNo[1]; q2++)
+			{
+				for (int q1=0; q1<CellNo[0]; q1++)
+				{
+					if (HOC[q1][q2][q3]==-1) continue;
+					else  NeighbourSearch(q1,q2,q3);
+				}
+			}
+		}
+    }
+    else
+    {
+		for (int q3=0; q3<CellNo[2]; q3++)
+		{
+			for (int q2=0; q2<CellNo[1]; q2++)
+			{
+				for (int q1=0; q1<CellNo[0]-1; q1++)
+				{
+					if (HOC[q1][q2][q3]==-1) continue;
+					else  NeighbourSearch(q1,q2,q3);
+				}
+			}
+		}
     }
 }
 
@@ -485,17 +514,33 @@ inline void Domain::UpdateInteractions()
 	PInteractions.Resize(0);
     IinSI.Resize(0);
 
-    for (int q3=0; q3<CellNo[2]; q3++)
+    if (!Periodic)
     {
-        for (int q2=0; q2<CellNo[1]; q2++)
-        {
-
-        	for (int q1=0; q1<CellNo[0]; q1++)
-            {
-            	if (HOC[q1][q2][q3]==-1) continue;
-            	else  NeighbourSearch(q1,q2,q3);
-            }
-        }
+		for (int q3=0; q3<CellNo[2]; q3++)
+		{
+			for (int q2=0; q2<CellNo[1]; q2++)
+			{
+				for (int q1=0; q1<CellNo[0]; q1++)
+				{
+					if (HOC[q1][q2][q3]==-1) continue;
+					else  NeighbourSearch(q1,q2,q3);
+				}
+			}
+		}
+    }
+    else
+    {
+		for (int q3=0; q3<CellNo[2]; q3++)
+		{
+			for (int q2=0; q2<CellNo[1]; q2++)
+			{
+				for (int q1=0; q1<CellNo[0]-1; q1++)
+				{
+					if (HOC[q1][q2][q3]==-1) continue;
+					else  NeighbourSearch(q1,q2,q3);
+				}
+			}
+		}
     }
 }
 
@@ -535,7 +580,13 @@ inline void Domain::ComputeAcceleration (double dt)
 inline void Domain::Move (double dt)
 {
 	#pragma omp parallel for
-	for (size_t i=0; i<Particles.Size(); i++) Particles[i]->Move(dt);
+	for (size_t i=0; i<Particles.Size(); i++)
+	{
+//		std::cout<<Particles[5349]->x(0)<<std::endl;
+		Particles[i]->Move(dt,Periodic,TRPR(0),BLPF(0));
+//        if (Particles[i]->x(0)<1) std::cout<<i<<std::endl;
+
+	}
 }
 
 inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheFileKey, size_t Nproc)
