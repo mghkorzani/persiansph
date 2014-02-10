@@ -24,16 +24,17 @@ using std::endl;
 
 int main(int argc, char **argv) try
 {
-        SPH::Domain dom;
-        dom.Gravity = 1.0,0.0,0.0;
-        dom.Dimension = 3;
-        dom.Alpha = 1.0;
-        dom.Beta = 1.0;
-        dom.MaxVel = sqrt(2*9.81*0.00985);
-        dom.AutoSaveInt = 1.0;
-        dom.Cellfac= 2;
-        size_t Nproc = 8;
-        dom.Periodic=true;
+        SPH::Domain		dom;
+        dom.Gravity		= 1.0,0.0,0.0;
+        dom.Dimension	= 3;
+        dom.Alpha		= 1.0;
+        dom.Beta		= 1.0;
+        dom.MaxVel		= sqrt(2*9.81*0.00985);
+        dom.AutoSaveInt	= 1.0;
+        dom.Cellfac		= 2;
+        size_t Nproc	= 8;
+        dom.Periodic	= true;
+        dom.MU			=0.0;
 
         dom.AddBoxLength(1,Vec3_t ( 1.001, 1.101 ,0.0  ), 0.2 ,  0,  0,100 ,  1 ,  1, 0, 1000, 0.002, true);
         dom.AddBoxLength(1,Vec3_t ( 1.002, 1.102 ,0.0  ),0.198,  0,  0,99  ,  1 ,  1, 0, 1000, 0.002, true);

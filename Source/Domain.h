@@ -80,17 +80,18 @@ public:
     void Load                 (char const * FileKey);                                                         				  ///< Load the domain from a file
 
     // Data
-    Vec3_t                  Gravity;        ///< Gravity acceleration
-    Array <Particle*>       Particles;      ///< Array of particles
-    Array <Interaction*>    Interactions;   ///< Array of interactions
-    Array <Interaction*>    PInteractions;  ///< Array of possible interactions
+    Vec3_t					Gravity;        ///< Gravity acceleration
+    Array <Particle*>		Particles;      ///< Array of particles
+    Array <Interaction*>	Interactions;   ///< Array of interactions
+    Array <Interaction*>	PInteractions;  ///< Array of possible interactions
     Array <int>				IinSI;			///< Array to save Interaction No for fixed particles
-    double                 Time;           ///< The simulation Time
+    double					Time;           ///< The simulation Time
     size_t                  idx_out;        ///< Index for output purposes
     double 					Dimension;      ///< Dimension of the problem
     double 					Alpha;
     double					Beta;
     double					MaxVel;
+    double					MU;				///< Dynamic Viscosity
     double					AutoSaveInt;	///< Automatic save interval
     Vec3_t                  TRPR;           ///< Top right-hand point at rear of the domain as a Rectangular
     Vec3_t                  BLPF;           ///< Bottom left-hand point At front side of the domain as a Rectangular
@@ -375,7 +376,7 @@ inline void Domain::CreateInteraction(int a, int b)
           {
 			if (ExInteract [a][b] == -1)
 			{
-				Interactions.Push(new Interaction(Particles[a],Particles[b],Dimension,Alpha,Beta,MaxVel));
+				Interactions.Push(new Interaction(Particles[a],Particles[b],Dimension,Alpha,Beta,MaxVel,MU));
 				ExInteract [a][b] = Interactions.size() - 1;
 				ExInteract [b][a] = Interactions.size() - 1;
 				PInteractions.Push(Interactions[ ExInteract [a][b] ]);

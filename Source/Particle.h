@@ -52,14 +52,14 @@ public:
     double h;                       ///< Smoothing length of the particle
     double hr;                      ///< Reference smoothing length of the particle
     double R;                       ///< Radius of the particle
+
     int    ID;						 ///< an Integer value to identify type of the particles
     int    LL;						 ///< Linked-List variable to show next particle in list of a cell
     int    CC[3];					 ///< Current cell No for the particle (linked-list)
 
-
     // Methods
-    void Move (double dt, bool periodic, double domainmax, double domainmin);	///< Update the important quantities of a particle
-    bool CellUpdate  (Vec3_t CellSize, Vec3_t BLPF);								///< Check if the particle cell needs to be updated
+    void Move			(double dt, bool periodic, double domainmax, double domainmin);		///< Update the important quantities of a particle
+    bool CellUpdate		(Vec3_t CellSize, Vec3_t BLPF);										///< Check if the particle cell needs to be updated
 
 };
 
