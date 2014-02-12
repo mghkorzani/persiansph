@@ -276,7 +276,8 @@ inline void Domain::CellInitiate ()
         if (Particles[i]->h > h) h=Particles[i]->h;
     }
 
-	TRPR += h;
+//	TRPR += h;
+//	BLPF -= h;
 
     if ((BLPF(0) < 0.0) | (BLPF(0) < 0.0) | (BLPF(0) < 0.0))
     	{
@@ -323,6 +324,40 @@ inline void Domain::ListGenerate ()
 		j= (int) (floor((Particles[a]->x(1) - BLPF(1)) / CellSize(1)));
 		k= 0;
 
+		if (i<0)
+		{
+			if ((BLPF(0) - Particles[a]->x(0))<=2*Particles[a]->h) i=0;
+				else std::cout<<"Leaving"<<std::endl;
+		}
+		if (j<0)
+		{
+			if ((BLPF(1) - Particles[a]->x(1))<=2*Particles[a]->h) j=0;
+				else std::cout<<"Leaving"<<std::endl;
+		}
+		if (i>=CellNo[0])
+		{
+			if ((Particles[a]->x(0) - TRPR(0))<=2*Particles[a]->h) i=CellNo[0]-1;
+				else std::cout<<"Leaving"<<std::endl;
+		}
+		if (j>=CellNo[1])
+		{
+			if ((Particles[a]->x(1) - TRPR(1))<=2*Particles[a]->h) j=CellNo[1]-1;
+				else std::cout<<"Leaving"<<std::endl;
+		}
+		//		if (i>=CellNo[0] || i<0 || j>=CellNo[1] || j<0)
+////		if (a==5345)
+//		{
+//			std::cout<<"Leaving"<<std::endl;
+//			std::cout<<a<<std::endl;
+//
+//			std::cout<<i<<std::endl;
+//			std::cout<<j<<std::endl;
+////			std::cout<<BLPF<<std::endl;
+////			std::cout<<CellSize<<std::endl;
+//
+////			std::cout<<Particles[a]->x(0)<<std::endl;
+////			std::cout<<Particles[a]->x(1)<<std::endl;
+//		}
         temp = HOC[i][j][k];
         HOC[i][j][k] = a;
         Particles[a]->LL = temp;
@@ -644,7 +679,7 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
 
        Time += dt;
 
-       CheckParticleLeave();
+       if (!Periodic) CheckParticleLeave();
        ListandInteractionUpdate();
     }
 }

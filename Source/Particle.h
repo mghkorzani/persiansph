@@ -96,8 +96,8 @@ inline void Particle::Move (double dt, bool periodic, double domainmax, double d
 
         if (periodic) if (x(0)>=domainmax)
         {
-        	xb(0)-=(domainmax-domainmin);
-        	x(0)-=(domainmax-domainmin);
+        	xb(0)-=(domainmax-domainmin+h);
+        	x(0)-=(domainmax-domainmin+h);
         }
         // Evolve density
         double dens = Density;

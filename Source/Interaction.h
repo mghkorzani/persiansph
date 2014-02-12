@@ -93,45 +93,54 @@ inline void Interaction::CalcForce(double dt)
     Vec3_t vij = P1->v - P2->v;
     Vec3_t rij = P1->x - P2->x;
 
-    if (MU!=0.0)
-    {
-    Mat3_t Kdelta;
-    Identity(Kdelta);
-
+    Mat3_t Kdelta,PI;
     Mat3_t Sigmai,Sigmaj;
     Mat3_t GradientVelocity,ShearStrain;
+    GradientVelocity=0.0;
+    ShearStrain=0.0;
+
     Vec3_t temp;
+	Mat3_t A,B;
 
+    Kdelta = 	1.0, 0.0, 0.0,
+    			0.0, 1.0, 0.0,
+    			0.0, 0.0, 1.0;
 
-    Dyad((mj/di),-1*vij,GradKernel(norm(rij),h)*(rij/norm(rij)),GradientVelocity);
+    double MUij = h*dot(vij,rij)/(dot(rij,rij)+0.01*h*h);                                                ///<(2.75) Li, Liu Book
+	double Cij	= 0.5*(SoundSpeed(di,P1->RefDensity)+SoundSpeed(dj,P1->RefDensity));
+	double PIij;
+	if (dot(vij,rij)<0) PIij = (-alpha*Cij*MUij+beta*MUij*MUij)/(0.5*(di+dj));                          ///<(2.74) Li, Liu Book
+	else                PIij = 0.0;
+
+    Dyad((mj/di),-vij,GradKernel(norm(rij),h)*(rij/norm(rij)),GradientVelocity);
     ShearStrainCal(GradientVelocity,ShearStrain);
-    Sigmaj			 = Pj*Kdelta-MU*ShearStrain;
+	Mult((Pi/(di*di)),Kdelta,A);
+	Mult((-MU/(di*di)),ShearStrain,B);
+	Add (A,B,Sigmai);
 
-    Dyad((mi/dj),vij,-1*GradKernel(norm(rij),h)*(rij/norm(rij)),GradientVelocity);
+	if (GradientVelocity(0,0)==0.0 && GradientVelocity(0,1)==0.0 && GradientVelocity(0,2)==0.0) std::cout<<"Zero"<<std::endl;
+	else std::cout<<"salammmm"<<std::endl;
+    GradientVelocity=0.0;
+    ShearStrain=0.0;
+
+    Dyad((mi/dj),vij,-GradKernel(norm(rij),h)*(rij/norm(rij)),GradientVelocity);
     ShearStrainCal(GradientVelocity,ShearStrain);
-    Sigmaj			 = Pj*Kdelta-MU*ShearStrain;
+	Mult((Pj/(dj*dj)),Kdelta,A);
+	Mult((-MU/(dj*dj)),ShearStrain,B);
+	Add (A,B,Sigmaj);
 
-    Mult (((1/(di*di))*Sigmai+(1/(dj*dj))*Sigmaj),GradKernel(norm(rij),h)*(rij/norm(rij)),temp);
-    P1->a			+= -1*mj*temp;                     ///<(2.73) Li, Liu Book
+	Mult(PIij,Kdelta,PI);
+
+	Add (Sigmai,Sigmaj,A);
+	Add (A,PI,B);
+
+    Mult (B,(GradKernel(norm(rij),h)*(rij/norm(rij))),temp);
+
+	P1->a			+= -mj*temp;                     ///<(2.73) Li, Liu Book
     P1->dDensity	+= (di*mj/dj)*dot(vij,(rij/norm(rij)))*GradKernel(norm(rij),h);                                  ///<(2.58) Li, Liu Book
 
-    P2->a			-= -1*mi*temp;
+    P2->a			-= -mi*temp;
     P2->dDensity	+= (dj*mi/di)*dot(vij,(rij/norm(rij)))*GradKernel(norm(rij),h);
-    }
-    else
-    {
-    	double MUij = h*dot(vij,rij)/(dot(rij,rij)+0.01*h*h);                                                ///<(2.75) Li, Liu Book
-    	double Cij	= 0.5*(SoundSpeed(di,P1->RefDensity)+SoundSpeed(dj,P1->RefDensity));
-    	double PIij;
-    	if (dot(vij,rij)<0) PIij = (-alpha*Cij*MUij+beta*MUij*MUij)/(0.5*(di+dj));                          ///<(2.74) Li, Liu Book
-    	else                PIij = 0.0;
-
-    	P1->a			+= -1*mj*(Pi/(di*di)+Pj/(dj*dj)+PIij)*GradKernel(norm(rij),h)*(rij/norm(rij));                     ///<(2.73) Li, Liu Book
-        P1->dDensity	+= (di*mj/dj)*dot(vij,(rij/norm(rij)))*GradKernel(norm(rij),h);                                  ///<(2.58) Li, Liu Book
-
-        P2->a			-= -1*mi*(Pi/(di*di)+Pj/(dj*dj)+PIij)*GradKernel(norm(rij),h)*(rij/norm(rij));
-        P2->dDensity	+= (dj*mi/di)*dot(vij,(rij/norm(rij)))*GradKernel(norm(rij),h);
-    }
 }
 
 inline double Interaction::Kernel(double r,double h)
