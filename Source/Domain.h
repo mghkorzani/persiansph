@@ -48,6 +48,9 @@ public:
     ~Domain ();
 
     // Methods
+    void AddRandomBoxFixed(int tag, Vec3_t const & V, double Lx, double Ly, double Lz, size_t nx, size_t ny, size_t nz, double Mass, double Density, double h, double R, size_t RandomSeed=100);
+
+
     void AddBox                (int tag, Vec3_t const & x, size_t nx, size_t ny, size_t nz,
     		                  double R, double Mass, double Density, double h, bool Fixed);                                    ///< Add a box of particles (should specify radius of particles)
     void AddBoxLength         (int tag, Vec3_t const &V, double Lx, double Ly, double Lz, size_t nx, size_t ny, size_t nz,
@@ -80,27 +83,29 @@ public:
     void Load                 (char const * FileKey);                                                         				  ///< Load the domain from a file
 
     // Data
-    Vec3_t					Gravity;        ///< Gravity acceleration
-    Array <Particle*>		Particles;      ///< Array of particles
-    Array <Interaction*>	Interactions;   ///< Array of interactions
-    Array <Interaction*>	PInteractions;  ///< Array of possible interactions
-    Array <int>				IinSI;			///< Array to save Interaction No for fixed particles
-    double					Time;           ///< The simulation Time
-    size_t                  idx_out;        ///< Index for output purposes
-    double 					Dimension;      ///< Dimension of the problem
-    double 					Alpha;
-    double					Beta;
-    double					MaxVel;
-    double					MU;				///< Dynamic Viscosity
-    double					AutoSaveInt;	///< Automatic save interval
-    Vec3_t                  TRPR;           ///< Top right-hand point at rear of the domain as a Rectangular
-    Vec3_t                  BLPF;           ///< Bottom left-hand point At front side of the domain as a Rectangular
-    Vec3_t                  CellSize;       ///< Calculated cell size according to (cell size >= 2h)
-    int		                CellNo[3];      ///< No. of cells for linked list
-    int					*** HOC;			///< Array of (Head of Chain) for each cell
-    int					 ** ExInteract;		///< Array to save existing interaction No. of "Interactions" to use in "PInteractions"
-    double 					Cellfac;		///< Factor which should be multiplied by h to change the size of cells (min 2)
-    bool					Periodic; 		///< It it is true, periodic boundary condition along x direction will be considered
+    Vec3_t					Gravity;       	 	///< Gravity acceleration
+    Array <Particle*>		Particles;     	 	///< Array of particles
+    Array <Interaction*>	Interactions;  	 	///< Array of interactions
+    Array <Interaction*>	PInteractions; 	 	///< Array of possible interactions
+    Array <int>				IinSI;				///< Array to save Interaction No for fixed particles
+    double					Time;          	 	///< The simulation Time
+    size_t                  idx_out;       	 	///< Index for output purposes
+    double 					Dimension;    	  	///< Dimension of the problem
+    double 					Alpha;				///< Artificial Viscosity Alpha Factor
+    double					Beta;				///< Artificial Viscosity Beta Factor
+    double					MaxVel;				///< Max velocity for pressure in equation of state
+    double					MU;					///< Dynamic Viscosity
+    double					AutoSaveInt;		///< Automatic save interval
+    Vec3_t                  TRPR;				///< Top right-hand point at rear of the domain as a Rectangular
+    Vec3_t                  BLPF;           	///< Bottom left-hand point At front side of the domain as a Rectangular
+    Vec3_t                  CellSize;      		///< Calculated cell size according to (cell size >= 2h)
+    int		                CellNo[3];      	///< No. of cells for linked list
+    int					*** HOC;				///< Array of (Head of Chain) for each cell
+    int					 ** ExInteract;			///< Array to save existing interaction No. of "Interactions" to use in "PInteractions"
+    double 					Cellfac;			///< Factor which should be multiplied by h to change the size of cells (min 2)
+    bool					Periodic; 			///< It it is true, periodic boundary condition along x direction will be considered
+    bool					PressureBoundary;	///< if it is true, it will get max pressure for solid boundary from neighbors but if false, mean value.
+    double 					XSPH;				///< Velocity correction factor
 };
 /////////////////////////////////////////////////////////////////////////////////////////// Implementation /////
 
@@ -190,6 +195,32 @@ inline void Domain::AddRandomBox(int tag, Vec3_t const & V, double Lx, double Ly
                 	Particles.Push(new Particle(tag,Vec3_t(x,y,z),Vec3_t(0,0,0),4/3*M_PI*R*R*R*Density,Density,R,h,false));
                 else
                 	Particles.Push(new Particle(tag,Vec3_t(x,y,z),Vec3_t(0,0,0),Mass,Density,R,h,false));
+            }
+        }
+    }
+    std::cout << "\n  Total No. of particles   = " << Particles.Size() << std::endl;
+}
+
+inline void Domain::AddRandomBoxFixed(int tag, Vec3_t const & V, double Lx, double Ly, double Lz, size_t nx, size_t ny, size_t nz, double Mass, double Density, double h, double R, size_t RandomSeed)
+{
+    Util::Stopwatch stopwatch;
+    std::cout << "\n--------------Generating random packing of particles by AddRandomBox-------------------------------" << std::endl;
+
+    double qin = 0.95;
+    srand(RandomSeed);
+    for (size_t i=0; i<nx; i++)
+    {
+        for (size_t j=0; j<ny; j++)
+        {
+            for (size_t k=0; k<nz; k++)
+            {
+            	double x,y,z;
+                x = V(0)+(i+(1-qin)*double(rand())/RAND_MAX)*R*sin(M_PI/6);
+                if ((i%2)==0.0) y = V(1)+(j+0.5+(1-qin)*double(rand())/RAND_MAX)*R*sin(M_PI/6);
+                else y = V(1)+(j+(1-qin)*double(rand())/RAND_MAX)*R*sin(M_PI/6);
+                if ((j%2)==0.0) z = V(2)+(k+(1-qin)*double(rand())/RAND_MAX)*R;
+//                else z = V(2)+(k+0.5+(1-qin)*double(rand())/RAND_MAX)*R;
+               	Particles.Push(new Particle(tag,Vec3_t(x,y,z),Vec3_t(0,0,0),Mass,Density,R,h,false));
             }
         }
     }
@@ -593,38 +624,46 @@ inline void Domain::StartAcceleration (Vec3_t const & a)
 
 inline void Domain::ComputeAcceleration (double dt)
 {
-//	#pragma omp parallel for
-//	for (size_t i=0; i<Particles.Size(); i++) if (!Particles[i]->IsFree) Particles[i]->Pressure=0.0;
-//
-//	#pragma omp parallel for
-//	for (size_t i=0; i<IinSI.Size(); i++)
-//	{
-//		if (Interactions[IinSI [i]]->P1->IsFree && !Interactions[IinSI [i]]->P2->IsFree)
-//		{
-//			if (Interactions[IinSI [i]]->P2->Pressure < Interactions[IinSI [i]]->P1->Pressure) Interactions[IinSI [i]]->P2->Pressure = Interactions[IinSI [i]]->P1->Pressure;
-//		}
-//		else
-//		{
-//			if (Interactions[IinSI [i]]->P1->Pressure < Interactions[IinSI [i]]->P2->Pressure) Interactions[IinSI [i]]->P1->Pressure = Interactions[IinSI [i]]->P2->Pressure;
-//
-//		}
-//	}
 
-	#pragma omp parallel for
-	for (size_t i=0; i<Particles.Size(); i++) if (!Particles[i]->IsFree) Particles[i]->Pressure=0.0;
-
-	#pragma omp parallel for
-	for (size_t i=0; i<IinSI.Size(); i++)
+	if (PressureBoundary)
 	{
-		if (Interactions[IinSI [i]]->P1->IsFree && !Interactions[IinSI [i]]->P2->IsFree)
+		// Get max value of pressure from neighbor for solid body particles
+		#pragma omp parallel for
+		for (size_t i=0; i<Particles.Size(); i++) if (!Particles[i]->IsFree) Particles[i]->Pressure=0.0;
+
+		#pragma omp parallel for
+		for (size_t i=0; i<IinSI.Size(); i++)
 		{
-			if (Interactions[IinSI [i]]->P2->Pressure == 0.0) Interactions[IinSI [i]]->P2->Pressure = Interactions[IinSI [i]]->P1->Pressure;
-			else Interactions[IinSI [i]]->P2->Pressure = (Interactions[IinSI [i]]->P2->Pressure + Interactions[IinSI [i]]->P1->Pressure)/2;
+			if (Interactions[IinSI [i]]->P1->IsFree && !Interactions[IinSI [i]]->P2->IsFree)
+			{
+				if (Interactions[IinSI [i]]->P2->Pressure < Interactions[IinSI [i]]->P1->Pressure) Interactions[IinSI [i]]->P2->Pressure = Interactions[IinSI [i]]->P1->Pressure;
+			}
+			else
+			{
+				if (Interactions[IinSI [i]]->P1->Pressure < Interactions[IinSI [i]]->P2->Pressure) Interactions[IinSI [i]]->P1->Pressure = Interactions[IinSI [i]]->P2->Pressure;
+
+			}
 		}
-		else
+	}
+	else
+	{
+		// Get max value of pressure from neighbor for solid body particles
+		#pragma omp parallel for
+		for (size_t i=0; i<Particles.Size(); i++) if (!Particles[i]->IsFree) Particles[i]->Pressure=0.0;
+
+		#pragma omp parallel for
+		for (size_t i=0; i<IinSI.Size(); i++)
 		{
-			if (Interactions[IinSI [i]]->P1->Pressure == 0.0) Interactions[IinSI [i]]->P1->Pressure = Interactions[IinSI [i]]->P2->Pressure;
-			else Interactions[IinSI [i]]->P1->Pressure = (Interactions[IinSI [i]]->P1->Pressure + Interactions[IinSI [i]]->P2->Pressure)/2;
+			if (Interactions[IinSI [i]]->P1->IsFree && !Interactions[IinSI [i]]->P2->IsFree)
+			{
+				if (Interactions[IinSI [i]]->P2->Pressure == 0.0) Interactions[IinSI [i]]->P2->Pressure = Interactions[IinSI [i]]->P1->Pressure;
+				else Interactions[IinSI [i]]->P2->Pressure = (Interactions[IinSI [i]]->P2->Pressure + Interactions[IinSI [i]]->P1->Pressure)/2;
+			}
+			else
+			{
+				if (Interactions[IinSI [i]]->P1->Pressure == 0.0) Interactions[IinSI [i]]->P1->Pressure = Interactions[IinSI [i]]->P2->Pressure;
+				else Interactions[IinSI [i]]->P1->Pressure = (Interactions[IinSI [i]]->P1->Pressure + Interactions[IinSI [i]]->P2->Pressure)/2;
+			}
 		}
 	}
 
