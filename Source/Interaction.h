@@ -93,7 +93,7 @@ inline void Interaction::CalcForce(double dt)
     Vec3_t vij = P1->v - P2->v;
     Vec3_t rij = P1->x - P2->x;
 
-    Mat3_t Kdelta,PI;
+    Mat3_t Kdelta,PI,RF;
     Mat3_t Sigmai,Sigmaj;
     Mat3_t GradientVelocity,ShearStrain;
     GradientVelocity=0.0;
@@ -105,6 +105,11 @@ inline void Interaction::CalcForce(double dt)
     Kdelta = 	1.0, 0.0, 0.0,
     			0.0, 1.0, 0.0,
     			0.0, 0.0, 1.0;
+
+    double TI;
+//    TI= ((Pi/(di*di)+Pj/(dj*dj))*0.01)*(Kernel(norm(rij),h)/Kernel(0.002,h))*(Kernel(norm(rij),h)/Kernel(0.002,h))*(Kernel(norm(rij),h)/Kernel(0.002,h))*(Kernel(norm(rij),h)/Kernel(0.002,h));
+    TI=0.0;
+
 
     double MUij = h*dot(vij,rij)/(dot(rij,rij)+0.01*h*h);                                                ///<(2.75) Li, Liu Book
 	double Cij	= 0.5*(SoundSpeed(di,P1->RefDensity)+SoundSpeed(dj,P1->RefDensity));
@@ -118,8 +123,6 @@ inline void Interaction::CalcForce(double dt)
 	Mult((-MU/(di*di)),ShearStrain,B);
 	Add (A,B,Sigmai);
 
-	if (GradientVelocity(0,0)==0.0 && GradientVelocity(0,1)==0.0 && GradientVelocity(0,2)==0.0) std::cout<<"Zero"<<std::endl;
-	else std::cout<<"salammmm"<<std::endl;
     GradientVelocity=0.0;
     ShearStrain=0.0;
 
@@ -130,17 +133,24 @@ inline void Interaction::CalcForce(double dt)
 	Add (A,B,Sigmaj);
 
 	Mult(PIij,Kdelta,PI);
+	Mult(TI,Kdelta,RF);
 
 	Add (Sigmai,Sigmaj,A);
 	Add (A,PI,B);
+	Add (B,RF,A);
 
-    Mult (B,(GradKernel(norm(rij),h)*(rij/norm(rij))),temp);
 
+    Mult (A,(GradKernel(norm(rij),h)*(rij/norm(rij))),temp);
+
+    omp_set_lock(&P1->my_lock);
 	P1->a			+= -mj*temp;                     ///<(2.73) Li, Liu Book
     P1->dDensity	+= (di*mj/dj)*dot(vij,(rij/norm(rij)))*GradKernel(norm(rij),h);                                  ///<(2.58) Li, Liu Book
+    omp_unset_lock(&P1->my_lock);
 
+    omp_set_lock(&P2->my_lock);
     P2->a			-= -mi*temp;
     P2->dDensity	+= (dj*mi/di)*dot(vij,(rij/norm(rij)))*GradKernel(norm(rij),h);
+    omp_unset_lock(&P2->my_lock);
 }
 
 inline double Interaction::Kernel(double r,double h)

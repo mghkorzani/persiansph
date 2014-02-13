@@ -23,6 +23,7 @@
 #include <iostream>
 #include <cstring>
 #include <cmath>
+#include <omp.h>
 
 // MechSys
 #include <mechsys/linalg/matvec.h>
@@ -56,6 +57,7 @@ public:
     int    ID;						 ///< an Integer value to identify type of the particles
     int    LL;						 ///< Linked-List variable to show next particle in list of a cell
     int    CC[3];					 ///< Current cell No for the particle (linked-list)
+    omp_lock_t my_lock;
 
     // Methods
     void Move			(double dt, bool periodic, double domainmax, double domainmin);		///< Update the important quantities of a particle
@@ -81,6 +83,8 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
     ID = Tag;
     CC[0]= CC[1] = CC[2] = 0;
     LL=0;
+    omp_init_lock(&my_lock);
+
 }
 
 inline void Particle::Move (double dt, bool periodic, double domainmax, double domainmin)
@@ -96,8 +100,8 @@ inline void Particle::Move (double dt, bool periodic, double domainmax, double d
 
         if (periodic) if (x(0)>=domainmax)
         {
-        	xb(0)-=(domainmax-domainmin+h);
-        	x(0)-=(domainmax-domainmin+h);
+        	xb(0)-=(domainmax-domainmin);
+        	x(0)-=(domainmax-domainmin);
         }
         // Evolve density
         double dens = Density;

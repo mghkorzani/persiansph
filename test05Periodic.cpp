@@ -25,34 +25,34 @@ using std::endl;
 int main(int argc, char **argv) try
 {
         SPH::Domain		dom;
-        dom.Gravity		= 1.0,0.0,0.0;
+        dom.Gravity		= 0.1,0.0,0.0;
         dom.Dimension	= 3;
         dom.Alpha		= 0.5;
         dom.Beta		= 0.5;
-        dom.MaxVel		= sqrt(2*9.81*0.00985);
+        dom.MaxVel		= 0.5;
         dom.AutoSaveInt	= 1.0;
         dom.Cellfac		= 2;
         size_t Nproc	= 8;
         dom.Periodic	= true;
         dom.MU			= 0.00089;
 
-        dom.AddBoxLength(1,Vec3_t ( 1.001, 1.101 ,0.0  ), 0.2 ,  0,  0,100 ,  1 ,  1, 0, 1000, 0.002, true);
-        dom.AddBoxLength(1,Vec3_t ( 1.002, 1.102 ,0.0  ),0.198,  0,  0,99  ,  1 ,  1, 0, 1000, 0.002, true);
-        dom.AddBoxLength(1,Vec3_t ( 1.001, 0.999 ,0.0  ), 0.2 ,  0,  0,100 ,  1 ,  1, 0, 1000, 0.002, true);
-        dom.AddBoxLength(1,Vec3_t ( 1.002, 0.998 ,0.0  ),0.198,  0,  0,99  ,  1 ,  1, 0, 1000, 0.002, true);
+        dom.AddBoxLength(1,Vec3_t ( 1.000, 1.100 ,0.0  ), 0.2 ,  0,  0,100 ,  1 ,  1, 0, 1000, 0.0026, true);
+        dom.AddBoxLength(1,Vec3_t ( 1.001, 1.101 ,0.0  ),0.198,  0,  0,99  ,  1 ,  1, 0, 1000, 0.0026, true);
+        dom.AddBoxLength(1,Vec3_t ( 1.001, 0.999 ,0.0  ), 0.2 ,  0,  0,100 ,  1 ,  1, 0, 1000, 0.0026, true);
+        dom.AddBoxLength(1,Vec3_t ( 1.002, 0.998 ,0.0  ),0.198,  0,  0,99  ,  1 ,  1, 0, 1000, 0.0026, true);
 //        dom.AddBoxLength(1,Vec3_t ( 1.050, 1.045 ,0.0  ),  0 ,0.004,  0, 1  ,  2 ,  1, 0, 1000, 0.002, true);
 
-//        double maz=1.001;
-//        for (size_t i=0; i<66; i+=2)
-//        {
-//            dom.AddBoxLength(1,Vec3_t ( 1.0 , maz ,0.0  ), 0.2 ,  0,  0,100 ,  1 ,  1, 0, 1000, 0.002, false);
-//            dom.AddBoxLength(1,Vec3_t ( 1.001 , maz+0.0015 ,0.0  ), 0.198 ,  0,  0,99 ,  1 ,  1, 0, 1000, 0.002, false);
-//             maz+=0.003;
-//        }
-        dom.AddRandomBox(3,Vec3_t ( 1.0  , 1.0   ,0.0  ), 0.2 ,0.1,  0,100 , 50 ,  1, 0, 1000, 0.002);
+        double maz=1.000;
+        for (size_t i=0; i<100; i+=2)
+        {
+            dom.AddBoxLength(1,Vec3_t ( 1.0 , maz ,0.0  ), 0.2 ,  0,  0,100 ,  1 ,  1, 0.00000201, 1000, 0.0026, false);
+            dom.AddBoxLength(1,Vec3_t ( 1.001 , maz+0.001 ,0.0  ), 0.198 ,  0,  0,99 ,  1 ,  1, 0.00000201, 1000, 0.0026, false);
+             maz+=0.002;
+        }
+//        dom.AddRandomBox(3,Vec3_t ( 1.0  , 1.0   ,0.0  ), 0.2 ,0.1,  0,100 , 50 ,  1, 0, 1000, 0.002);
 
 //        dom.WriteXDMF("test05");
-        dom.Solve(/*tf*/1.0,/*dt*/0.0001,/*dtOut*/0.005,"test05",Nproc);
+        dom.Solve(/*tf*/10.0,/*dt*/0.0001,/*dtOut*/0.005,"test06",Nproc);
         return 0;
 }
 MECHSYS_CATCH

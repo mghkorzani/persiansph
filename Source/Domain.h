@@ -144,6 +144,7 @@ inline void Domain::AddBoxLength(int tag, Vec3_t const & V, double Lx, double Ly
 
 	double R = (std::min(Lx/(2*nx),Ly/(2*ny))>0) ? std::min(Lx/(2*nx),Ly/(2*ny)) : std::max(Lx/(2*nx),Ly/(2*ny));
     R = (std::min(R,Lz/(2*nz))>0) ? std::min(R,Lz/(2*nz)) : std::max(R,Lz/(2*nz));
+	std::cout << 4/3*M_PI*R*R*R*Density << R << std::endl;
 
 	for (size_t i=0; i<nx; i++)
     {
@@ -592,6 +593,23 @@ inline void Domain::StartAcceleration (Vec3_t const & a)
 
 inline void Domain::ComputeAcceleration (double dt)
 {
+//	#pragma omp parallel for
+//	for (size_t i=0; i<Particles.Size(); i++) if (!Particles[i]->IsFree) Particles[i]->Pressure=0.0;
+//
+//	#pragma omp parallel for
+//	for (size_t i=0; i<IinSI.Size(); i++)
+//	{
+//		if (Interactions[IinSI [i]]->P1->IsFree && !Interactions[IinSI [i]]->P2->IsFree)
+//		{
+//			if (Interactions[IinSI [i]]->P2->Pressure < Interactions[IinSI [i]]->P1->Pressure) Interactions[IinSI [i]]->P2->Pressure = Interactions[IinSI [i]]->P1->Pressure;
+//		}
+//		else
+//		{
+//			if (Interactions[IinSI [i]]->P1->Pressure < Interactions[IinSI [i]]->P2->Pressure) Interactions[IinSI [i]]->P1->Pressure = Interactions[IinSI [i]]->P2->Pressure;
+//
+//		}
+//	}
+
 	#pragma omp parallel for
 	for (size_t i=0; i<Particles.Size(); i++) if (!Particles[i]->IsFree) Particles[i]->Pressure=0.0;
 
@@ -600,12 +618,13 @@ inline void Domain::ComputeAcceleration (double dt)
 	{
 		if (Interactions[IinSI [i]]->P1->IsFree && !Interactions[IinSI [i]]->P2->IsFree)
 		{
-			if (Interactions[IinSI [i]]->P2->Pressure < Interactions[IinSI [i]]->P1->Pressure) Interactions[IinSI [i]]->P2->Pressure = Interactions[IinSI [i]]->P1->Pressure;
+			if (Interactions[IinSI [i]]->P2->Pressure == 0.0) Interactions[IinSI [i]]->P2->Pressure = Interactions[IinSI [i]]->P1->Pressure;
+			else Interactions[IinSI [i]]->P2->Pressure = (Interactions[IinSI [i]]->P2->Pressure + Interactions[IinSI [i]]->P1->Pressure)/2;
 		}
 		else
 		{
-			if (Interactions[IinSI [i]]->P1->Pressure < Interactions[IinSI [i]]->P2->Pressure) Interactions[IinSI [i]]->P1->Pressure = Interactions[IinSI [i]]->P2->Pressure;
-
+			if (Interactions[IinSI [i]]->P1->Pressure == 0.0) Interactions[IinSI [i]]->P1->Pressure = Interactions[IinSI [i]]->P2->Pressure;
+			else Interactions[IinSI [i]]->P1->Pressure = (Interactions[IinSI [i]]->P1->Pressure + Interactions[IinSI [i]]->P2->Pressure)/2;
 		}
 	}
 
@@ -639,6 +658,7 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
     CellInitiate();
     ListGenerate();
     InitiateInteractions();
+//	StartAcceleration(Gravity);
 
     while (Time<tf)
     {
