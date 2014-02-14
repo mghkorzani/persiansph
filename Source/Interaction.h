@@ -28,7 +28,7 @@ class Interaction
 {
 public:
     // Constructor
-    Interaction (Particle * Pt1, Particle * Pt2,size_t dim, double VisAlpha, double VisBeta, double Vel, double DV);
+    Interaction (Particle * Pt1, Particle * Pt2,size_t dim, double VisAlpha, double VisBeta, double Vel, double DV, double XSPHfac);
 
     // Methods
     void CalcForce      (double dt = 0.0);                ///< Calculates the contact force between particles
@@ -47,11 +47,12 @@ public:
     size_t		Dim;			///< Dimension of the problem
     double		V2;				///< Squared maximum velocity of the fluid for pressure and sound speed
     double		MU;				///< Dynamic Viscosity
+    double 		X;				///< Factor of XSPH
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////// Implementation /////
 
-inline Interaction::Interaction (Particle * Pt1, Particle * Pt2,size_t dim, double VisAlpha, double VisBeta, double Vel, double DV)
+inline Interaction::Interaction (Particle * Pt1, Particle * Pt2,size_t dim, double VisAlpha, double VisBeta, double Vel, double DV, double XSPHfac)
 {
     P1		=	Pt1;
     P2		=	Pt2;
@@ -61,6 +62,7 @@ inline Interaction::Interaction (Particle * Pt1, Particle * Pt2,size_t dim, doub
     beta	=	VisBeta;
     V2		=	Vel*Vel;
     MU		=	DV;
+    X		=	XSPHfac;
 
 }
 
@@ -146,11 +148,13 @@ inline void Interaction::CalcForce(double dt)
     omp_set_lock(&P1->my_lock);
 	P1->a			+= -mj*temp;                     ///<(2.73) Li, Liu Book
     P1->dDensity	+= (mj)*dot(vij,(rij/norm(rij)))*GradKernel(norm(rij),h);                                  ///<(2.58) Li, Liu Book
+    P1->VXSPH		+= X*mj/(0.5*(di+dj))*Kernel(norm(rij),h)*-vij;
     omp_unset_lock(&P1->my_lock);
 
     omp_set_lock(&P2->my_lock);
     P2->a			-= -mi*temp;
     P2->dDensity	+= (mi)*dot(vij,(rij/norm(rij)))*GradKernel(norm(rij),h);
+    P2->VXSPH		+= X*mi/(0.5*(di+dj))*Kernel(norm(rij),h)*vij;
     omp_unset_lock(&P2->my_lock);
 }
 

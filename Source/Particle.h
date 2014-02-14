@@ -39,25 +39,31 @@ public:
 
 
     // Data
-    bool   IsFree;                  ///< Check the particle if it is free to move or not
-    Vec3_t  x;                       ///< Position of the particle
-    Vec3_t  xb;                      ///< Previous position for Verlet algorithm
-    Vec3_t  v;                       ///< Velocity of the particle
-    Vec3_t  a;                       ///< Acceleration of the particle
-    double Pressure;                ///< Pressure at the position of the particle
-    double Density;                 ///< Density at the position of the particle
-    double Densityb;                ///< Previous density for the Verlet algorithm
-    double RefDensity;				 ///< Reference Density of Particle
-    double Mass;                    ///< Mass of the particle
-    double dDensity;                ///< Rate of density change in time
-    double h;                       ///< Smoothing length of the particle
-    double hr;                      ///< Reference smoothing length of the particle
-    double R;                       ///< Radius of the particle
+    bool   	IsFree;			///< Check the particle if it is free to move or not
+    Vec3_t  xb;				///< Position of the particle n-1
+    Vec3_t  x;				///< Position of the particle n
 
-    int    ID;						 ///< an Integer value to identify type of the particles
-    int    LL;						 ///< Linked-List variable to show next particle in list of a cell
-    int    CC[3];					 ///< Current cell No for the particle (linked-list)
-    omp_lock_t my_lock;
+    Vec3_t  vb;				///< Velocity of the particle n-1
+    Vec3_t  v;				///< Velocity of the particle n+1,
+    Vec3_t	VXSPH;			///< Mean value of the neighbor particles' velocity
+    Vec3_t  a;				///< Acceleration of the particle
+
+    double 	Pressure;		///< Pressure at the position of the particle
+    double	Density;		///< Density at the position of the particle n+1
+    double 	Densityb;		///< Density at the position of the particle n-1
+    double 	RefDensity;		///< Reference Density of Particle
+    double 	dDensity;		///< Rate of density change in time
+    double 	Mass;			///< Mass of the particle
+
+    double 	h;				///< Smoothing length of the particle
+    double 	hr;				///< Reference smoothing length of the particle
+    double 	R;				///< Radius of the particle
+
+    int    	ID;				///< an Integer value to identify type of the particles
+    int    	LL;				///< Linked-List variable to show next particle in list of a cell
+    int    	CC[3];			///< Current cell No for the particle (linked-list)
+
+    omp_lock_t my_lock;		///< Open MP lock
 
     // Methods
     void Move			(double dt, bool periodic, double domainmax, double domainmin);		///< Update the important quantities of a particle
@@ -67,12 +73,10 @@ public:
 
 inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double Mass0, double Density0, double R0, double h0,bool Fixed)
 {
-    x = x0;
-    xb = x;
-    v = v0;
-    Density = Density0;
+    x = xb = x0;
+    vb = v = v0;
+    Densityb = Density = Density0;
     RefDensity = Density0;
-    Densityb = Density;
     Mass = Mass0;
     IsFree = !Fixed;
     hr = h0;
@@ -84,6 +88,7 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
     CC[0]= CC[1] = CC[2] = 0;
     LL=0;
     omp_init_lock(&my_lock);
+    VXSPH = 0.0;
 
 }
 
@@ -91,22 +96,28 @@ inline void Particle::Move (double dt, bool periodic, double domainmax, double d
 {
     if (IsFree)
     {
-        // Evolve position and velocity
-        Vec3_t xa;
-        xa = 2*x - xb + a*dt*dt;
-        v = 0.5*(xa - xb)/dt;
-        xb = x;
-        x = xa;
+        // Evolve velocity
+    	Vec3_t temp;
+    	temp = v;
+    	v = vb + 2*dt*a;
+    	vb = temp;
+
+        // Evolve density
+        double dens = Density;
+        Density = Densityb + 2*dt*dDensity;
+        Densityb = dens;
+
+
+        // Evolve velocity
+    	x = x + dt*(vb+VXSPH) + 0.5*dt*dt*a;
+
+
 
         if (periodic) if (x(0)>=domainmax)
         {
         	xb(0)-=(domainmax-domainmin);
         	x(0)-=(domainmax-domainmin);
         }
-        // Evolve density
-        double dens = Density;
-        Density = Densityb + 2*dt*dDensity;
-        Densityb = dens;
     }
 }
 

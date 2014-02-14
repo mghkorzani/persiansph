@@ -358,22 +358,22 @@ inline void Domain::ListGenerate ()
 
 		if (i<0)
 		{
-			if ((BLPF(0) - Particles[a]->x(0))<=2*Particles[a]->h) i=0;
+			if ((BLPF(0) - Particles[a]->x(0))<=Particles[a]->h) i=0;
 				else std::cout<<"Leaving"<<std::endl;
 		}
 		if (j<0)
 		{
-			if ((BLPF(1) - Particles[a]->x(1))<=2*Particles[a]->h) j=0;
+			if ((BLPF(1) - Particles[a]->x(1))<=Particles[a]->h) j=0;
 				else std::cout<<"Leaving"<<std::endl;
 		}
 		if (i>=CellNo[0])
 		{
-			if ((Particles[a]->x(0) - TRPR(0))<=2*Particles[a]->h) i=CellNo[0]-1;
+			if ((Particles[a]->x(0) - TRPR(0))<=Particles[a]->h) i=CellNo[0]-1;
 				else std::cout<<"Leaving"<<std::endl;
 		}
 		if (j>=CellNo[1])
 		{
-			if ((Particles[a]->x(1) - TRPR(1))<=2*Particles[a]->h) j=CellNo[1]-1;
+			if ((Particles[a]->x(1) - TRPR(1))<=Particles[a]->h) j=CellNo[1]-1;
 				else std::cout<<"Leaving"<<std::endl;
 		}
 		//		if (i>=CellNo[0] || i<0 || j>=CellNo[1] || j<0)
@@ -443,7 +443,7 @@ inline void Domain::CreateInteraction(int a, int b)
           {
 			if (ExInteract [a][b] == -1)
 			{
-				Interactions.Push(new Interaction(Particles[a],Particles[b],Dimension,Alpha,Beta,MaxVel,MU));
+				Interactions.Push(new Interaction(Particles[a],Particles[b],Dimension,Alpha,Beta,MaxVel,MU,XSPH));
 				ExInteract [a][b] = Interactions.size() - 1;
 				ExInteract [b][a] = Interactions.size() - 1;
 				PInteractions.Push(Interactions[ ExInteract [a][b] ]);
@@ -619,6 +619,7 @@ inline void Domain::StartAcceleration (Vec3_t const & a)
     {
         Particles[i]->a = a;
         Particles[i]->dDensity = 0.0;
+        Particles[i]->VXSPH;
     }
 }
 
@@ -755,6 +756,7 @@ inline void Domain::WriteXDMF (char const * FileKey)
     float * Posvec   = new float[3*Particles.Size()];
     float * Velvec   = new float[3*Particles.Size()];
     float * Pressure = new float[  Particles.Size()];
+    float * Density  = new float[  Particles.Size()];
     float * Radius   = new float[  Particles.Size()];
     int   * Tag      = new int  [  Particles.Size()];
 
@@ -767,6 +769,7 @@ inline void Domain::WriteXDMF (char const * FileKey)
         Velvec  [3*i+1] = float(Particles[i]->v(1));
         Velvec  [3*i+2] = float(Particles[i]->v(2));
         Pressure[i    ] = float(Particles[i]->Pressure);
+        Density [i    ] = float(Particles[i]->Density);
         Radius  [i    ] = float(Particles[i]->R);
         Tag     [i    ] = int  (Particles[i]->ID);
     }
@@ -781,6 +784,8 @@ inline void Domain::WriteXDMF (char const * FileKey)
     dims[0] = Particles.Size();
     dsname.Printf("Pressure");
     H5LTmake_dataset_float(file_id,dsname.CStr(),1,dims,Pressure);
+    dsname.Printf("Density");
+    H5LTmake_dataset_float(file_id,dsname.CStr(),1,dims,Density);
     dsname.Printf("Radius");
     H5LTmake_dataset_float(file_id,dsname.CStr(),1,dims,Radius);
     dsname.Printf("Tag");
@@ -790,6 +795,7 @@ inline void Domain::WriteXDMF (char const * FileKey)
     delete [] Posvec;
     delete [] Velvec;
     delete [] Pressure;
+    delete [] Density;
     delete [] Radius;
     delete [] Tag;
 
@@ -820,6 +826,11 @@ inline void Domain::WriteXDMF (char const * FileKey)
     oss << "     <Attribute Name=\"Pressure\" AttributeType=\"Scalar\" Center=\"Node\">\n";
     oss << "       <DataItem Dimensions=\"" << Particles.Size() << "\" NumberType=\"Float\" Precision=\"4\"  Format=\"HDF\">\n";
     oss << "        " << fn.CStr() <<":/Pressure \n";
+    oss << "       </DataItem>\n";
+    oss << "     </Attribute>\n";
+    oss << "     <Attribute Name=\"Density\" AttributeType=\"Scalar\" Center=\"Node\">\n";
+    oss << "       <DataItem Dimensions=\"" << Particles.Size() << "\" NumberType=\"Float\" Precision=\"4\"  Format=\"HDF\">\n";
+    oss << "        " << fn.CStr() <<":/Density \n";
     oss << "       </DataItem>\n";
     oss << "     </Attribute>\n";
     oss << "     <Attribute Name=\"Radius\" AttributeType=\"Scalar\" Center=\"Node\">\n";
