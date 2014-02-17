@@ -40,7 +40,6 @@ public:
 
     // Data
     bool   	IsFree;			///< Check the particle if it is free to move or not
-    Vec3_t  xb;				///< Position of the particle n-1
     Vec3_t  x;				///< Position of the particle n
 
     Vec3_t  vb;				///< Velocity of the particle n-1
@@ -62,7 +61,7 @@ public:
     int    	ID;				///< an Integer value to identify type of the particles
     int    	LL;				///< Linked-List variable to show next particle in list of a cell
     int    	CC[3];			///< Current cell No for the particle (linked-list)
-
+    int		ct;
     omp_lock_t my_lock;		///< Open MP lock
 
     // Methods
@@ -73,7 +72,8 @@ public:
 
 inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double Mass0, double Density0, double R0, double h0,bool Fixed)
 {
-    x = xb = x0;
+	ct =0;
+    x = x0;
     vb = v = v0;
     Densityb = Density = Density0;
     RefDensity = Density0;
@@ -94,31 +94,56 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
 
 inline void Particle::Move (double dt, bool periodic, double domainmax, double domainmin)
 {
-    if (IsFree)
-    {
-        // Evolve velocity
-    	Vec3_t temp;
-    	temp = v;
-    	v = vb + 2*dt*a;
-    	vb = temp;
+	if (ct<30)
+	{
+		if (IsFree)
+		{
+			// Evolve position
+			x = x + dt*(v+VXSPH) + 0.5*dt*dt*a;
 
-        // Evolve density
-        double dens = Density;
-        Density = Densityb + 2*dt*dDensity;
-        Densityb = dens;
+			// Evolve velocity
+			Vec3_t temp;
+			temp = v;
+			v = vb + 2*dt*a;
+			vb = temp;
 
+			// Evolve density
+			double dens = Density;
+			Density = Densityb + 2*dt*dDensity;
+			Densityb = dens;
 
-        // Evolve velocity
-    	x = x + dt*(vb+VXSPH) + 0.5*dt*dt*a;
+			if (periodic) if (x(0)>=domainmax)
+			{
+				x(0)-=(domainmax-domainmin);
+			}
+		ct++;
+		}
+	}
+	else
+	{
+		if (IsFree)
+		{
+			// Evolve position
+			x = x + dt*(vb+VXSPH) + 0.5*dt*dt*a;
 
+			// Evolve velocity
+			Vec3_t temp;
+			temp = v;
+			v = v + dt*a;
+			vb = temp;
 
+			// Evolve density
+			double dens = Density;
+			Density = Density + dt*dDensity;
+			Densityb = dens;
 
-        if (periodic) if (x(0)>=domainmax)
-        {
-        	xb(0)-=(domainmax-domainmin);
-        	x(0)-=(domainmax-domainmin);
-        }
-    }
+			if (periodic) if (x(0)>=domainmax)
+			{
+				x(0)-=(domainmax-domainmin);
+			}
+		}
+		ct=0;
+	}
 }
 
 inline bool Particle::CellUpdate (Vec3_t CellSize, Vec3_t BLPF)

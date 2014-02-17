@@ -27,8 +27,8 @@ int main(int argc, char **argv) try
         SPH::Domain dom;
         dom.Gravity 		= 0.0,-9.81,0.0;
         dom.Dimension 		= 3;
-        dom.Alpha 			= 0.01;
-        dom.Beta 			= 0.0;
+        dom.Alpha 			= 1.0;
+        dom.Beta 			= 1.0;
         dom.MaxVel 			= sqrt(2*9.81*0.00985);
         dom.AutoSaveInt 	= 1.0;
         dom.Cellfac			= 2;
@@ -51,13 +51,13 @@ int main(int argc, char **argv) try
         dom.AddBoxLength(1,Vec3_t ( 0.998, 1.0   ,0.0  ), 0.0 ,0.3,  0, 1  , 150,  1, 0, 1000, 0.002, true);
         dom.AddBoxLength(1,Vec3_t ( 1.101, 0.999 ,0.0  ), 0.0 ,0.3,  0, 1  , 150,  1, 0, 1000, 0.002, true);
         dom.AddBoxLength(1,Vec3_t ( 1.102, 1.0   ,0.0  ), 0.0 ,0.3,  0, 1  , 150,  1, 0, 1000, 0.002, true);
-        dom.AddRandomBox(3,Vec3_t ( 1.0  , 1.0   ,0.0  ),0.1,0.150,  0, 50 , 100,  1, 0, 1000, 0.002);
+        dom.AddRandomBox(3,Vec3_t ( 1.0  , 1.0   ,0.0  ), 0.1 ,0.2,  0, 50 , 100,  1, 0, 1000, 0.002);
 
 //        dom.CellInitiate();
 //        dom.ListGenerate();
 //        dom.InitiateInteractions();
 //        dom.WriteXDMF("test02");
-        dom.Solve(/*tf*/30.0,/*dt*/0.00005,/*dtOut*/0.5,"test03",Nproc);
+        dom.Solve(/*tf*/30.0,/*dt*/0.00005,/*dtOut*/0.05,"test03",Nproc);
         return 0;
 }
 MECHSYS_CATCH

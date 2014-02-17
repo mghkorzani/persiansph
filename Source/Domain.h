@@ -308,10 +308,10 @@ inline void Domain::CellInitiate ()
         if (Particles[i]->h > h) h=Particles[i]->h;
     }
 
-//	TRPR += h;
-//	BLPF -= h;
+	TRPR += h;
+	BLPF -= h;
 
-    if ((BLPF(0) < 0.0) | (BLPF(0) < 0.0) | (BLPF(0) < 0.0))
+    if ((BLPF(0) < 0.0) | (BLPF(1) < 0.0) | (BLPF(2) < 0.0))
     	{
     	std::cout << "\nProblem to allocate Cells !!!!!!!!!!!!!" << std::endl;
     	std::cout << "Particle with minus coordinate" << std::endl;
@@ -953,7 +953,6 @@ inline void Domain::Load (char const * FileKey)
         double cd[3];
         H5LTread_dataset_double(group_id,"x",cd);
         Particles[Particles.Size()-1]->x = Vec3_t(cd[0],cd[1],cd[2]);
-        Particles[Particles.Size()-1]->xb = Vec3_t(cd[0],cd[1],cd[2]);			// Because of the constructor in Particle
 
 //        H5LTread_dataset_double(group_id,"v",cd);
 //        Particles[Particles.Size()-1]->v = Vec3_t(cd[0],cd[1],cd[2]);

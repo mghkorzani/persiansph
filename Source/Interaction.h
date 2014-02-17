@@ -145,16 +145,21 @@ inline void Interaction::CalcForce(double dt)
 
     Mult (A,(GradKernel(norm(rij),h)*(rij/norm(rij))),temp);
 
+    omp_set_lock(&P2->my_lock);
+    P2->VXSPH		+= X*mi/(0.5*(di+dj))*Kernel(norm(rij),h)*vij;
+    omp_unset_lock(&P2->my_lock);
+
+
     omp_set_lock(&P1->my_lock);
-	P1->a			+= -mj*temp;                     ///<(2.73) Li, Liu Book
-    P1->dDensity	+= (mj)*dot(vij,(rij/norm(rij)))*GradKernel(norm(rij),h);                                  ///<(2.58) Li, Liu Book
     P1->VXSPH		+= X*mj/(0.5*(di+dj))*Kernel(norm(rij),h)*-vij;
+	P1->a			+= -mj*temp;                     ///<(2.73) Li, Liu Book
+    P1->dDensity	+= (mj)*dot((vij+P1->VXSPH-P2->VXSPH),(rij/norm(rij)))*GradKernel(norm(rij),h);                                  ///<(2.58) Li, Liu Book
     omp_unset_lock(&P1->my_lock);
+
 
     omp_set_lock(&P2->my_lock);
     P2->a			-= -mi*temp;
-    P2->dDensity	+= (mi)*dot(vij,(rij/norm(rij)))*GradKernel(norm(rij),h);
-    P2->VXSPH		+= X*mi/(0.5*(di+dj))*Kernel(norm(rij),h)*vij;
+    P2->dDensity	+= (mi)*dot((-vij+P2->VXSPH-P1->VXSPH),(-rij/norm(rij)))*GradKernel(norm(rij),h);
     omp_unset_lock(&P2->my_lock);
 }
 

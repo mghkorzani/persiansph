@@ -16,7 +16,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>  *
  ************************************************************************/
 
-#include <Source/Domain.h>
+#include <Domain.h>
 
 
 using std::cout;
@@ -24,14 +24,19 @@ using std::endl;
 
 int main(int argc, char **argv) try
 {
-        SPH::Domain dom;
-        dom.Gravity = 0.0,-9.81,0.0;
-        dom.Dimension = 3;
-        dom.Alpha = 1.0;
-        dom.Beta = 1.0;
-        dom.MaxVel = sqrt(2*9.81*0.20);
-        dom.AutoSaveInt = 0.0;
-        size_t Nproc = 64;
+    SPH::Domain dom;
+    dom.Gravity 		= 0.0,-9.81,0.0;
+    dom.Dimension 		= 3;
+    dom.Alpha 			= 1.0;
+    dom.Beta 			= 1.0;
+    dom.MaxVel 			= sqrt(2*9.81*0.2);
+    dom.AutoSaveInt 	= 1.0;
+    dom.Cellfac			= 2;
+    size_t Nproc 		= 8;
+    dom.Periodic		= false;
+    dom.MU				= 0.0;
+    dom.PressureBoundary= false;
+    dom.XSPH			= 0.0;
 
         dom.Load("Auto Save_test02_0029");
         dom.AddBoxLength(1,Vec3_t (-0.099,-0.076,0.0 ), 0.3 ,  0 ,  0, 150,  1,  1, 0, 1000, 0.002, true);
