@@ -247,8 +247,8 @@ inline void Domain::CheckParticleLeave ()
 	#pragma omp parallel for
 	for (size_t i=0; i<Particles.Size(); i++)
     {
-		if ((Particles[i]->x(0) > TRPR(0)) || (Particles[i]->x(1) > TRPR(1)) || (Particles[i]->x(2) > TRPR(2)) ||
-				(Particles[i]->x(0) < BLPF(0)) || (Particles[i]->x(1) < BLPF(1)) || (Particles[i]->x(2) < BLPF(2))) DelParticles.Push(i);
+		if ((Particles[i]->x(0) >= TRPR(0)) || (Particles[i]->x(1) >= TRPR(1)) || (Particles[i]->x(2) >= TRPR(2)) ||
+				(Particles[i]->x(0) <= BLPF(0)) || (Particles[i]->x(1) <= BLPF(1)) || (Particles[i]->x(2) <= BLPF(2))) DelParticles.Push(i);
     }
 
 	if (DelParticles.Size()>0)
@@ -319,13 +319,31 @@ inline void Domain::CellInitiate ()
     	}
 
     // Calculate Cells Properties
-    CellNo[0] = (int) (floor((TRPR(0)-BLPF(0))/(Cellfac*h)));
-    CellNo[1] = (int) (floor((TRPR(1)-BLPF(1))/(Cellfac*h)));
-    CellNo[2] = (int) (floor((TRPR(2)-BLPF(2))/(Cellfac*h)));
-    CellSize  = Vec3_t ((TRPR(0)-BLPF(0))/CellNo[0],(TRPR(1)-BLPF(1))/CellNo[1],(TRPR(2)-BLPF(2))/CellNo[2]);
+    	switch (Dimension)
+        {case 1:
+            CellNo[0] = (int) (floor((TRPR(0)-BLPF(0))/(Cellfac*h)));
+            CellNo[1] = 1;
+            CellNo[2] = 1;
+            CellSize  = Vec3_t ((TRPR(0)-BLPF(0))/CellNo[0],0.0,0.0);
+            break;
+        case 2:
+            CellNo[0] = (int) (floor((TRPR(0)-BLPF(0))/(Cellfac*h)));
+            CellNo[1] = (int) (floor((TRPR(1)-BLPF(1))/(Cellfac*h)));
+            CellNo[2] = 1;
+            CellSize  = Vec3_t ((TRPR(0)-BLPF(0))/CellNo[0],(TRPR(1)-BLPF(1))/CellNo[1],0.0);
+            break;
+        case 3:
+            CellNo[0] = (int) (floor((TRPR(0)-BLPF(0))/(Cellfac*h)));
+            CellNo[1] = (int) (floor((TRPR(1)-BLPF(1))/(Cellfac*h)));
+            CellNo[2] = (int) (floor((TRPR(2)-BLPF(2))/(Cellfac*h)));
+            CellSize  = Vec3_t ((TRPR(0)-BLPF(0))/CellNo[0],(TRPR(1)-BLPF(1))/CellNo[1],(TRPR(2)-BLPF(2))/CellNo[2]);
+        	break;
+        default:
+        	std::cout << "Please correct dimension and run again" << std::endl;
+        	break;
+        }
 
-    if (Periodic) CellNo[0]++;
-    if (CellNo[2]==0) CellNo[2]=1;
+    if (Periodic) CellNo[0] = CellNo[0]+2;
 
     std::cout << "cell size = " << CellSize << std::endl;
     std::cout << "No of Cells in X Direction = " << CellNo[0] << std::endl;
@@ -347,62 +365,58 @@ inline void Domain::CellInitiate ()
 
 inline void Domain::ListGenerate ()
 {
-	int i,j,k,temp=0;
-
-	for (size_t a=0; a<Particles.Size(); a++)
-    {
-
-		i= (int) (floor((Particles[a]->x(0) - BLPF(0)) / CellSize(0)));
-		j= (int) (floor((Particles[a]->x(1) - BLPF(1)) / CellSize(1)));
-		k= 0;
-
-		if (i<0)
+	switch (Dimension)
+	{case 1:
+		int i,temp=0;
+		for (size_t a=0; a<Particles.Size(); a++)
 		{
-			if ((BLPF(0) - Particles[a]->x(0))<=Particles[a]->h) i=0;
-				else std::cout<<"Leaving"<<std::endl;
+			i= (int) (floor((Particles[a]->x(0) - BLPF(0)) / CellSize(0)));
+			temp = HOC[i][0][0];
+			HOC[i][0][0] = a;
+			Particles[a]->LL = temp;
+			Particles[a]->CC[0] = i;
+			Particles[a]->CC[1] = 0;
+			Particles[a]->CC[2] = 0;
 		}
-		if (j<0)
+		break;
+	case 2:
+		int i,j,temp=0;
+		for (size_t a=0; a<Particles.Size(); a++)
 		{
-			if ((BLPF(1) - Particles[a]->x(1))<=Particles[a]->h) j=0;
-				else std::cout<<"Leaving"<<std::endl;
+			i= (int) (floor((Particles[a]->x(0) - BLPF(0)) / CellSize(0)));
+			j= (int) (floor((Particles[a]->x(1) - BLPF(1)) / CellSize(1)));
+			temp = HOC[i][j][0];
+			HOC[i][j][0] = a;
+			Particles[a]->LL = temp;
+			Particles[a]->CC[0] = i;
+			Particles[a]->CC[1] = j;
+			Particles[a]->CC[2] = 0;
 		}
-		if (i>=CellNo[0])
+		break;
+	case 3:
+		int i,j,k,temp=0;
+		for (size_t a=0; a<Particles.Size(); a++)
 		{
-			if ((Particles[a]->x(0) - TRPR(0))<=Particles[a]->h) i=CellNo[0]-1;
-				else std::cout<<"Leaving"<<std::endl;
+			i= (int) (floor((Particles[a]->x(0) - BLPF(0)) / CellSize(0)));
+			j= (int) (floor((Particles[a]->x(1) - BLPF(1)) / CellSize(1)));
+			k= (int) (floor((Particles[a]->x(2) - BLPF(2)) / CellSize(2)));
+			temp = HOC[i][j][k];
+			HOC[i][j][k] = a;
+			Particles[a]->LL = temp;
+			Particles[a]->CC[0] = i;
+			Particles[a]->CC[1] = j;
+			Particles[a]->CC[2] = k;
 		}
-		if (j>=CellNo[1])
-		{
-			if ((Particles[a]->x(1) - TRPR(1))<=Particles[a]->h) j=CellNo[1]-1;
-				else std::cout<<"Leaving"<<std::endl;
-		}
-		//		if (i>=CellNo[0] || i<0 || j>=CellNo[1] || j<0)
-////		if (a==5345)
-//		{
-//			std::cout<<"Leaving"<<std::endl;
-//			std::cout<<a<<std::endl;
-//
-//			std::cout<<i<<std::endl;
-//			std::cout<<j<<std::endl;
-////			std::cout<<BLPF<<std::endl;
-////			std::cout<<CellSize<<std::endl;
-//
-////			std::cout<<Particles[a]->x(0)<<std::endl;
-////			std::cout<<Particles[a]->x(1)<<std::endl;
-//		}
-        temp = HOC[i][j][k];
-        HOC[i][j][k] = a;
-        Particles[a]->LL = temp;
-        Particles[a]->CC[0] = i;
-        Particles[a]->CC[1] = j;
-        Particles[a]->CC[2] = k;
+		break;
 	}
 
 	if (Periodic)
 	{
 	       for(int j =0; j<CellNo[1]; j++){
 	           for(int k = 0; k<CellNo[2];k++){
-	              HOC[CellNo[0]-1][j][k] =  HOC[0][j][k];
+	              HOC[CellNo[0]-1][j][k] =  HOC[1][j][k];
+	              HOC[CellNo[0]-2][j][k] =  HOC[0][j][k];
+
 	           }
 	       }
 	}
@@ -547,6 +561,7 @@ inline void Domain::InitiateInteractions()
     PInteractions.Resize(0);
     IinSI.Resize(0);
 
+    int q1;
     if (!Periodic)
     {
 		for (int q3=0; q3<CellNo[2]; q3++)
@@ -567,13 +582,14 @@ inline void Domain::InitiateInteractions()
 		{
 			for (int q2=0; q2<CellNo[1]; q2++)
 			{
-				for (int q1=0; q1<CellNo[0]-1; q1++)
+				for (int q1=1; q1<CellNo[0]-1; q1++)
 				{
 					if (HOC[q1][q2][q3]==-1) continue;
 					else  NeighbourSearch(q1,q2,q3);
 				}
 			}
 		}
+
     }
 }
 
@@ -602,13 +618,14 @@ inline void Domain::UpdateInteractions()
 		{
 			for (int q2=0; q2<CellNo[1]; q2++)
 			{
-				for (int q1=0; q1<CellNo[0]-1; q1++)
+				for (int q1=1; q1<CellNo[0]-1; q1++)
 				{
 					if (HOC[q1][q2][q3]==-1) continue;
 					else  NeighbourSearch(q1,q2,q3);
 				}
 			}
 		}
+
     }
 }
 
@@ -619,7 +636,7 @@ inline void Domain::StartAcceleration (Vec3_t const & a)
     {
         Particles[i]->a = a;
         Particles[i]->dDensity = 0.0;
-        Particles[i]->VXSPH;
+        Particles[i]->VXSPH=0.0;
     }
 }
 
@@ -675,13 +692,7 @@ inline void Domain::ComputeAcceleration (double dt)
 inline void Domain::Move (double dt)
 {
 	#pragma omp parallel for
-	for (size_t i=0; i<Particles.Size(); i++)
-	{
-//		std::cout<<Particles[5349]->x(0)<<std::endl;
-		Particles[i]->Move(dt,Periodic,TRPR(0),BLPF(0));
-//        if (Particles[i]->x(0)<1) std::cout<<i<<std::endl;
-
-	}
+	for (size_t i=0; i<Particles.Size(); i++) Particles[i]->Move(dt,Periodic,TRPR(0),BLPF(0));
 }
 
 inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheFileKey, size_t Nproc)
