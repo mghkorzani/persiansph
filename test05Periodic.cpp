@@ -25,21 +25,23 @@ using std::endl;
 int main(int argc, char **argv) try
 {
         SPH::Domain		dom;
-        dom.Gravity		= 0.1,0.0,0.0;
+        dom.Gravity		= 0.01,0.0,0.0;
         dom.Dimension	= 3;
-        dom.Alpha		= 0.5;
-        dom.Beta		= 0.5;
-        dom.MaxVel		= 0.5;
+        dom.Alpha		= 0.3;
+        dom.Beta		= 0.0;
+        dom.MaxVel		= 0.05;
         dom.AutoSaveInt	= 1.0;
         dom.Cellfac		= 2;
         size_t Nproc	= 8;
         dom.Periodic	= true;
         dom.MU			= 0.00089;
+        dom.PressureBoundary= false;
+        dom.XSPH			= 0.5;
 
-        dom.AddBoxLength(1,Vec3_t ( 1.000 , 1.050 ,0.0  ), 0.2 ,  0,  0,200 ,  1 ,  1, 0.00000025, 1000, 0.0016, true);
-        dom.AddBoxLength(1,Vec3_t ( 1.0005, 1.0505,0.0  ),0.198,  0,  0,199 ,  1 ,  1, 0.00000025, 1000, 0.0016, true);
-        dom.AddBoxLength(1,Vec3_t ( 1.000 , 0.999 ,0.0  ), 0.2 ,  0,  0,200 ,  1 ,  1, 0.00000025, 1000, 0.0016, true);
-        dom.AddBoxLength(1,Vec3_t ( 1.0005, 0.9985,0.0  ),0.198,  0,  0,199 ,  1 ,  1, 0.00000025, 1000, 0.0016, true);
+        dom.AddBoxLength(1,Vec3_t ( 1.000 , 1.050 ,0.0  ), 0.2 ,  0,  0,100 ,  1 ,  1, 0, 1000, 0.002, true);
+//        dom.AddBoxLength(1,Vec3_t ( 1.001 , 1.051 ,0.0  ),0.198,  0,  0,99  ,  1 ,  1, 0, 1000, 0.002, true);
+        dom.AddBoxLength(1,Vec3_t ( 1.000 , 0.999 ,0.0  ), 0.2 ,  0,  0,100 ,  1 ,  1, 0, 1000, 0.002, true);
+//        dom.AddBoxLength(1,Vec3_t ( 1.001 , 0.998 ,0.0  ),0.198,  0,  0,99  ,  1 ,  1, 0, 1000, 0.002, true);
 //        dom.AddBoxLength(1,Vec3_t ( 1.050, 1.045 ,0.0  ),  0 ,0.004,  0, 1  ,  2 ,  1, 0, 1000, 0.002, true);
 
 //        double maz=1.000;
@@ -51,7 +53,7 @@ int main(int argc, char **argv) try
 //        }
 //        dom.AddRandomBox(3,Vec3_t ( 1.0  , 0.9995   ,0.0  ), 0.2 ,0.05,  0,200 ,100 ,  1, 0.00000025, 1000, 0.002);
 
-        //        dom.AddRandomBox(3,Vec3_t ( 1.0  , 0.9995   ,0.0  ), 0.2 ,0.05,  0,200 ,100 ,  1, 0.00000025, 1000, 0.002);
+        dom.AddRandomBox(3,Vec3_t ( 1.0  , 0.9995   ,0.0  ), 0.2 ,0.05,  0,100 ,25 ,  1, 0, 1000, 0.002);
 //        dom.AddRandomBoxFixed(3,Vec3_t ( 1.0  , 0.9995   ,0.0  ), 0.2 ,0.05,  0,200 ,100 ,  1, 0.00000025, 1000, 0.0016, 0.001);
 
 //        dom.WriteXDMF("test05");

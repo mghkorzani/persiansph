@@ -90,7 +90,7 @@ public:
     Array <int>				IinSI;				///< Array to save Interaction No for fixed particles
     double					Time;          	 	///< The simulation Time
     size_t                  idx_out;       	 	///< Index for output purposes
-    double 					Dimension;    	  	///< Dimension of the problem
+    int 					Dimension;    	  	///< Dimension of the problem
     double 					Alpha;				///< Artificial Viscosity Alpha Factor
     double					Beta;				///< Artificial Viscosity Beta Factor
     double					MaxVel;				///< Max velocity for pressure in equation of state
@@ -106,6 +106,7 @@ public:
     bool					Periodic; 			///< It it is true, periodic boundary condition along x direction will be considered
     bool					PressureBoundary;	///< if it is true, it will get max pressure for solid boundary from neighbors but if false, mean value.
     double 					XSPH;				///< Velocity correction factor
+	double 					hmax;				///< Max of h
 };
 /////////////////////////////////////////////////////////////////////////////////////////// Implementation /////
 
@@ -291,9 +292,9 @@ inline void Domain::CheckParticleLeave ()
 inline void Domain::CellInitiate ()
 {
 	// Calculate Domain Size
-	double h=0.0;
 	BLPF = Particles[0]->x;
 	TRPR = Particles[0]->x;
+	hmax = 0.0;
 
 	for (size_t i=0; i<Particles.Size(); i++)
     {
@@ -305,13 +306,13 @@ inline void Domain::CellInitiate ()
         if (Particles[i]->x(1) < BLPF(1)) BLPF(1) = Particles[i]->x(1);
         if (Particles[i]->x(2) < BLPF(2)) BLPF(2) = Particles[i]->x(2);
 
-        if (Particles[i]->h > h) h=Particles[i]->h;
+        if (Particles[i]->h > hmax) hmax=Particles[i]->h;
     }
 
-	TRPR += h;
-	BLPF -= h;
+	TRPR += hmax;
+	BLPF -= hmax;
 
-    if ((BLPF(0) < 0.0) | (BLPF(1) < 0.0) | (BLPF(2) < 0.0))
+    if ((BLPF(0) < 0.0) | (BLPF(0) < 0.0) | (BLPF(0) < 0.0))
     	{
     	std::cout << "\nProblem to allocate Cells !!!!!!!!!!!!!" << std::endl;
     	std::cout << "Particle with minus coordinate" << std::endl;
@@ -321,21 +322,21 @@ inline void Domain::CellInitiate ()
     // Calculate Cells Properties
     	switch (Dimension)
         {case 1:
-            CellNo[0] = (int) (floor((TRPR(0)-BLPF(0))/(Cellfac*h)));
+            CellNo[0] = (int) (floor((TRPR(0)-BLPF(0))/(Cellfac*hmax)));
             CellNo[1] = 1;
             CellNo[2] = 1;
             CellSize  = Vec3_t ((TRPR(0)-BLPF(0))/CellNo[0],0.0,0.0);
             break;
         case 2:
-            CellNo[0] = (int) (floor((TRPR(0)-BLPF(0))/(Cellfac*h)));
-            CellNo[1] = (int) (floor((TRPR(1)-BLPF(1))/(Cellfac*h)));
+            CellNo[0] = (int) (floor((TRPR(0)-BLPF(0))/(Cellfac*hmax)));
+            CellNo[1] = (int) (floor((TRPR(1)-BLPF(1))/(Cellfac*hmax)));
             CellNo[2] = 1;
             CellSize  = Vec3_t ((TRPR(0)-BLPF(0))/CellNo[0],(TRPR(1)-BLPF(1))/CellNo[1],0.0);
             break;
         case 3:
-            CellNo[0] = (int) (floor((TRPR(0)-BLPF(0))/(Cellfac*h)));
-            CellNo[1] = (int) (floor((TRPR(1)-BLPF(1))/(Cellfac*h)));
-            CellNo[2] = (int) (floor((TRPR(2)-BLPF(2))/(Cellfac*h)));
+            CellNo[0] = (int) (floor((TRPR(0)-BLPF(0))/(Cellfac*hmax)));
+            CellNo[1] = (int) (floor((TRPR(1)-BLPF(1))/(Cellfac*hmax)));
+            CellNo[2] = (int) (floor((TRPR(2)-BLPF(2))/(Cellfac*hmax)));
             CellSize  = Vec3_t ((TRPR(0)-BLPF(0))/CellNo[0],(TRPR(1)-BLPF(1))/CellNo[1],(TRPR(2)-BLPF(2))/CellNo[2]);
         	break;
         default:
@@ -365,9 +366,9 @@ inline void Domain::CellInitiate ()
 
 inline void Domain::ListGenerate ()
 {
+	int i, j, k, temp=0;
 	switch (Dimension)
 	{case 1:
-		int i,temp=0;
 		for (size_t a=0; a<Particles.Size(); a++)
 		{
 			i= (int) (floor((Particles[a]->x(0) - BLPF(0)) / CellSize(0)));
@@ -380,7 +381,6 @@ inline void Domain::ListGenerate ()
 		}
 		break;
 	case 2:
-		int i,j,temp=0;
 		for (size_t a=0; a<Particles.Size(); a++)
 		{
 			i= (int) (floor((Particles[a]->x(0) - BLPF(0)) / CellSize(0)));
@@ -394,18 +394,50 @@ inline void Domain::ListGenerate ()
 		}
 		break;
 	case 3:
-		int i,j,k,temp=0;
 		for (size_t a=0; a<Particles.Size(); a++)
 		{
 			i= (int) (floor((Particles[a]->x(0) - BLPF(0)) / CellSize(0)));
 			j= (int) (floor((Particles[a]->x(1) - BLPF(1)) / CellSize(1)));
 			k= (int) (floor((Particles[a]->x(2) - BLPF(2)) / CellSize(2)));
-			temp = HOC[i][j][k];
-			HOC[i][j][k] = a;
+			temp = HOC[i][j][0];
+			HOC[i][j][0] = a;
 			Particles[a]->LL = temp;
 			Particles[a]->CC[0] = i;
 			Particles[a]->CC[1] = j;
-			Particles[a]->CC[2] = k;
+			Particles[a]->CC[2] = 0;
+            if (i<0)
+            {
+                    if ((BLPF(0) - Particles[a]->x(0))<=hmax) i=0;
+                            else std::cout<<"Leaving"<<std::endl;
+            }
+            if (j<0)
+            {
+                    if ((BLPF(1) - Particles[a]->x(1))<=hmax) j=0;
+                            else std::cout<<"Leaving"<<std::endl;
+            }
+            if (Periodic)
+            {
+            	if (i>=CellNo[0])
+				{
+						if ((Particles[a]->x(0) - TRPR(0))<=hmax) i=CellNo[0]-3;
+								else std::cout<<"Leaving"<<std::endl;
+				}
+            }
+            else
+            {
+            	if (i>=CellNo[0])
+				{
+						if ((Particles[a]->x(0) - TRPR(0))<=hmax) i=CellNo[0]-1;
+								else std::cout<<"Leaving"<<std::endl;
+				}
+
+            }
+            if (j>=CellNo[1])
+            {
+                    if ((Particles[a]->x(1) - TRPR(1))<=hmax) j=CellNo[1]-1;
+                            else std::cout<<"Leaving"<<std::endl;
+            }
+
 		}
 		break;
 	}
@@ -561,7 +593,6 @@ inline void Domain::InitiateInteractions()
     PInteractions.Resize(0);
     IinSI.Resize(0);
 
-    int q1;
     if (!Periodic)
     {
 		for (int q3=0; q3<CellNo[2]; q3++)
@@ -692,7 +723,7 @@ inline void Domain::ComputeAcceleration (double dt)
 inline void Domain::Move (double dt)
 {
 	#pragma omp parallel for
-	for (size_t i=0; i<Particles.Size(); i++) Particles[i]->Move(dt,Periodic,TRPR(0),BLPF(0));
+	for (size_t i=0; i<Particles.Size(); i++) Particles[i]->Move(dt,Periodic,TRPR(0),BLPF(0),hmax);
 }
 
 inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheFileKey, size_t Nproc)
