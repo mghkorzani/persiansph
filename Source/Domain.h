@@ -64,6 +64,7 @@ public:
     void StartAcceleration   (Vec3_t const & a = Vec3_t(0.0,0.0,0.0));                                                         ///< Add a fixed acceleration
     void ComputeAcceleration (double dt);                                                                                     ///< Compute the acceleration due to the other particles
     void Move                  (double dt);                                                                                     ///< Move particles
+    void ConstVel			();
 
     void Solve                (double tf, double dt, double dtOut, char const * TheFileKey, size_t Nproc);                   ///< The solving function
 
@@ -106,7 +107,9 @@ public:
     bool					Periodic; 			///< It it is true, periodic boundary condition along x direction will be considered
     bool					PressureBoundary;	///< if it is true, it will get max pressure for solid boundary from neighbors but if false, mean value.
     double 					XSPH;				///< Velocity correction factor
+    double					ConstVelPeriodic;	///< Define a constant velocity in the left and the right side of the domain in x direction
 	double 					hmax;				///< Max of h
+
 };
 /////////////////////////////////////////////////////////////////////////////////////////// Implementation /////
 
@@ -248,8 +251,12 @@ inline void Domain::CheckParticleLeave ()
 	#pragma omp parallel for
 	for (size_t i=0; i<Particles.Size(); i++)
     {
-		if ((Particles[i]->x(0) >= TRPR(0)) || (Particles[i]->x(1) >= TRPR(1)) || (Particles[i]->x(2) >= TRPR(2)) ||
-				(Particles[i]->x(0) <= BLPF(0)) || (Particles[i]->x(1) <= BLPF(1)) || (Particles[i]->x(2) <= BLPF(2))) DelParticles.Push(i);
+		if (!Periodic){
+			if ((Particles[i]->x(0) >= TRPR(0)) || (Particles[i]->x(1) >= TRPR(1)) || (Particles[i]->x(2) >= TRPR(2)) ||
+					(Particles[i]->x(0) <= BLPF(0)) || (Particles[i]->x(1) <= BLPF(1)) || (Particles[i]->x(2) <= BLPF(2))) DelParticles.Push(i);}
+		else{
+			if ((Particles[i]->x(1) >= TRPR(1)) || (Particles[i]->x(2) >= TRPR(2)) ||
+					(Particles[i]->x(1) <= BLPF(1)) || (Particles[i]->x(2) <= BLPF(2))) DelParticles.Push(i);}
     }
 
 	if (DelParticles.Size()>0)
@@ -385,6 +392,40 @@ inline void Domain::ListGenerate ()
 		{
 			i= (int) (floor((Particles[a]->x(0) - BLPF(0)) / CellSize(0)));
 			j= (int) (floor((Particles[a]->x(1) - BLPF(1)) / CellSize(1)));
+
+			if (i<0)
+            {
+                    if ((BLPF(0) - Particles[a]->x(0)) <= hmax) i=0;
+                            else std::cout<<"Leaving i<0"<<std::endl;
+            }
+            if (j<0)
+            {
+                    if ((BLPF(1) - Particles[a]->x(1)) <= hmax) j=0;
+                            else std::cout<<"Leaving j<0"<<std::endl;
+            }
+            if (Periodic)
+            {
+            	if (i>=CellNo[0]-2)
+				{
+						if ((Particles[a]->x(0) - TRPR(0)) <= hmax) i=CellNo[0]-3;
+								else std::cout<<"Leaving i>=CellNo"<<std::endl;
+				}
+            }
+            else
+            {
+            	if (i>=CellNo[0])
+				{
+						if ((Particles[a]->x(0) - TRPR(0)) <= hmax) i=CellNo[0]-1;
+								else std::cout<<"Leaving i>=CellNo"<<std::endl;
+				}
+
+            }
+            if (j>=CellNo[1])
+            {
+                    if ((Particles[a]->x(1) - TRPR(1)) <= hmax) j=CellNo[1]-1;
+                            else std::cout<<"Leaving j>=CellNo"<<std::endl;
+            }
+
 			temp = HOC[i][j][0];
 			HOC[i][j][0] = a;
 			Particles[a]->LL = temp;
@@ -399,12 +440,7 @@ inline void Domain::ListGenerate ()
 			i= (int) (floor((Particles[a]->x(0) - BLPF(0)) / CellSize(0)));
 			j= (int) (floor((Particles[a]->x(1) - BLPF(1)) / CellSize(1)));
 			k= (int) (floor((Particles[a]->x(2) - BLPF(2)) / CellSize(2)));
-			temp = HOC[i][j][0];
-			HOC[i][j][0] = a;
-			Particles[a]->LL = temp;
-			Particles[a]->CC[0] = i;
-			Particles[a]->CC[1] = j;
-			Particles[a]->CC[2] = 0;
+
             if (i<0)
             {
                     if ((BLPF(0) - Particles[a]->x(0))<=hmax) i=0;
@@ -438,6 +474,12 @@ inline void Domain::ListGenerate ()
                             else std::cout<<"Leaving"<<std::endl;
             }
 
+            temp = HOC[i][j][k];
+			HOC[i][j][k] = a;
+			Particles[a]->LL = temp;
+			Particles[a]->CC[0] = i;
+			Particles[a]->CC[1] = j;
+			Particles[a]->CC[2] = k;
 		}
 		break;
 	}
@@ -726,6 +768,33 @@ inline void Domain::Move (double dt)
 	for (size_t i=0; i<Particles.Size(); i++) Particles[i]->Move(dt,Periodic,TRPR(0),BLPF(0),hmax);
 }
 
+inline void Domain::ConstVel ()
+{
+	if (Periodic && ConstVelPeriodic>0.0)
+	{
+		int temp;
+		for (int q3=0; q3<CellNo[2]; q3++)
+		{
+			for (int q2=0; q2<CellNo[1]; q2++)
+			{
+				for (int q1=CellNo[0]-2; q1<CellNo[0]; q1++)
+				{
+					if (HOC[q1][q2][q3]==-1) continue;
+					else
+					{
+						temp = HOC[q1][q2][q3];
+						while (temp != -1)
+						{
+							Particles[temp]->v = Vec3_t (ConstVelPeriodic,0.0,0.0);
+							temp = Particles[temp]->LL;
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
 inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheFileKey, size_t Nproc)
 {
     Util::Stopwatch stopwatch;
@@ -740,11 +809,17 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
     CellInitiate();
     ListGenerate();
     InitiateInteractions();
-//	StartAcceleration(Gravity);
+//#pragma omp parallel for
+//for (size_t i=0; i<Particles.Size(); i++)
+//{
+//
+//	if (Particles[i]->IsFree) Particles[i]->v = Vec3_t (ConstVelPeriodic/5,0.0,0.0);
+//}
 
     while (Time<tf)
     {
     	StartAcceleration(Gravity);
+//    	ConstVel();
     	ComputeAcceleration(dt);
     	Move(dt);
 
@@ -781,7 +856,7 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
 
        Time += dt;
 
-       if (!Periodic) CheckParticleLeave();
+       CheckParticleLeave();
        ListandInteractionUpdate();
     }
 }
@@ -856,27 +931,27 @@ inline void Domain::WriteXDMF (char const * FileKey)
     oss << "   <Grid Name=\"SPHCenter\" GridType=\"Uniform\">\n";
     oss << "     <Topology TopologyType=\"Polyvertex\" NumberOfElements=\"" << Particles.Size() << "\"/>\n";
     oss << "     <Geometry GeometryType=\"XYZ\">\n";
-    oss << "       <DataItem Format=\"HDF\" NumberType=\"Float\" Precision=\"4\" Dimensions=\"" << Particles.Size() << " 3\" >\n";
+    oss << "       <DataItem Format=\"HDF\" NumberType=\"Float\" Precision=\"10\" Dimensions=\"" << Particles.Size() << " 3\" >\n";
     oss << "        " << fn.CStr() <<":/Position \n";
     oss << "       </DataItem>\n";
     oss << "     </Geometry>\n";
     oss << "     <Attribute Name=\"Velocity\" AttributeType=\"Vector\" Center=\"Node\">\n";
-    oss << "       <DataItem Dimensions=\"" << Particles.Size() << " 3\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">\n";
+    oss << "       <DataItem Dimensions=\"" << Particles.Size() << " 3\" NumberType=\"Float\" Precision=\"10\" Format=\"HDF\">\n";
     oss << "        " << fn.CStr() <<":/Velocity \n";
     oss << "       </DataItem>\n";
     oss << "     </Attribute>\n";
     oss << "     <Attribute Name=\"Pressure\" AttributeType=\"Scalar\" Center=\"Node\">\n";
-    oss << "       <DataItem Dimensions=\"" << Particles.Size() << "\" NumberType=\"Float\" Precision=\"4\"  Format=\"HDF\">\n";
+    oss << "       <DataItem Dimensions=\"" << Particles.Size() << "\" NumberType=\"Float\" Precision=\"10\"  Format=\"HDF\">\n";
     oss << "        " << fn.CStr() <<":/Pressure \n";
     oss << "       </DataItem>\n";
     oss << "     </Attribute>\n";
     oss << "     <Attribute Name=\"Density\" AttributeType=\"Scalar\" Center=\"Node\">\n";
-    oss << "       <DataItem Dimensions=\"" << Particles.Size() << "\" NumberType=\"Float\" Precision=\"4\"  Format=\"HDF\">\n";
+    oss << "       <DataItem Dimensions=\"" << Particles.Size() << "\" NumberType=\"Float\" Precision=\"10\"  Format=\"HDF\">\n";
     oss << "        " << fn.CStr() <<":/Density \n";
     oss << "       </DataItem>\n";
     oss << "     </Attribute>\n";
     oss << "     <Attribute Name=\"Radius\" AttributeType=\"Scalar\" Center=\"Node\">\n";
-    oss << "       <DataItem Dimensions=\"" << Particles.Size() << "\" NumberType=\"Float\" Precision=\"4\"  Format=\"HDF\">\n";
+    oss << "       <DataItem Dimensions=\"" << Particles.Size() << "\" NumberType=\"Float\" Precision=\"10\"  Format=\"HDF\">\n";
     oss << "        " << fn.CStr() <<":/Radius \n";
     oss << "       </DataItem>\n";
     oss << "     </Attribute>\n";

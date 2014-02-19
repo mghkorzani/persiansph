@@ -96,54 +96,11 @@ inline void Interaction::CalcForce(double dt)
     Vec3_t vij = P1->v - P2->v;
     Vec3_t rij = P1->x - P2->x;
 
-    Mat3_t Kdelta,PI,RF;
-    Mat3_t Sigmai,Sigmaj;
-    Mat3_t GradientVelocity,ShearStrain;
-    GradientVelocity=0.0;
-    ShearStrain=0.0;
-
-    Vec3_t temp;
-	Mat3_t A,B;
-
-    Kdelta = 	1.0, 0.0, 0.0,
-    			0.0, 1.0, 0.0,
-    			0.0, 0.0, 1.0;
-
-    double TI;
-//    TI= ((Pi/(di*di)+Pj/(dj*dj))*0.01)*(Kernel(norm(rij),h)/Kernel(0.002,h))*(Kernel(norm(rij),h)/Kernel(0.002,h))*(Kernel(norm(rij),h)/Kernel(0.002,h))*(Kernel(norm(rij),h)/Kernel(0.002,h));
-    TI=0.0;
-
-
     double MUij = h*dot(vij,rij)/(dot(rij,rij)+0.01*h*h);                                                ///<(2.75) Li, Liu Book
-	double Cij	= 0.5*(SoundSpeed(di,P1->RefDensity)+SoundSpeed(dj,P1->RefDensity));
-	double PIij;
-	if (dot(vij,rij)<0) PIij = (-alpha*Cij*MUij+beta*MUij*MUij)/(0.5*(di+dj));                          ///<(2.74) Li, Liu Book
-	else                PIij = 0.0;
-
-    Dyad((mj/di),-vij,GradKernel(norm(rij),h)*(rij/norm(rij)),GradientVelocity);
-    ShearStrainCal(GradientVelocity,ShearStrain);
-	Mult((Pi/(di*di)),Kdelta,A);
-	Mult((-MU/(di*di)),ShearStrain,B);
-	Add (A,B,Sigmai);
-
-    GradientVelocity=0.0;
-    ShearStrain=0.0;
-
-    Dyad((mi/dj),vij,-GradKernel(norm(rij),h)*(rij/norm(rij)),GradientVelocity);
-    ShearStrainCal(GradientVelocity,ShearStrain);
-	Mult((Pj/(dj*dj)),Kdelta,A);
-	Mult((-MU/(dj*dj)),ShearStrain,B);
-	Add (A,B,Sigmaj);
-
-	Mult(PIij,Kdelta,PI);
-	Mult(TI,Kdelta,RF);
-
-	Add (Sigmai,Sigmaj,A);
-	Add (A,PI,B);
-	Add (B,RF,A);
-
-
-    Mult (A,(GradKernel(norm(rij),h)*(rij/norm(rij))),temp);
+    double Cij = 0.5*(SoundSpeed(di,P1->RefDensity)+SoundSpeed(dj,P1->RefDensity));
+    double PIij;
+    if (dot(vij,rij)<0) PIij = (-alpha*Cij*MUij+beta*MUij*MUij)/(0.5*(di+dj));                          ///<(2.74) Li, Liu Book
+    else                PIij = 0.0;
 
     omp_set_lock(&P2->my_lock);
     P2->VXSPH		+= X*mi/(0.5*(di+dj))*Kernel(norm(rij),h)*vij;
@@ -152,13 +109,13 @@ inline void Interaction::CalcForce(double dt)
 
     omp_set_lock(&P1->my_lock);
     P1->VXSPH		+= X*mj/(0.5*(di+dj))*Kernel(norm(rij),h)*-vij;
-	P1->a			+= -mj*temp;                     ///<(2.73) Li, Liu Book
+	P1->a			+= -mj*(Pi/(di*di)+Pj/(dj*dj)+PIij)*GradKernel(norm(rij),h)*(rij/norm(rij))+ mj*8*MU/((di+dj)*(di+dj)*dot(rij,rij))*dot(rij,GradKernel(norm(rij),h)*(rij/norm(rij)))*vij;  ///<(2.73) Li, Liu Book
     P1->dDensity	+= (mj)*dot((vij+P1->VXSPH-P2->VXSPH),(rij/norm(rij)))*GradKernel(norm(rij),h);                                  ///<(2.58) Li, Liu Book
     omp_unset_lock(&P1->my_lock);
 
 
     omp_set_lock(&P2->my_lock);
-    P2->a			-= -mi*temp;
+    P2->a			-= -mi*(Pi/(di*di)+Pj/(dj*dj)+PIij)*GradKernel(norm(rij),h)*(rij/norm(rij))+ mi*8*MU/((di+dj)*(di+dj)*dot(rij,rij))*dot(rij,GradKernel(norm(rij),h)*(rij/norm(rij)))*vij;
     P2->dDensity	+= (mi)*dot((-vij+P2->VXSPH-P1->VXSPH),(-rij/norm(rij)))*GradKernel(norm(rij),h);
     omp_unset_lock(&P2->my_lock);
 }
