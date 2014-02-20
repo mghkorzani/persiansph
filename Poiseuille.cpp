@@ -25,11 +25,11 @@ using std::endl;
 int main(int argc, char **argv) try
 {
         SPH::Domain		dom;
-        dom.Gravity		= 0.0002,0.0,0.0;
+        dom.Gravity		= 0.2,0.0,0.0;
         dom.Dimension	= 2;
         dom.Alpha		= 0.0;
         dom.Beta		= 0.0;
-        dom.MaxVel		= 0.000025;
+        dom.MaxVel		= 0.1;
         dom.AutoSaveInt	= 1.0;
         dom.Cellfac		= 2;
         size_t Nproc	= 8;
@@ -39,12 +39,14 @@ int main(int argc, char **argv) try
         dom.XSPH			= 0.0;
         dom.ConstVelPeriodic= 0.0;
 
-        dom.AddBoxLength(1 ,Vec3_t ( 1.0000 , 1.0010125 , 0.0 ), 0.000525 , 0 , 0 , 21 , 1 , 1 , 0.000000625 , 1000 , 0.0000275 , true);
-        dom.AddBoxLength(1 ,Vec3_t ( 1.0000 , 0.9999875 , 0.0 ), 0.000525 , 0 , 0 , 21 , 1 , 1 , 0.000000625 , 1000 , 0.0000275 , true);
+        dom.AddBoxLength(1 ,Vec3_t ( 1.0000 , 1.0010125 , 0.0 ), 0.00375 , 0 , 0 , 150 , 1 , 1 , 0.000000625 , 1000 , 0.0000275 , true);
+        dom.AddBoxLength(1 ,Vec3_t ( 1.0000 , 0.9999875 , 0.0 ), 0.00375 , 0 , 0 , 150 , 1 , 1 , 0.000000625 , 1000 , 0.0000275 , true);
 
-        dom.AddRandomBox(3 ,Vec3_t ( 1.000 , 1.000 , 0.0 ), 0.0005 , 0.001 ,  0 , 20 , 40 , 1 , 0.000000625 , 1000, 0.0000275);
+        dom.AddBoxLength(1 ,Vec3_t ( 1.0005 , 1.0005 , 0.0 ), 0 , 0.000050 , 0 , 1 , 2 , 1 , 0.000000625 , 1000 , 0.0000275 , true);
 
-        dom.Solve(/*tf*/10.0,/*dt*/0.00001,/*dtOut*/0.001,"test07",Nproc);
+        dom.AddRandomBox(3 ,Vec3_t ( 1.000 , 1.000 , 0.0 ), 0.003725 , 0.001 ,  0 , 149 , 40 , 1 , 0.000000625 , 1000, 0.0000275);
+
+        dom.Solve(/*tf*/10.0,/*dt*/0.00001,/*dtOut*/0.002,"test07",Nproc);
         return 0;
 }
 MECHSYS_CATCH

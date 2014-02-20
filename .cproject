@@ -59,11 +59,11 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
-					<fileInfo id="cdt.managedbuild.config.gnu.exe.debug.829054585.358754841" name="test05Periodic.cpp" rcbsApplicability="disable" resourcePath="test05Periodic.cpp" toolsToInvoke="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.1274044068.497606015">
-						<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.1274044068.497606015" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.1274044068"/>
+					<fileInfo id="cdt.managedbuild.config.gnu.exe.debug.829054585.1461128959" name="Poiseuille.cpp" rcbsApplicability="disable" resourcePath="Poiseuille.cpp" toolsToInvoke="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.1274044068.1359786997">
+						<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.1274044068.1359786997" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.1274044068"/>
 					</fileInfo>
 					<sourceEntries>
-						<entry excluding="test05Periodic.cpp|test02.cpp|test03.cpp|test04.cpp" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="Poiseuille.cpp|test05Periodic.cpp|test02.cpp|test03.cpp|test04.cpp" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
@@ -127,11 +127,11 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
-					<fileInfo id="cdt.managedbuild.config.gnu.exe.release.1951905185.997332562" name="test05Periodic.cpp" rcbsApplicability="disable" resourcePath="test05Periodic.cpp" toolsToInvoke="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.1325570310.2380612">
-						<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.1325570310.2380612" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.1325570310"/>
+					<fileInfo id="cdt.managedbuild.config.gnu.exe.release.1951905185.14217784" name="Poiseuille.cpp" rcbsApplicability="disable" resourcePath="Poiseuille.cpp" toolsToInvoke="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.1325570310.2130014726">
+						<tool command="g++" commandLinePattern="${COMMAND} ${FLAGS} ${OUTPUT_FLAG} ${OUTPUT_PREFIX}${OUTPUT} ${INPUTS}" id="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.1325570310.2130014726" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.1325570310"/>
 					</fileInfo>
 					<sourceEntries>
-						<entry excluding="test05Periodic.cpp|test02.cpp|test03.cpp|test04.cpp" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="Poiseuille.cpp|test05Periodic.cpp|test02.cpp|test03.cpp|test04.cpp" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>

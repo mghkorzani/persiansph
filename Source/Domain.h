@@ -50,6 +50,7 @@ public:
     // Methods
     void AddRandomBoxFixed(int tag, Vec3_t const & V, double Lx, double Ly, double Lz, size_t nx, size_t ny, size_t nz, double Mass, double Density, double h, double R, size_t RandomSeed=100);
 
+    void AddSingleParticle                (int tag, Vec3_t const & x, double Mass, double Density, double h, bool Fixed);                                    ///< Add a box of particles (should specify radius of particles)
 
     void AddBox                (int tag, Vec3_t const & x, size_t nx, size_t ny, size_t nz,
     		                  double R, double Mass, double Density, double h, bool Fixed);                                    ///< Add a box of particles (should specify radius of particles)
@@ -129,6 +130,14 @@ inline Domain::~Domain ()
 
 
 // Methods
+inline void Domain::AddSingleParticle(int tag, Vec3_t const & x, double Mass, double Density, double h, bool Fixed)
+{
+    std::cout << "\n--------------Generating particles by AddSingleParticle-----------------------------------" << std::endl;
+
+        	Particles.Push(new Particle(tag,x,Vec3_t(0,0,0),Mass,Density,0.0000125,h,Fixed));
+            std::cout << "\n  Total No. of particles   = " << Particles.Size() << std::endl;
+}
+
 inline void Domain::AddBox(int tag, Vec3_t const & V, size_t nx, size_t ny, size_t nz, double R, double Mass, double Density, double h, bool Fixed)
 {
     std::cout << "\n--------------Generating particles by AddBox with defined radius-----------------------------------" << std::endl;

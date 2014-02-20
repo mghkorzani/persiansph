@@ -114,7 +114,7 @@ inline void Particle::Move (double dt, bool periodic, double domainmax, double d
 
 			if (periodic) if (x(0)>domainmax-hmax)
 			{
-				x(0) -= (domainmax-domainmin-1.5*hmax);
+				x(0) -= (domainmax-domainmin-2*hmax);
 			}
 		ct++;
 		}
@@ -139,7 +139,7 @@ inline void Particle::Move (double dt, bool periodic, double domainmax, double d
 
 			if (periodic) if (x(0)>domainmax-hmax)
 			{
-				x(0) -=(domainmax-domainmin-1.5*hmax);
+				x(0) -=(domainmax-domainmin-2*hmax);
 			}
 		}
 		ct=0;
