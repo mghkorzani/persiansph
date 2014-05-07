@@ -36,7 +36,6 @@ public:
     double GradKernel   (double r,double h);              ///< Gradient of kernel function
     double Pressure     (double Density, double Density0);///< Equation of state for weakly compressible fluid
     double SoundSpeed   (double Density, double Density0);///< Speed of sound in the fluid (dP/drho)
-    void ShearStrainCal	(Mat3_t GradVel,Mat3_t SStrain);  ///< Calculate shear strain from velocity gradient
 
     // Data
     Particle	*P1;			///< Pointer to first particle
@@ -74,24 +73,8 @@ inline void Interaction::CalcForce(double dt)
     double mj = P2->Mass;
     double Pi,Pj;
 
-    if (P1->IsFree)
-    {
-    	if (P2->IsFree)
-    	{
     	Pi = P1->Pressure = Pressure(di,P1->RefDensity);
     	Pj = P2->Pressure = Pressure(dj,P2->RefDensity);
-    	}
-    	else
-    		{
-    		Pi = P1->Pressure = Pressure(di,P1->RefDensity);
-    		Pj = P2->Pressure;
-    		}
-    }
-    else
-    	{
-    	Pj = P2->Pressure = Pressure(dj,P2->RefDensity);
-    	Pi = P1->Pressure;
-    	}
 
     Vec3_t vij = P1->v - P2->v;
     Vec3_t rij = P1->x - P2->x;
@@ -109,16 +92,66 @@ inline void Interaction::CalcForce(double dt)
 
     omp_set_lock(&P1->my_lock);
     P1->VXSPH		+= X*mj/(0.5*(di+dj))*Kernel(norm(rij),h)*-vij;
-	P1->a			+= -mj*(Pi/(di*di)+Pj/(dj*dj)+PIij+0.05*(Pi/(di*di)+Pj/(dj*dj))*(Kernel(norm(rij),h)/Kernel(0.000025,h)))*GradKernel(norm(rij),h)*(rij/norm(rij))+ mj*8*MU/((di+dj)*(di+dj)*dot(rij,rij))*dot(rij,GradKernel(norm(rij),h)*(rij/norm(rij)))*vij;  ///<(2.73) Li, Liu Book
+	P1->a			+= -mj*(Pi/(di*di)+Pj/(dj*dj)+PIij+0.05*(Pi/(di*di)+Pj/(dj*dj))*pow((Kernel(norm(rij),h)/Kernel(0.000016,h)),4))*GradKernel(norm(rij),h)*(rij/norm(rij))+ mj*8*MU/((di+dj)*(di+dj)*dot(rij,rij))*dot(rij,GradKernel(norm(rij),h)*(rij/norm(rij)))*vij;  ///<(2.73) Li, Liu Book
     P1->dDensity	+= (mj)*dot((vij+P1->VXSPH-P2->VXSPH),(rij/norm(rij)))*GradKernel(norm(rij),h);                                  ///<(2.58) Li, Liu Book
     omp_unset_lock(&P1->my_lock);
 
 
     omp_set_lock(&P2->my_lock);
-    P2->a			-= -mi*(Pi/(di*di)+Pj/(dj*dj)+PIij+0.05*(Pi/(di*di)+Pj/(dj*dj))*(Kernel(norm(rij),h)/Kernel(0.000025,h)))*GradKernel(norm(rij),h)*(rij/norm(rij))+ mi*8*MU/((di+dj)*(di+dj)*dot(rij,rij))*dot(rij,GradKernel(norm(rij),h)*(rij/norm(rij)))*vij;
+    P2->a			-= -mi*(Pi/(di*di)+Pj/(dj*dj)+PIij+0.05*(Pi/(di*di)+Pj/(dj*dj))*pow((Kernel(norm(rij),h)/Kernel(0.000016,h)),4))*GradKernel(norm(rij),h)*(rij/norm(rij))+ mi*8*MU/((di+dj)*(di+dj)*dot(rij,rij))*dot(rij,GradKernel(norm(rij),h)*(rij/norm(rij)))*vij;
     P2->dDensity	+= (mi)*dot((-vij+P2->VXSPH-P1->VXSPH),(-rij/norm(rij)))*GradKernel(norm(rij),h);
     omp_unset_lock(&P2->my_lock);
 }
+
+//inline double Interaction::Kernel(double r,double h)
+//{
+//	double C;
+//	switch (Dim)
+//    {case 1:
+//       C = 1.0/(7.0*h);
+//       break;
+//    case 2:
+//       C = 1.0/(3.0*h*h*M_PI);
+//       break;
+//    case 3:
+//       C = 15.0/(62.0*h*h*h*M_PI);
+//       break;
+//    default:
+//       std::cout << "Please correct dimension for kernel and run again, otherwise 3D is used" << std::endl;
+//       C = 1.0/(h*h*h*M_PI);
+//       break;
+//    }
+//
+//    double q = r/h;
+//    if ((q>=0.0)&&(q<1)) return C*(6.0-6.0*q+(q*q*q));
+//    else if (q<=2)       return C*((2-q)*(2-q)*(2-q));
+//    else                 return 0.0;
+//}
+//
+//inline double Interaction::GradKernel(double r, double h)
+//{
+//	double C;
+//	switch (Dim)
+//    {case 1:
+//       C = 1.0/(7.0*h*h);
+//       break;
+//    case 2:
+//       C = 1.0/(3.0*h*h*h*M_PI);
+//       break;
+//    case 3:
+//       C = 15.0/(62.0*h*h*h*h*M_PI);
+//       break;
+//    default:
+//       std::cout << "Please correct dimension for kernel and run again, otherwise 3D is used" << std::endl;
+//       C = 1.0/(h*h*h*h*M_PI);
+//       break;
+//    }
+//    double q = r/h;
+//    if ((q>=0.0)&&(q<1)) return C*(-6.0+3.0*q*q);
+//    else if (q<=2)       return C*(-3.0*(2-q)*(2-q));
+//    else                 return 0.0;
+//}
+
 
 inline double Interaction::Kernel(double r,double h)
 {
@@ -171,21 +204,13 @@ inline double Interaction::GradKernel(double r, double h)
 
 inline double Interaction::Pressure(double Density, double Density0)
 {
-	return (100*Density0*V2/7)*(pow(Density/Density0,7)-1);
+		return (100*Density0*V2/7)*(pow(Density/Density0,7)-1);
 }
 
 inline double Interaction::SoundSpeed(double Density, double Density0)
 {
-	return sqrt(7*(100*Density0*V2/7)*(pow(Density/Density0,6)/Density0));
+		return sqrt(7*(100*Density0*V2/7)*(pow(Density/Density0,6)/Density0));
 }
-
-inline void Interaction::ShearStrainCal (Mat3_t GradVel,Mat3_t SStrain)
-{
-    SStrain(0,0)=2*GradVel(0,0);  				SStrain(0,1)=GradVel(1,0)+GradVel(0,1);  	SStrain(0,2)=GradVel(2,0)+GradVel(0,2);
-    SStrain(1,0)=GradVel(1,0)+GradVel(0,1);  	SStrain(1,1)=2*GradVel(1,1);				SStrain(1,2)=GradVel(2,1)+GradVel(1,2);
-    SStrain(2,0)=GradVel(2,0)+GradVel(0,2);		SStrain(2,1)=GradVel(2,1)+GradVel(1,2);		SStrain(2,2)=2*GradVel(2,2);
-}
-
 
 }; // namespace SPH
 
