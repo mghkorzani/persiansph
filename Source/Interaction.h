@@ -90,15 +90,22 @@ inline void Interaction::CalcForce(double dt)
     omp_unset_lock(&P2->my_lock);
 
 
+    double pa,pb;
+    if (Pi<0) pa = abs(Pi);
+    		else pa=0;
+    if (Pj<0) pa = abs(Pj);
+    		else pb=0;
+    double TI = 0.1*(pa/(di*di)+pb/(dj*dj))*pow((Kernel(norm(rij),h)/Kernel(0.0000225,h)),4);
+
     omp_set_lock(&P1->my_lock);
     P1->VXSPH		+= X*mj/(0.5*(di+dj))*Kernel(norm(rij),h)*-vij;
-	P1->a			+= -mj*(Pi/(di*di)+Pj/(dj*dj)+PIij+0.05*(Pi/(di*di)+Pj/(dj*dj))*pow((Kernel(norm(rij),h)/Kernel(0.000016,h)),4))*GradKernel(norm(rij),h)*(rij/norm(rij))+ mj*8*MU/((di+dj)*(di+dj)*dot(rij,rij))*dot(rij,GradKernel(norm(rij),h)*(rij/norm(rij)))*vij;  ///<(2.73) Li, Liu Book
+	P1->a			+= -mj*(Pi/(di*di)+Pj/(dj*dj)+PIij+TI)*GradKernel(norm(rij),h)*(rij/norm(rij))+ mj*8*MU/((di+dj)*(di+dj)*dot(rij,rij))*dot(rij,GradKernel(norm(rij),h)*(rij/norm(rij)))*vij;  ///<(2.73) Li, Liu Book
     P1->dDensity	+= (mj)*dot((vij+P1->VXSPH-P2->VXSPH),(rij/norm(rij)))*GradKernel(norm(rij),h);                                  ///<(2.58) Li, Liu Book
     omp_unset_lock(&P1->my_lock);
 
 
     omp_set_lock(&P2->my_lock);
-    P2->a			-= -mi*(Pi/(di*di)+Pj/(dj*dj)+PIij+0.05*(Pi/(di*di)+Pj/(dj*dj))*pow((Kernel(norm(rij),h)/Kernel(0.000016,h)),4))*GradKernel(norm(rij),h)*(rij/norm(rij))+ mi*8*MU/((di+dj)*(di+dj)*dot(rij,rij))*dot(rij,GradKernel(norm(rij),h)*(rij/norm(rij)))*vij;
+    P2->a			-= -mi*(Pi/(di*di)+Pj/(dj*dj)+PIij+TI)*GradKernel(norm(rij),h)*(rij/norm(rij))+ mi*8*MU/((di+dj)*(di+dj)*dot(rij,rij))*dot(rij,GradKernel(norm(rij),h)*(rij/norm(rij)))*vij;
     P2->dDensity	+= (mi)*dot((-vij+P2->VXSPH-P1->VXSPH),(-rij/norm(rij)))*GradKernel(norm(rij),h);
     omp_unset_lock(&P2->my_lock);
 }
