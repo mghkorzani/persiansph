@@ -90,12 +90,13 @@ inline void Interaction::CalcForce(double dt)
     omp_unset_lock(&P2->my_lock);
 
 
-    double pa,pb;
-    if (Pi<0) pa = abs(Pi);
-    		else pa=0;
-    if (Pj<0) pa = abs(Pj);
-    		else pb=0;
-    double TI = 0.1*(pa/(di*di)+pb/(dj*dj))*pow((Kernel(norm(rij),h)/Kernel(0.0000225,h)),4);
+//    double pa,pb;
+//    if (Pi<0) pa = abs(Pi);
+//    		else pa=0;
+//    if (Pj<0) pa = abs(Pj);
+//    		else pb=0;
+//    double TI = 0.3*(pa/(di*di)+pb/(dj*dj))*pow((Kernel(norm(rij),h)/Kernel(0.0000225,h)),4);
+    double TI=0.0;
 
     omp_set_lock(&P1->my_lock);
     P1->VXSPH		+= X*mj/(0.5*(di+dj))*Kernel(norm(rij),h)*-vij;
@@ -211,7 +212,8 @@ inline double Interaction::GradKernel(double r, double h)
 
 inline double Interaction::Pressure(double Density, double Density0)
 {
-		return (100*Density0*V2/7)*(pow(Density/Density0,7)-1);
+//		return (100*Density0*V2/7)*(pow(Density/Density0,7)-1);
+		return 3000+10*10*(Density-Density0);
 }
 
 inline double Interaction::SoundSpeed(double Density, double Density0)

@@ -66,7 +66,8 @@ public:
     void ComputeAcceleration (double dt);                                                                                     ///< Compute the acceleration due to the other particles
     void Move                  (double dt);                                                                                     ///< Move particles
     void ConstVel			();
-
+    void ConstVelPart2 ();
+    void AvgParticleVelocity();
     void Solve                (double tf, double dt, double dtOut, char const * TheFileKey, size_t Nproc);                   ///< The solving function
 
     void InitiateInteractions();                                                                                               ///< Reset the interaction array and make the first Interaction and PInteraction array
@@ -110,6 +111,7 @@ public:
     double 					XSPH;				///< Velocity correction factor
     double					ConstVelPeriodic;	///< Define a constant velocity in the left and the right side of the domain in x direction
 	double 					hmax;				///< Max of h
+	double					AvgVelocity;
 
 };
 /////////////////////////////////////////////////////////////////////////////////////////// Implementation /////
@@ -499,7 +501,6 @@ inline void Domain::ListGenerate ()
 	           for(int k = 0; k<CellNo[2];k++){
 	              HOC[CellNo[0]-1][j][k] =  HOC[1][j][k];
 	              HOC[CellNo[0]-2][j][k] =  HOC[0][j][k];
-
 	           }
 	       }
 	}
@@ -786,7 +787,7 @@ inline void Domain::ConstVel ()
 		{
 			for (int q2=0; q2<CellNo[1]; q2++)
 			{
-				for (int q1=CellNo[0]-2; q1<CellNo[0]; q1++)
+				for (int q1=CellNo[0]-6; q1<CellNo[0]-2; q1++)
 				{
 					if (HOC[q1][q2][q3]==-1) continue;
 					else
@@ -794,7 +795,31 @@ inline void Domain::ConstVel ()
 						temp = HOC[q1][q2][q3];
 						while (temp != -1)
 						{
-							Particles[temp]->v = Vec3_t (ConstVelPeriodic,0.0,0.0);
+							if (Particles[temp]->IsFree) Particles[temp]->v = Vec3_t (ConstVelPeriodic,0.0,0.0);
+							temp = Particles[temp]->LL;
+						}
+					}
+				}
+			}
+		}
+	}
+
+	if (Periodic && ConstVelPeriodic>0.0)
+	{
+		int temp;
+		for (int q3=0; q3<CellNo[2]; q3++)
+		{
+			for (int q2=0; q2<CellNo[1]; q2++)
+			{
+				for (int q1=0; q1<4; q1++)
+				{
+					if (HOC[q1][q2][q3]==-1) continue;
+					else
+					{
+						temp = HOC[q1][q2][q3];
+						while (temp != -1)
+						{
+							if (Particles[temp]->IsFree) Particles[temp]->v = Vec3_t (ConstVelPeriodic,0.0,0.0);
 							temp = Particles[temp]->LL;
 						}
 					}
@@ -804,7 +829,77 @@ inline void Domain::ConstVel ()
 	}
 }
 
-inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheFileKey, size_t Nproc)
+
+inline void Domain::ConstVelPart2 ()
+{
+	if (Periodic && ConstVelPeriodic>0.0)
+	{
+		int temp;
+		for (int q3=0; q3<CellNo[2]; q3++)
+		{
+			for (int q2=0; q2<CellNo[1]; q2++)
+			{
+				for (int q1=CellNo[0]-6; q1<CellNo[0]-2; q1++)
+				{
+					if (HOC[q1][q2][q3]==-1) continue;
+					else
+					{
+						temp = HOC[q1][q2][q3];
+						while (temp != -1)
+						{
+							if (Particles[temp]->IsFree) Particles[temp]->a = Vec3_t (0.0,0.0,0.0);
+							temp = Particles[temp]->LL;
+						}
+					}
+				}
+			}
+		}
+	}
+
+	if (Periodic && ConstVelPeriodic>0.0)
+	{
+		int temp;
+		for (int q3=0; q3<CellNo[2]; q3++)
+		{
+			for (int q2=0; q2<CellNo[1]; q2++)
+			{
+				for (int q1=0; q1<4; q1++)
+				{
+					if (HOC[q1][q2][q3]==-1) continue;
+					else
+					{
+						temp = HOC[q1][q2][q3];
+						while (temp != -1)
+						{
+							if (Particles[temp]->IsFree) Particles[temp]->a = Vec3_t (0.0,0.0,0.0);
+							temp = Particles[temp]->LL;
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+inline void Domain::AvgParticleVelocity ()
+{
+	AvgVelocity = 0.0;
+	int j = 0;
+
+	#pragma omp parallel for
+	for (size_t i=0; i<Particles.Size(); i++)
+		{
+		if (Particles[i]->IsFree)
+			{
+			AvgVelocity += Particles[i]->v(0);
+			j++;
+			}
+		}
+
+	AvgVelocity = AvgVelocity / j;
+}
+
+	inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheFileKey, size_t Nproc)
 {
     Util::Stopwatch stopwatch;
     std::cout << "\n--------------Solving------------------------------------------------------------------------------" << std::endl;
@@ -818,19 +913,21 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
     CellInitiate();
     ListGenerate();
     InitiateInteractions();
-//#pragma omp parallel for
-//for (size_t i=0; i<Particles.Size(); i++)
-//{
-//
-//	if (Particles[i]->IsFree) Particles[i]->v = Vec3_t (ConstVelPeriodic/5,0.0,0.0);
-//}
+	#pragma omp parallel for
+	for (size_t i=0; i<Particles.Size(); i++)
+	{
+		if (Particles[i]->IsFree) Particles[i]->v = Vec3_t (ConstVelPeriodic,0.0,0.0);
+	}
 
     while (Time<tf)
     {
     	StartAcceleration(Gravity);
-//    	ConstVel();
+    	ConstVel();
     	ComputeAcceleration(dt);
+    	ConstVelPart2();
     	Move(dt);
+    	AvgParticleVelocity ();
+
 
         // output
         if (Time>=tout)
@@ -841,6 +938,7 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
                 fn.Printf    ("%s_%04d", TheFileKey, idx_out);
                 WriteXDMF    (fn.CStr());
                 std::cout << "\n" << "Output No. " << idx_out << " at " << Time << " has been generated" << std::endl;
+                std::cout << AvgVelocity<< std::endl;
             	}
             idx_out++;
             tout += dtOut;
