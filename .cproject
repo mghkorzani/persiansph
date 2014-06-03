@@ -1,34 +1,30 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<?fileVersion 4.0.0?>
-
-<cproject storage_type_id="org.eclipse.cdt.core.XmlProjectDescriptionStorage">
+<?fileVersion 4.0.0?><cproject storage_type_id="org.eclipse.cdt.core.XmlProjectDescriptionStorage">
 	<storageModule moduleId="org.eclipse.cdt.core.settings">
 		<cconfiguration id="cdt.managedbuild.config.gnu.exe.debug.829054585">
 			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="cdt.managedbuild.config.gnu.exe.debug.829054585" moduleId="org.eclipse.cdt.core.settings" name="Debug">
 				<externalSettings/>
 				<extensions>
-					<extension id="org.eclipse.cdt.core.ELF" point="org.eclipse.cdt.core.BinaryParser"/>
-					<extension id="org.eclipse.cdt.core.GmakeErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
-					<extension id="org.eclipse.cdt.core.CWDLocator" point="org.eclipse.cdt.core.ErrorParser"/>
 					<extension id="org.eclipse.cdt.core.GCCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
 					<extension id="org.eclipse.cdt.core.GASErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
 					<extension id="org.eclipse.cdt.core.GLDErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.ELF" point="org.eclipse.cdt.core.BinaryParser"/>
 				</extensions>
 			</storageModule>
 			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
 				<configuration artifactName="${ProjName}" buildArtefactType="org.eclipse.cdt.build.core.buildArtefactType.exe" buildProperties="org.eclipse.cdt.build.core.buildType=org.eclipse.cdt.build.core.buildType.debug,org.eclipse.cdt.build.core.buildArtefactType=org.eclipse.cdt.build.core.buildArtefactType.exe" cleanCommand="rm -rf" description="" id="cdt.managedbuild.config.gnu.exe.debug.829054585" name="Debug" parent="cdt.managedbuild.config.gnu.exe.debug">
 					<folderInfo id="cdt.managedbuild.config.gnu.exe.debug.829054585." name="/" resourcePath="">
-						<toolChain id="cdt.managedbuild.toolchain.gnu.exe.debug.1762957922" name="Linux GCC" superClass="cdt.managedbuild.toolchain.gnu.exe.debug">
+						<toolChain id="cdt.managedbuild.toolchain.gnu.exe.debug.1762957922" name="Linux GCC" nonInternalBuilderId="cdt.managedbuild.target.gnu.builder.exe.debug" superClass="cdt.managedbuild.toolchain.gnu.exe.debug">
 							<targetPlatform id="cdt.managedbuild.target.gnu.platform.exe.debug.423507959" name="Debug Platform" superClass="cdt.managedbuild.target.gnu.platform.exe.debug"/>
-							<builder buildPath="${workspace_loc:/SPH/Debug}" id="cdt.managedbuild.target.gnu.builder.exe.debug.413648291" keepEnvironmentInBuildfile="false" managedBuildOn="true" name="Gnu Make Builder" superClass="cdt.managedbuild.target.gnu.builder.exe.debug"/>
+							<builder autoBuildTarget="all" buildPath="${workspace_loc:/SPH}/Debug" cleanBuildTarget="clean" id="org.eclipse.cdt.build.core.internal.builder.1218679492" incrementalBuildTarget="all" keepEnvironmentInBuildfile="false" managedBuildOn="true" name="CDT Internal Builder" superClass="org.eclipse.cdt.build.core.internal.builder"/>
 							<tool id="cdt.managedbuild.tool.gnu.archiver.base.831899797" name="GCC Archiver" superClass="cdt.managedbuild.tool.gnu.archiver.base"/>
 							<tool command="g++" commandLinePattern="${COMMAND} ${FLAGS} ${OUTPUT_FLAG} ${OUTPUT_PREFIX}${OUTPUT} ${INPUTS}" id="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.1274044068" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug">
 								<option id="gnu.cpp.compiler.exe.debug.option.optimization.level.746366457" name="Optimization Level" superClass="gnu.cpp.compiler.exe.debug.option.optimization.level" value="gnu.cpp.compiler.optimization.level.none" valueType="enumerated"/>
 								<option id="gnu.cpp.compiler.exe.debug.option.debugging.level.365891630" name="Debug Level" superClass="gnu.cpp.compiler.exe.debug.option.debugging.level" value="gnu.cpp.compiler.debugging.level.max" valueType="enumerated"/>
 								<option id="gnu.cpp.compiler.option.include.paths.1336138286" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" valueType="includePath">
-									<listOptionValue builtIn="false" value="/home/uqmghol1/mechsys"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/Source}&quot;"/>
-									<listOptionValue builtIn="false" value="/home/uqmghol1/pkg/blitz-0.9"/>
+									<listOptionValue builtIn="false" value="/home/maziar/mechsys"/>
+									<listOptionValue builtIn="false" value="/home/maziar/sph-scouring/Source"/>
+									<listOptionValue builtIn="false" value="/home/maziar/pkg/blitz-0.9"/>
 								</option>
 								<option id="gnu.cpp.compiler.option.include.files.695372981" name="Include files (-include)" superClass="gnu.cpp.compiler.option.include.files"/>
 								<option id="gnu.cpp.compiler.option.other.other.490791709" name="Other flags" superClass="gnu.cpp.compiler.option.other.other" value="-c -fmessage-length=0 -fopenmp" valueType="string"/>
@@ -59,9 +55,6 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
-					<fileInfo id="cdt.managedbuild.config.gnu.exe.debug.829054585.1461128959" name="Poiseuille.cpp" rcbsApplicability="disable" resourcePath="Poiseuille.cpp" toolsToInvoke="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.1274044068.1359786997">
-						<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.1274044068.1359786997" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.1274044068"/>
-					</fileInfo>
 					<sourceEntries>
 						<entry excluding="Poiseuille.cpp|test05Periodic.cpp|test02.cpp|test03.cpp|test04.cpp" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
@@ -73,12 +66,12 @@
 			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="cdt.managedbuild.config.gnu.exe.release.1951905185" moduleId="org.eclipse.cdt.core.settings" name="Release">
 				<externalSettings/>
 				<extensions>
-					<extension id="org.eclipse.cdt.core.ELF" point="org.eclipse.cdt.core.BinaryParser"/>
 					<extension id="org.eclipse.cdt.core.GmakeErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
 					<extension id="org.eclipse.cdt.core.CWDLocator" point="org.eclipse.cdt.core.ErrorParser"/>
 					<extension id="org.eclipse.cdt.core.GCCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
 					<extension id="org.eclipse.cdt.core.GASErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
 					<extension id="org.eclipse.cdt.core.GLDErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.ELF" point="org.eclipse.cdt.core.BinaryParser"/>
 				</extensions>
 			</storageModule>
 			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
@@ -92,9 +85,9 @@
 								<option id="gnu.cpp.compiler.exe.release.option.optimization.level.1003527472" name="Optimization Level" superClass="gnu.cpp.compiler.exe.release.option.optimization.level" value="gnu.cpp.compiler.optimization.level.most" valueType="enumerated"/>
 								<option id="gnu.cpp.compiler.exe.release.option.debugging.level.1298270231" name="Debug Level" superClass="gnu.cpp.compiler.exe.release.option.debugging.level" value="gnu.cpp.compiler.debugging.level.none" valueType="enumerated"/>
 								<option id="gnu.cpp.compiler.option.include.paths.1415930681" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" valueType="includePath">
-									<listOptionValue builtIn="false" value="/home/uqmghol1/mechsys"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/Source}&quot;"/>
-									<listOptionValue builtIn="false" value="/home/uqmghol1/pkg/blitz-0.9"/>
+									<listOptionValue builtIn="false" value="/home/maziar/mechsys"/>
+									<listOptionValue builtIn="false" value="/home/maziar/sph-scouring/Source"/>
+									<listOptionValue builtIn="false" value="/home/maziar/pkg/blitz-0.9"/>
 								</option>
 								<option id="gnu.cpp.compiler.option.other.other.1990774116" name="Other flags" superClass="gnu.cpp.compiler.option.other.other" value="-c -fmessage-length=0 -fopenmp" valueType="string"/>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.1401729402" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
@@ -127,9 +120,6 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
-					<fileInfo id="cdt.managedbuild.config.gnu.exe.release.1951905185.14217784" name="Poiseuille.cpp" rcbsApplicability="disable" resourcePath="Poiseuille.cpp" toolsToInvoke="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.1325570310.2130014726">
-						<tool command="g++" commandLinePattern="${COMMAND} ${FLAGS} ${OUTPUT_FLAG} ${OUTPUT_PREFIX}${OUTPUT} ${INPUTS}" id="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.1325570310.2130014726" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.1325570310"/>
-					</fileInfo>
 					<sourceEntries>
 						<entry excluding="Poiseuille.cpp|test05Periodic.cpp|test02.cpp|test03.cpp|test04.cpp" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>

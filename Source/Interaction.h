@@ -91,23 +91,29 @@ inline void Interaction::CalcForce(double dt)
 
 
 //    double pa,pb;
-//    if (Pi<0) pa = abs(Pi);
-//    		else pa=0;
-//    if (Pj<0) pa = abs(Pj);
-//    		else pb=0;
-//    double TI = 0.3*(pa/(di*di)+pb/(dj*dj))*pow((Kernel(norm(rij),h)/Kernel(0.0000225,h)),4);
+//    if ((Pi<0) && (Pj<0))
+//    	{
+//    	pa = abs(Pi);
+//    	pa = abs(Pj);
+//    	}
+//    		else
+//    			{
+//    			pa=0;
+//				pb=0;
+//    			}
+//    double TI = 0.1*(pa/(di*di)+pb/(dj*dj))*pow((Kernel(norm(rij),h)/Kernel(0.0000225,h)),4);
     double TI=0.0;
 
     omp_set_lock(&P1->my_lock);
     P1->VXSPH		+= X*mj/(0.5*(di+dj))*Kernel(norm(rij),h)*-vij;
 	P1->a			+= -mj*(Pi/(di*di)+Pj/(dj*dj)+PIij+TI)*GradKernel(norm(rij),h)*(rij/norm(rij))+ mj*8*MU/((di+dj)*(di+dj)*dot(rij,rij))*dot(rij,GradKernel(norm(rij),h)*(rij/norm(rij)))*vij;  ///<(2.73) Li, Liu Book
-    P1->dDensity	+= (mj)*dot((vij+P1->VXSPH-P2->VXSPH),(rij/norm(rij)))*GradKernel(norm(rij),h);                                  ///<(2.58) Li, Liu Book
+    P1->dDensity	+= (di*mj/dj)*dot((vij+P1->VXSPH-P2->VXSPH),(rij/norm(rij)))*GradKernel(norm(rij),h)+ (0.0*h*1*mj/dj)*dot((2*(di-dj)/dot(rij,rij)*rij),(rij/norm(rij)))*GradKernel(norm(rij),h);                                  ///<(2.58) Li, Liu Book
     omp_unset_lock(&P1->my_lock);
 
 
     omp_set_lock(&P2->my_lock);
     P2->a			-= -mi*(Pi/(di*di)+Pj/(dj*dj)+PIij+TI)*GradKernel(norm(rij),h)*(rij/norm(rij))+ mi*8*MU/((di+dj)*(di+dj)*dot(rij,rij))*dot(rij,GradKernel(norm(rij),h)*(rij/norm(rij)))*vij;
-    P2->dDensity	+= (mi)*dot((-vij+P2->VXSPH-P1->VXSPH),(-rij/norm(rij)))*GradKernel(norm(rij),h);
+    P2->dDensity	+= (dj*mi/di)*dot((-vij+P2->VXSPH-P1->VXSPH),(-rij/norm(rij)))*GradKernel(norm(rij),h)+ (0.0*h*1*mi/di)*dot((2*(dj-di)/dot(rij,rij)*-rij),(-rij/norm(rij)))*GradKernel(norm(rij),h);
     omp_unset_lock(&P2->my_lock);
 }
 
@@ -212,8 +218,9 @@ inline double Interaction::GradKernel(double r, double h)
 
 inline double Interaction::Pressure(double Density, double Density0)
 {
-//		return (100*Density0*V2/7)*(pow(Density/Density0,7)-1);
+//		return 4000+(100*Density0*V2/7)*(pow(Density/Density0,7)-1);
 		return 3000+10*10*(Density-Density0);
+//		return 10*10*Density;
 }
 
 inline double Interaction::SoundSpeed(double Density, double Density0)

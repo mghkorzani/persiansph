@@ -972,7 +972,7 @@ inline void Domain::WriteXDMF (char const * FileKey)
 {
 
 	String fn(FileKey);
-    fn.append(".h5");
+    fn.append(".hdf5");
     hid_t file_id;
     file_id = H5Fcreate(fn.CStr(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
@@ -981,8 +981,11 @@ inline void Domain::WriteXDMF (char const * FileKey)
     float * Velvec   = new float[3*Particles.Size()];
     float * Pressure = new float[  Particles.Size()];
     float * Density  = new float[  Particles.Size()];
-    float * Radius   = new float[  Particles.Size()];
+    float * Mass	 = new float[  Particles.Size()];
+    float * sh	     = new float[  Particles.Size()];
     int   * Tag      = new int  [  Particles.Size()];
+    int   * IsFree   = new int  [  Particles.Size()];
+
 
     for (size_t i=0;i<Particles.Size();i++)
     {
@@ -994,13 +997,23 @@ inline void Domain::WriteXDMF (char const * FileKey)
         Velvec  [3*i+2] = float(Particles[i]->v(2));
         Pressure[i    ] = float(Particles[i]->Pressure);
         Density [i    ] = float(Particles[i]->Density);
-        Radius  [i    ] = float(Particles[i]->R);
+        Mass	[i    ] = float(Particles[i]->Mass);
+        sh	    [i    ] = float(Particles[i]->h);
         Tag     [i    ] = int  (Particles[i]->ID);
+        if (Particles[i]->IsFree)
+        	IsFree[i] = int  (1);
+        else
+        	IsFree[i] = int  (0);
     }
 
-    hsize_t dims[1];
-    dims[0] = 3*Particles.Size();
+    int data[1];
     String dsname;
+    hsize_t dims[1];
+    dims[0]=1;
+    data[0]=Particles.Size();
+    dsname.Printf("/NP");
+    H5LTmake_dataset_int(file_id,dsname.CStr(),1,dims,data);
+    dims[0] = 3*Particles.Size();
     dsname.Printf("Position");
     H5LTmake_dataset_float(file_id,dsname.CStr(),1,dims,Posvec);
     dsname.Printf("Velocity");
@@ -1010,18 +1023,24 @@ inline void Domain::WriteXDMF (char const * FileKey)
     H5LTmake_dataset_float(file_id,dsname.CStr(),1,dims,Pressure);
     dsname.Printf("Density");
     H5LTmake_dataset_float(file_id,dsname.CStr(),1,dims,Density);
-    dsname.Printf("Radius");
-    H5LTmake_dataset_float(file_id,dsname.CStr(),1,dims,Radius);
+    dsname.Printf("Mass");
+    H5LTmake_dataset_float(file_id,dsname.CStr(),1,dims,Mass);
+    dsname.Printf("h");
+    H5LTmake_dataset_float(file_id,dsname.CStr(),1,dims,sh);
     dsname.Printf("Tag");
     H5LTmake_dataset_int(file_id,dsname.CStr(),1,dims,Tag);
+    dsname.Printf("IsFree");
+    H5LTmake_dataset_int(file_id,dsname.CStr(),1,dims,IsFree);
 
 
     delete [] Posvec;
     delete [] Velvec;
     delete [] Pressure;
     delete [] Density;
-    delete [] Radius;
+    delete [] Mass;
+    delete [] sh;
     delete [] Tag;
+    delete [] IsFree;
 
 
     //Closing the file
@@ -1055,11 +1074,6 @@ inline void Domain::WriteXDMF (char const * FileKey)
     oss << "     <Attribute Name=\"Density\" AttributeType=\"Scalar\" Center=\"Node\">\n";
     oss << "       <DataItem Dimensions=\"" << Particles.Size() << "\" NumberType=\"Float\" Precision=\"10\"  Format=\"HDF\">\n";
     oss << "        " << fn.CStr() <<":/Density \n";
-    oss << "       </DataItem>\n";
-    oss << "     </Attribute>\n";
-    oss << "     <Attribute Name=\"Radius\" AttributeType=\"Scalar\" Center=\"Node\">\n";
-    oss << "       <DataItem Dimensions=\"" << Particles.Size() << "\" NumberType=\"Float\" Precision=\"10\"  Format=\"HDF\">\n";
-    oss << "        " << fn.CStr() <<":/Radius \n";
     oss << "       </DataItem>\n";
     oss << "     </Attribute>\n";
     oss << "     <Attribute Name=\"Tag\" AttributeType=\"Scalar\" Center=\"Node\">\n";

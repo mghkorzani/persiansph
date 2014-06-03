@@ -29,7 +29,7 @@ int main(int argc, char **argv) try
         dom.Dimension	= 2;
         dom.Alpha		= 0.0;
         dom.Beta		= 0.0;
-        dom.MaxVel		= 0.1;
+        dom.MaxVel		= 1.0;
         dom.AutoSaveInt	= 1.0;
         dom.Cellfac		= 2;
         size_t Nproc	= 8;
@@ -39,20 +39,20 @@ int main(int argc, char **argv) try
         dom.XSPH			= 0.0;
         dom.ConstVelPeriodic= 1.0;
 
-        dom.AddBoxLength(1 ,Vec3_t ( 1.00001125 , 1.00158625 , 0.0 ), 0.0033975 , 0 , 0 , 151 , 1 , 1 , 5.0625e-7 , 1000 , 2.475e-5 , true);
-        dom.AddBoxLength(1 ,Vec3_t ( 1.00001125 , 1.00160875 , 0.0 ), 0.0033975 , 0 , 0 , 151 , 1 , 1 , 5.0625e-7 , 1000 , 2.475e-5 , true);
-        dom.AddBoxLength(1 ,Vec3_t ( 1.00001125 , 1.00021375 , 0.0 ), 0.0033975 , 0 , 0 , 151 , 1 , 1 , 5.0625e-7 , 1000 , 2.475e-5 , true);
-        dom.AddBoxLength(1 ,Vec3_t ( 1.00001125 , 1.00019125 , 0.0 ), 0.0033975 , 0 , 0 , 151 , 1 , 1 , 5.0625e-7 , 1000 , 2.475e-5 , true);
+        dom.AddBoxLength(1 ,Vec3_t ( 1.00001125 , 1.00158625+0.0000225 , 0.0 ), 0.0056475 , 0 , 0 , 251 , 1 , 1 , 5.0625e-7 , 1000 , 2.475e-5 , true);
+        dom.AddBoxLength(1 ,Vec3_t ( 1.00001125 , 1.00160875+0.0000225 , 0.0 ), 0.0056475 , 0 , 0 , 251 , 1 , 1 , 5.0625e-7 , 1000 , 2.475e-5 , true);
+        dom.AddBoxLength(1 ,Vec3_t ( 1.00001125 , 1.00021375+0.0000225 , 0.0 ), 0.0056475 , 0 , 0 , 251 , 1 , 1 , 5.0625e-7 , 1000 , 2.475e-5 , true);
+        dom.AddBoxLength(1 ,Vec3_t ( 1.00001125 , 1.00019125+0.0000225 , 0.0 ), 0.0056475 , 0 , 0 , 251 , 1 , 1 , 5.0625e-7 , 1000 , 2.475e-5 , true);
 
         double xa,ya,xb,yb,yc;
 
-        dom.AddRandomBox(3 ,Vec3_t ( 1.000 , 1.000225 , 0.0 ), 0.003375 , 0.00135 ,  0 , 150 , 60 , 1 , 5.0625e-7 , 1000, 2.475e-5);
+        dom.AddRandomBox(3 ,Vec3_t ( 1.000 , 1.000225+0.0000225 , 0.0 ), 0.005625 , 0.00135 ,  0 , 250 , 60 , 1 , 5.0625e-7 , 1000, 2.475e-5);
 
         for (size_t a=0; a<dom.Particles.Size(); a++)
         {
         	xb=dom.Particles[a]->x(0);
         	yb=dom.Particles[a]->x(1);
-        	if ((xb-1.001125)*(xb-1.001125)+(yb-1.0009)*(yb-1.0009)<=0.000000017)
+        	if (((xb-1.001125)*(xb-1.001125)+(yb-1.0009)*(yb-1.0009)<=0.000000018))
         		{
         		dom.Particles[a]->ID=4;
         		dom.Particles[a]->IsFree=false;
@@ -82,9 +82,36 @@ int main(int argc, char **argv) try
 			if (yc>0.0) dom.AddSingleParticle(4,Vec3_t ( xa , yc , 0.0 ), 5.0625e-7 , 1000 , 2.475e-5 , true);
         }
 
+        xa=1.00103505;
+        ya=sqrt (8.1e-9-(xa-1.001125)*(xa-1.001125))+1.0009;
+
+   		while (xa<=1.001215)
+        {
+   			xb= xa+0.000000000001;
+			yb=sqrt (8.1e-9-(xb-1.001125)*(xb-1.001125))+1.0009;
+			std::cout<<yb<<std::endl;
+			while(sqrt((xb-xa)*(xb-xa)+(yb-ya)*(yb-ya))<=0.000019)
+        		{
+					xb=xb+0.000000000001;
+					yb=sqrt (8.1e-9-(xb-1.001125)*(xb-1.001125))+1.0009;
+       			}
+			xa=xb;
+			ya=yb;
+
+			yc=(-sqrt (8.1e-9-(xa-1.001125)*(xa-1.001125))+1.0009);
+
+			if (yc>0.0)
+				{
+				dom.AddSingleParticle(4,Vec3_t ( xa , yc , 0.0 ), 5.0625e-7 , 1000 , 2.475e-5 , true);
+				dom.AddSingleParticle(4,Vec3_t ( xa , 1.0009+1.0009-yc , 0.0 ), 5.0625e-7 , 1000 , 2.475e-5 , true);
+				}
+        }
+		dom.AddSingleParticle(4,Vec3_t ( 1.001035 , 1.0009 , 0.0 ), 5.0625e-7 , 1000 , 2.475e-5 , true);
+
+
 // 	       dom.WriteXDMF("maz");
 
-        dom.Solve(/*tf*/10.0,/*dt*/0.000001,/*dtOut*/0.001,"test07",Nproc);
+        dom.Solve(/*tf*/0.5,/*dt*/0.000001,/*dtOut*/0.0002,"test07",Nproc);
         return 0;
 }
 MECHSYS_CATCH
