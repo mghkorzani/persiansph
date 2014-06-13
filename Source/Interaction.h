@@ -28,41 +28,55 @@ class Interaction
 {
 public:
     // Constructor
-    Interaction (Particle * Pt1, Particle * Pt2,size_t dim, double VisAlpha, double VisBeta, double Vel, double DV, double XSPHfac);
-
+    		Interaction	(Particle * Pt1, Particle * Pt2,size_t Dim0, double Alpha0, double Beta0, double Cs0, double MU0, double XSPHC0, double TIC0, double InitialDist0, double P00, int PresEq0);
     // Methods
-    void CalcForce      (double dt = 0.0);                ///< Calculates the contact force between particles
-    double Kernel       (double r,double h);	          ///< Kernel function
-    double GradKernel   (double r,double h);              ///< Gradient of kernel function
-    double Pressure     (double Density, double Density0);///< Equation of state for weakly compressible fluid
-    double SoundSpeed   (double Density, double Density0);///< Speed of sound in the fluid (dP/drho)
+    void	CalcForce	(double dt);						///< Calculates the contact force between particles
+    double	Kernel		(double r,double h);				///< Kernel function
+    double	GradKernel	(double r,double h);				///< Gradient of the kernel function
+    double	Pressure	(double Density, double Density0);	///< Equation of state for a weakly compressible fluid
+    double	SoundSpeed	(double Density, double Density0);	///< Speed of sound in a fluid (dP/drho)
 
     // Data
-    Particle	*P1;			///< Pointer to first particle
-    Particle	*P2;			///< Pointer to second particle
-    double		alpha;			///< Coefficient of bulk viscosity
+    Particle	*P1;			///< Pointer to the first particle
+    Particle	*P2;			///< Pointer to the second particle
+
+    double		alpha;			///< Coefficient of the bulk viscosity
     double		beta;			///< Coefficient of Neumann-Richtmyer viscosity
+    double		MU;				///< Dynamic Viscosity coefficient
+
     double		h;				///< Smoothing length
-    size_t		Dim;			///< Dimension of the problem
-    double		V2;				///< Squared maximum velocity of the fluid for pressure and sound speed
-    double		MU;				///< Dynamic Viscosity
-    double 		X;				///< Factor of XSPH
+    size_t		Dim;			///< Dimension of problem
+    double		Cs;				///< Speed of Sound
+
+    double 		XSPHC;			///< XSPH coefficient
+    double		TIC;			///< Monagham Tensile Instability coefficient
+    double		InitialDist;	///< Initial distance of particles for Tensile Instability calculation
+
+    double		P0;				///< Background pressure
+    int			PresEq;			///< Selection function for the various equation of state
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////// Implementation /////
 
-inline Interaction::Interaction (Particle * Pt1, Particle * Pt2,size_t dim, double VisAlpha, double VisBeta, double Vel, double DV, double XSPHfac)
+inline Interaction::Interaction (Particle * Pt1, Particle * Pt2,size_t Dim0, double Alpha0, double Beta0, double Cs0, double MU0, double XSPHC0, double TIC0, double InitialDist0, double P00, int PresEq0)
 {
-    P1		=	Pt1;
-    P2		=	Pt2;
-    h		=	P1->h;                                  ///< It should be revised
-    Dim		=	dim;
-    alpha	=	VisAlpha;
-    beta	=	VisBeta;
-    V2		=	Vel*Vel;
-    MU		=	DV;
-    X		=	XSPHfac;
+    P1		= Pt1;
+    P2		= Pt2;
 
+    h		= P1->h;                                  ///< It should be revised
+    Dim		= Dim0;
+    Cs		= Cs0;
+
+    alpha	= Alpha0;
+    beta	= Beta0;
+    MU		= MU0;
+
+    XSPHC	= XSPHC0;
+    TIC		= TIC0;
+    InitialDist = InitialDist0;
+
+    P0		= P00;
+    PresEq	= PresEq0;
 }
 
 inline void Interaction::CalcForce(double dt)
@@ -79,93 +93,53 @@ inline void Interaction::CalcForce(double dt)
     Vec3_t vij = P1->v - P2->v;
     Vec3_t rij = P1->x - P2->x;
 
-    double MUij = h*dot(vij,rij)/(dot(rij,rij)+0.01*h*h);                                                ///<(2.75) Li, Liu Book
-    double Cij = 0.5*(SoundSpeed(di,P1->RefDensity)+SoundSpeed(dj,P1->RefDensity));
-    double PIij;
-    if (dot(vij,rij)<0) PIij = (-alpha*Cij*MUij+beta*MUij*MUij)/(0.5*(di+dj));                          ///<(2.74) Li, Liu Book
-    else                PIij = 0.0;
+    //Artificial Viscosity
+    double PIij = 0.0;
+    if (alpha!=0.0 || beta!=0.0)
+    {
+    	double MUij = h*dot(vij,rij)/(dot(rij,rij)+0.01*h*h);                                                ///<(2.75) Li, Liu Book
+    	double Cij = 0.5*(SoundSpeed(di,P1->RefDensity)+SoundSpeed(dj,P1->RefDensity));
+    	if (dot(vij,rij)<0) PIij = (-alpha*Cij*MUij+beta*MUij*MUij)/(0.5*(di+dj));                          ///<(2.74) Li, Liu Book
+    	else                PIij = 0.0;
+    }
 
-    omp_set_lock(&P2->my_lock);
-    P2->VXSPH		+= X*mi/(0.5*(di+dj))*Kernel(norm(rij),h)*vij;
-    omp_unset_lock(&P2->my_lock);
+    //Tensile Instability
+    double TI = 0.0;
+    if ((TIC > 0.0) && (Pi < 0.0) && (Pj < 0.0))
+    {
+        double pa,pb;
+    	pa = abs(Pi);
+    	pb = abs(Pj);
+        TI = TIC*(pa/(di*di)+pb/(dj*dj))*pow((Kernel(norm(rij),h)/Kernel(InitialDist,h)),4);
+    }
+    else TI = 0.0;
 
+    //Real Viscosity
+    Vec3_t VI = 0.0;
+    if (MU!=0.0) VI = 8*MU/((di+dj)*(di+dj)*dot(rij,rij))*dot(rij,GradKernel(norm(rij),h)*(rij/norm(rij)))*vij;
 
-//    double pa,pb;
-//    if ((Pi<0) && (Pj<0))
-//    	{
-//    	pa = abs(Pi);
-//    	pa = abs(Pj);
-//    	}
-//    		else
-//    			{
-//    			pa=0;
-//				pb=0;
-//    			}
-//    double TI = 0.1*(pa/(di*di)+pb/(dj*dj))*pow((Kernel(norm(rij),h)/Kernel(0.0000225,h)),4);
-    double TI=0.0;
+    if (XSPHC != 0.0)
+    {
+        omp_set_lock(&P1->my_lock);
+        P1->VXSPH		+= XSPHC*mj/(0.5*(di+dj))*Kernel(norm(rij),h)*-vij;
+        omp_unset_lock(&P1->my_lock);
+
+        omp_set_lock(&P2->my_lock);
+		P2->VXSPH		+= XSPHC*mi/(0.5*(di+dj))*Kernel(norm(rij),h)*vij;
+		omp_unset_lock(&P2->my_lock);
+    }
 
     omp_set_lock(&P1->my_lock);
-    P1->VXSPH		+= X*mj/(0.5*(di+dj))*Kernel(norm(rij),h)*-vij;
-	P1->a			+= -mj*(Pi/(di*di)+Pj/(dj*dj)+PIij+TI)*GradKernel(norm(rij),h)*(rij/norm(rij))+ mj*8*MU/((di+dj)*(di+dj)*dot(rij,rij))*dot(rij,GradKernel(norm(rij),h)*(rij/norm(rij)))*vij;  ///<(2.73) Li, Liu Book
-    P1->dDensity	+= (di*mj/dj)*dot((vij+P1->VXSPH-P2->VXSPH),(rij/norm(rij)))*GradKernel(norm(rij),h)+ (0.0*h*1*mj/dj)*dot((2*(di-dj)/dot(rij,rij)*rij),(rij/norm(rij)))*GradKernel(norm(rij),h);                                  ///<(2.58) Li, Liu Book
+	P1->a			+= -mj*(Pi/(di*di)+Pj/(dj*dj)+PIij+TI)*GradKernel(norm(rij),h)*(rij/norm(rij))+ mj*VI;
+    P1->dDensity	+= (di*mj/dj)*dot((vij+P1->VXSPH-P2->VXSPH),(rij/norm(rij)))*GradKernel(norm(rij),h);
     omp_unset_lock(&P1->my_lock);
 
 
     omp_set_lock(&P2->my_lock);
-    P2->a			-= -mi*(Pi/(di*di)+Pj/(dj*dj)+PIij+TI)*GradKernel(norm(rij),h)*(rij/norm(rij))+ mi*8*MU/((di+dj)*(di+dj)*dot(rij,rij))*dot(rij,GradKernel(norm(rij),h)*(rij/norm(rij)))*vij;
-    P2->dDensity	+= (dj*mi/di)*dot((-vij+P2->VXSPH-P1->VXSPH),(-rij/norm(rij)))*GradKernel(norm(rij),h)+ (0.0*h*1*mi/di)*dot((2*(dj-di)/dot(rij,rij)*-rij),(-rij/norm(rij)))*GradKernel(norm(rij),h);
+    P2->a			-= -mi*(Pi/(di*di)+Pj/(dj*dj)+PIij+TI)*GradKernel(norm(rij),h)*(rij/norm(rij))+ mi*VI;
+    P2->dDensity	+= (dj*mi/di)*dot((-vij+P2->VXSPH-P1->VXSPH),(-rij/norm(rij)))*GradKernel(norm(rij),h);
     omp_unset_lock(&P2->my_lock);
 }
-
-//inline double Interaction::Kernel(double r,double h)
-//{
-//	double C;
-//	switch (Dim)
-//    {case 1:
-//       C = 1.0/(7.0*h);
-//       break;
-//    case 2:
-//       C = 1.0/(3.0*h*h*M_PI);
-//       break;
-//    case 3:
-//       C = 15.0/(62.0*h*h*h*M_PI);
-//       break;
-//    default:
-//       std::cout << "Please correct dimension for kernel and run again, otherwise 3D is used" << std::endl;
-//       C = 1.0/(h*h*h*M_PI);
-//       break;
-//    }
-//
-//    double q = r/h;
-//    if ((q>=0.0)&&(q<1)) return C*(6.0-6.0*q+(q*q*q));
-//    else if (q<=2)       return C*((2-q)*(2-q)*(2-q));
-//    else                 return 0.0;
-//}
-//
-//inline double Interaction::GradKernel(double r, double h)
-//{
-//	double C;
-//	switch (Dim)
-//    {case 1:
-//       C = 1.0/(7.0*h*h);
-//       break;
-//    case 2:
-//       C = 1.0/(3.0*h*h*h*M_PI);
-//       break;
-//    case 3:
-//       C = 15.0/(62.0*h*h*h*h*M_PI);
-//       break;
-//    default:
-//       std::cout << "Please correct dimension for kernel and run again, otherwise 3D is used" << std::endl;
-//       C = 1.0/(h*h*h*h*M_PI);
-//       break;
-//    }
-//    double q = r/h;
-//    if ((q>=0.0)&&(q<1)) return C*(-6.0+3.0*q*q);
-//    else if (q<=2)       return C*(-3.0*(2-q)*(2-q));
-//    else                 return 0.0;
-//}
-
 
 inline double Interaction::Kernel(double r,double h)
 {
@@ -218,14 +192,42 @@ inline double Interaction::GradKernel(double r, double h)
 
 inline double Interaction::Pressure(double Density, double Density0)
 {
-//		return 4000+(100*Density0*V2/7)*(pow(Density/Density0,7)-1);
-		return 3000+10*10*(Density-Density0);
-//		return 10*10*Density;
+	switch (PresEq)
+    {
+	case 0:
+		return P0+(Cs*Cs)*(Density-Density0);
+		break;
+	case 1:
+		return P0+(Density0*Cs*Cs/7)*(pow(Density/Density0,7)-1);
+		break;
+	case 2:
+		return (Cs*Cs)*Density;
+		break;
+	default:
+		std::cout << "Please correct Pressure Equation No, otherwise Eq. (0) is used" << std::endl;
+		return P0+(Cs*Cs)*(Density-Density0);
+		break;
+    }
 }
 
 inline double Interaction::SoundSpeed(double Density, double Density0)
 {
-		return sqrt(7*(100*Density0*V2/7)*(pow(Density/Density0,6)/Density0));
+	switch (PresEq)
+    {
+	case 0:
+		return Cs;
+		break;
+	case 1:
+		return sqrt((Cs*Cs)*pow(Density/Density0,6));
+		break;
+	case 2:
+		return Cs;
+		break;
+	default:
+		std::cout << "Please correct Pressure Equation No, otherwise Eq. (0) is used" << std::endl;
+		return P0+(Cs*Cs)*(Density-Density0);
+		break;
+    }
 }
 
 }; // namespace SPH

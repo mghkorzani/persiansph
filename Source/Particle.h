@@ -35,16 +35,17 @@ class Particle
 public:
 
     // Constructor
-    Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double Mass0, double Density0, double R0, double h0, bool Fixed=false);
+    Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double Mass0, double Density0, double h0, bool Fixed=false);
 
 
     // Data
     bool   	IsFree;			///< Check the particle if it is free to move or not
-    Vec3_t  x;				///< Position of the particle n
+    int    	ID;				///< an Integer value to identify type of the particles
 
+    Vec3_t  x;				///< Position of the particle n
     Vec3_t  vb;				///< Velocity of the particle n-1
     Vec3_t  v;				///< Velocity of the particle n+1,
-    Vec3_t	VXSPH;			///< Mean value of the neighbor particles' velocity
+    Vec3_t	VXSPH;			///< Mean Velocity of neighbor particles
     Vec3_t  a;				///< Acceleration of the particle
 
     double 	Pressure;		///< Pressure at the position of the particle
@@ -56,12 +57,12 @@ public:
 
     double 	h;				///< Smoothing length of the particle
     double 	hr;				///< Reference smoothing length of the particle
-    double 	R;				///< Radius of the particle
 
-    int    	ID;				///< an Integer value to identify type of the particles
-    int    	LL;				///< Linked-List variable to show next particle in list of a cell
+    int    	LL;				///< Linked-List variable to show the next particle in the list of a cell
     int    	CC[3];			///< Current cell No for the particle (linked-list)
-    int		ct;
+
+    int		ct;				///< Correction step for the Verlet Algorithm
+
     omp_lock_t my_lock;		///< Open MP lock
 
     // Methods
@@ -70,7 +71,7 @@ public:
 
 };
 
-inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double Mass0, double Density0, double R0, double h0,bool Fixed)
+inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double Mass0, double Density0, double h0,bool Fixed)
 {
 	ct =0;
     x = x0;
@@ -81,7 +82,6 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
     IsFree = !Fixed;
     hr = h0;
     h = hr;
-    R = R0;
     dDensity=0.0;
     Pressure=0.0;
     ID = Tag;
@@ -149,11 +149,9 @@ inline void Particle::Move (double dt, bool periodic, double domainmax, double d
 inline bool Particle::CellUpdate (Vec3_t CellSize, Vec3_t BLPF)
 {
 	bool update;
-	//    if (CC == (int) (x(0) - BLPF(0)) / CellSize(0), (int) (x(1) - BLPF(1)) / CellSize(1), (int) (x(2) - BLPF(2)) / CellSize(2)) return false;
-	//    else return true;
-	    if ((CC[0] == (int) ((x(0) - BLPF(0)) / CellSize(0))) && (CC[1] == (int) ((x(1) - BLPF(1)) / CellSize(1))) && (CC[2] == 0)) update=false;
-	    else update=true;
-	    return update;
+	if ((CC[0] == (int) ((x(0) - BLPF(0)) / CellSize(0))) && (CC[1] == (int) ((x(1) - BLPF(1)) / CellSize(1))) && (CC[2] == (int) ((x(2) - BLPF(2)) / CellSize(2)))) update=false;
+	else update=true;
+	return update;
 }
 
 }; // namespace SPH

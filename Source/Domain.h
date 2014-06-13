@@ -42,76 +42,91 @@ class Domain
 public:
 
     // Constructor
-    Domain();  ///< Constructor with a vector containing the number of divisions per length, and Xmin Xmax defining the limits of the rectangular domain to be plotted
+    Domain();
 
     // Destructor
     ~Domain ();
 
     // Methods
-    void AddRandomBoxFixed(int tag, Vec3_t const & V, double Lx, double Ly, double Lz, size_t nx, size_t ny, size_t nz, double Mass, double Density, double h, double R, size_t RandomSeed=100);
+    void AddSingleParticle			(int tag, Vec3_t const & x, double Mass, double Density, double h, bool Fixed);						///< Add one particle
+    void AddBoxLength				(int tag, Vec3_t const &V, double Lx, double Ly, double Lz, size_t nx, size_t ny, size_t nz,
+    									double Mass, double Density, double h, bool Fixed);												///< Add a cube of particles with a defined dimensions
+    void AddRandomBox				(int tag, Vec3_t const &V, double Lx, double Ly, double Lz, size_t nx, size_t ny, size_t nz,
+    									double Mass, double Density, double h, size_t RandomSeed=100);									///< Add a cube of random positioned particles with a defined dimensions
 
-    void AddSingleParticle                (int tag, Vec3_t const & x, double Mass, double Density, double h, bool Fixed);                                    ///< Add a box of particles (should specify radius of particles)
+    void DelParticles				(int const & Tags);																					///< Delete particles by tag
+    void CheckParticleLeave			();																									///< Check if any particle are leaving the domain or not
 
-    void AddBox                (int tag, Vec3_t const & x, size_t nx, size_t ny, size_t nz,
-    		                  double R, double Mass, double Density, double h, bool Fixed);                                    ///< Add a box of particles (should specify radius of particles)
-    void AddBoxLength         (int tag, Vec3_t const &V, double Lx, double Ly, double Lz, size_t nx, size_t ny, size_t nz,
-    		                  double Mass, double Density, double h, bool Fixed);                                              ///< Add a box of particles with length (calculate radius of particles)
-    void AddRandomBox         (int tag, Vec3_t const &V, double Lx, double Ly, double Lz, size_t nx, size_t ny, size_t nz,
-    		                  double Mass, double Density, double h, size_t RandomSeed=100);                                    ///< Add box of random positioned particles (calculate radius of particles)
+    void StartAcceleration			(Vec3_t const & a = Vec3_t(0.0,0.0,0.0));															///< Add a fixed acceleration such as the Gravity
+    void ComputeAcceleration		(double dt);																						///< Compute the acceleration due to the other particles
+    void Move						(double dt);																						///< Move particles
 
-    void DelParticles        (int const & Tags);														     				      ///< Delete particles by tag
-    void CheckParticleLeave ();																								  ///< Check if any particle are leaving the domain or not
+    void ConstVel					();																									///< Give a defined velocity to the first and last 4 column of cells in X direction
+    void ConstVelPart2				();																									///< Give a zero acceleration to all constant velocity zone (Correction for the first part)
+    void AvgParticleVelocity		();																									///< Calculate the average velocity of whole domain (free particles)
+    void Solve						(double tf, double dt, double dtOut, char const * TheFileKey, size_t Nproc);						///< The solving function
 
-    void StartAcceleration   (Vec3_t const & a = Vec3_t(0.0,0.0,0.0));                                                         ///< Add a fixed acceleration
-    void ComputeAcceleration (double dt);                                                                                     ///< Compute the acceleration due to the other particles
-    void Move                  (double dt);                                                                                     ///< Move particles
-    void ConstVel			();
-    void ConstVelPart2 ();
-    void AvgParticleVelocity();
-    void Solve                (double tf, double dt, double dtOut, char const * TheFileKey, size_t Nproc);                   ///< The solving function
+    void InitiateInteractions		();																									///< Reset the interaction array and make the first Interaction and PInteraction array
+    void CellInitiate				();																									///< Find the size of the domain as a cube, make cells and HOCs
+    void ListGenerate				();																									///< Generate linked-list
 
-    void InitiateInteractions();                                                                                               ///< Reset the interaction array and make the first Interaction and PInteraction array
-    void CellInitiate        ();                                                         										  ///< Find the size of the domain as a rectangular, make cell and HOC
-    void ListGenerate	       ();                                                         										  ///< Generate linked-list
+    void NeighbourSearch			(int q1, int q2, int q3);																			///< Find neighbor cells and make interaction for cell(q1,q2,q3)
+    void CreateInteraction			(int a, int b);																						///< Create interaction between two particles and put it in PInteractions
 
-    void NeighbourSearch	   (int q1, int q2, int q3);																		  ///< Find neighbour cells and make interaction for cell(q1,q2,q3)
-    void CreateInteraction  (int a, int b);																					  ///< Create interaction between two particles
+    void CellReset					();																									///< Reset HOCs to initial value of -1
+    void ListandInteractionUpdate	();																									///< Checks if linked-list needs to be updated
+    void UpdateInteractions			();																									///< Update PInteraction (possible interaction) list
 
-    void CellReset 	       ();                                                         										  ///< Reset HOC to initial value of -1
-    void ListandInteractionUpdate();                                                    										  ///< Checks if linked-list needs to be updated
-    void UpdateInteractions ();																								  ///< Update PInteraction (possible interaction) list
-
-    void WriteXDMF           (char const * FileKey);                                                                           ///< Save a XDMF file for visualization
-    void Save                 (char const * FileKey);                                                         				  ///< Save the domain in a file
-    void Load                 (char const * FileKey);                                                         				  ///< Load the domain from a file
+    void WriteXDMF					(char const * FileKey);																				///< Save a XDMF file for the visualization
+    void Save						(char const * FileKey);																				///< Save the domain in a file
+    void Load						(char const * FileKey);																				///< Load the domain from a file
 
     // Data
-    Vec3_t					Gravity;       	 	///< Gravity acceleration
     Array <Particle*>		Particles;     	 	///< Array of particles
     Array <Interaction*>	Interactions;  	 	///< Array of interactions
     Array <Interaction*>	PInteractions; 	 	///< Array of possible interactions
+
     Array <int>				IinSI;				///< Array to save Interaction No for fixed particles
-    double					Time;          	 	///< The simulation Time
-    size_t                  idx_out;       	 	///< Index for output purposes
+
+    double					Time;          	 	///< The simulation time at each step
+    double					AutoSaveInt;		///< Automatic save interval
+
     int 					Dimension;    	  	///< Dimension of the problem
+
     double 					Alpha;				///< Artificial Viscosity Alpha Factor
     double					Beta;				///< Artificial Viscosity Beta Factor
-    double					MaxVel;				///< Max velocity for pressure in equation of state
     double					MU;					///< Dynamic Viscosity
-    double					AutoSaveInt;		///< Automatic save interval
-    Vec3_t                  TRPR;				///< Top right-hand point at rear of the domain as a Rectangular
-    Vec3_t                  BLPF;           	///< Bottom left-hand point At front side of the domain as a Rectangular
+
+    Vec3_t					Gravity;       	 	///< Gravity acceleration
+    double					Cs;					///< Spead of sound
+
+    Vec3_t                  TRPR;				///< Top right-hand point at rear of the domain as a cube
+    Vec3_t                  BLPF;           	///< Bottom left-hand point at front of the domain as a cube
     Vec3_t                  CellSize;      		///< Calculated cell size according to (cell size >= 2h)
     int		                CellNo[3];      	///< No. of cells for linked list
-    int					*** HOC;				///< Array of (Head of Chain) for each cell
+    double 					Cellfac;			///< Factor which should be multiplied by h to change the size of cells (Min 2)
+	double 					hmax;				///< Max of h for the cell size  determination
+
+    int					*** HOC;				///< Array of "Head of Chain" for each cell
     int					 ** ExInteract;			///< Array to save existing interaction No. of "Interactions" to use in "PInteractions"
-    double 					Cellfac;			///< Factor which should be multiplied by h to change the size of cells (min 2)
-    bool					Periodic; 			///< It it is true, periodic boundary condition along x direction will be considered
-    bool					PressureBoundary;	///< if it is true, it will get max pressure for solid boundary from neighbors but if false, mean value.
+
+    bool					RigidBody; 			///< If it is true, A rigid body with RTag will be considered
+    int						RBTag;				///< Tag of particles for rigid body
+    Vec3_t					RBForce;			///< Rigid body force
+
+    double 					P0;					///< background pressure for equation of state
+    int						PresEq;				///< Selecting variable to choose a equation of state
+
+    bool					Periodic; 			///< If it is true, periodic boundary condition along x direction will be considered
+    double					ConstVelPeriodic;	///< Define a constant velocity in the left and the right side of the domain in x direction in periodic condition
+
+    bool					PressureBoundary;	///< If it is true, it will get max pressure for solid boundary from neighbors but if false, mean value.
+
     double 					XSPH;				///< Velocity correction factor
-    double					ConstVelPeriodic;	///< Define a constant velocity in the left and the right side of the domain in x direction
-	double 					hmax;				///< Max of h
-	double					AvgVelocity;
+    double 					TI;					///< Tensile instability factor
+    double 					InitialDist;		///< Initial distance of particles for calculation of tensile instability
+
+    double					AvgVelocity;		///< Average velocity of the whole domain
 
 };
 /////////////////////////////////////////////////////////////////////////////////////////// Implementation /////
@@ -120,139 +135,108 @@ public:
 inline Domain::Domain ()
 {
     Time    = 0.0;
-    Gravity = 0.0;
-    idx_out = 0;
+    AutoSaveInt = 0.0;
+
+    Dimension = 2;
+
+    Alpha	= 0.0;
+    Beta	= 0.0;
+    MU		= 0.0;
+
+    Gravity	= 0.0,0.0,0.0;
+    Cs		= 0.0;
+
+    Cellfac = 2.0;
+
+    RigidBody = false;
+    RBTag	= 0;
+    RBForce = 0.0;
+
+    P0		= 0.0;
+    PresEq	= 0;
+
+    Periodic = false;
+    ConstVelPeriodic = 0.0;
+
+    PressureBoundary = false;
+
+    XSPH	= 0.0;
+    TI		= 0.0;
+    InitialDist = 0.0;
+
+    AvgVelocity = 0.0;
+    hmax	= 0.0;
 }
 
 inline Domain::~Domain ()
 {
-    for (size_t i=0; i<Particles.Size();   ++i) if (Particles  [i]!=NULL) delete Particles  [i];
-    for (size_t i=0; i<Interactions.Size(); ++i) if (Interactions[i]!=NULL) delete Interactions[i];
-}
+	size_t Max = Interactions.Size();
+	for (size_t i=1; i<=Max ; i++) Interactions.DelItem(Max-i);
 
+	Max = Particles.Size();
+	for (size_t i=1; i<=Max; i++)  Particles.DelItem(Max-i);
+}
 
 // Methods
 inline void Domain::AddSingleParticle(int tag, Vec3_t const & x, double Mass, double Density, double h, bool Fixed)
 {
-    std::cout << "\n--------------Generating particles by AddSingleParticle-----------------------------------" << std::endl;
-
-        	Particles.Push(new Particle(tag,x,Vec3_t(0,0,0),Mass,Density,0.0000125,h,Fixed));
-            std::cout << "\n  Total No. of particles   = " << Particles.Size() << std::endl;
-}
-
-inline void Domain::AddBox(int tag, Vec3_t const & V, size_t nx, size_t ny, size_t nz, double R, double Mass, double Density, double h, bool Fixed)
-{
-    std::cout << "\n--------------Generating particles by AddBox with defined radius-----------------------------------" << std::endl;
-
-    for (size_t i = 0;i<nx;i++)
-    for (size_t j = 0;j<ny;j++)
-    for (size_t k = 0;k<nz;k++)
-    {
-        Vec3_t x(2*i*R,2*j*R,2*k*R);
-        x +=V;
-        if (Mass == 0.0)
-        	Particles.Push(new Particle(tag,x,Vec3_t(0,0,0),4/3*M_PI*R*R*R*Density,Density,R,h,Fixed));
-        else
-        	Particles.Push(new Particle(tag,x,Vec3_t(0,0,0),Mass,Density,R,h,Fixed));
-     }
-    std::cout << "\n  Total No. of particles   = " << Particles.Size() << std::endl;
+   	Particles.Push(new Particle(tag,x,Vec3_t(0,0,0),Mass,Density,h,Fixed));
 }
 
 inline void Domain::AddBoxLength(int tag, Vec3_t const & V, double Lx, double Ly, double Lz, size_t nx, size_t ny, size_t nz, double Mass, double Density, double h, bool Fixed)
 {
-    std::cout << "\n--------------Generating particles by AddBoxLength with defined length-----------------------------" << std::endl;
+    std::cout << "\n--------------Generating particles by AddBoxLength with defined length--------------" << std::endl;
 
-	double R = (std::min(Lx/(2*nx),Ly/(2*ny))>0) ? std::min(Lx/(2*nx),Ly/(2*ny)) : std::max(Lx/(2*nx),Ly/(2*ny));
-    R = (std::min(R,Lz/(2*nz))>0) ? std::min(R,Lz/(2*nz)) : std::max(R,Lz/(2*nz));
-	std::cout << 4/3*M_PI*R*R*R*Density << R << std::endl;
+    size_t PrePS = Particles.Size();
 
-	for (size_t i=0; i<nx; i++)
+    for (size_t i=0; i<nx; i++)
+    for (size_t j=0; j<ny; j++)
+    for (size_t k=0; k<nz; k++)
     {
-        for (size_t j=0; j<ny; j++)
-        {
-            for (size_t k=0; k<nz; k++)
-            {
-                double x = V(0)+i*Lx/nx;
-                double y = V(1)+j*Ly/ny;
-                double z = V(2)+k*Lz/nz;
-                if (Mass == 0.0)
-                	Particles.Push(new Particle(tag,Vec3_t(x,y,z),Vec3_t(0,0,0),4/3*M_PI*R*R*R*Density,Density,R,h,Fixed));
-                else
-                	Particles.Push(new Particle(tag,Vec3_t(x,y,z),Vec3_t(0,0,0),Mass,Density,R,h,Fixed));
-            }
-        }
+		double x = V(0)+i*Lx/nx;
+		double y = V(1)+j*Ly/ny;
+		double z = V(2)+k*Lz/nz;
+		Particles.Push(new Particle(tag,Vec3_t(x,y,z),Vec3_t(0,0,0),Mass,Density,h,Fixed));
     }
-    std::cout << "\n  Total No. of particles   = " << Particles.Size() << std::endl;
+
+    std::cout << "\nNo. of added particles = " << Particles.Size()-PrePS << std::endl;
 }
 
 inline void Domain::AddRandomBox(int tag, Vec3_t const & V, double Lx, double Ly, double Lz, size_t nx, size_t ny, size_t nz, double Mass, double Density, double h, size_t RandomSeed)
 {
     Util::Stopwatch stopwatch;
-    std::cout << "\n--------------Generating random packing of particles by AddRandomBox-------------------------------" << std::endl;
+    std::cout << "\n--------------Generating random packing of particles by AddRandomBox----------------" << std::endl;
 
-    double R = (std::min(Lx/(2*nx),Ly/(2*ny))>0) ? std::min(Lx/(2*nx),Ly/(2*ny)) : std::max(Lx/(2*nx),Ly/(2*ny));
-    R = (std::min(R,Lz/(2*nz))>0) ? std::min(R,Lz/(2*nz)) : std::max(R,Lz/(2*nz));
-
-	std::cout << "\n Radius of Particle = " << R << std::endl;
+    size_t PrePS = Particles.Size();
 
     double qin = 0.95;
     srand(RandomSeed);
     for (size_t i=0; i<nx; i++)
+    for (size_t j=0; j<ny; j++)
+    for (size_t k=0; k<nz; k++)
     {
-        for (size_t j=0; j<ny; j++)
-        {
-            for (size_t k=0; k<nz; k++)
-            {
-                double x = V(0)+(i+0.5*qin+(1-qin)*double(rand())/RAND_MAX)*Lx/nx;
-                double y = V(1)+(j+0.5*qin+(1-qin)*double(rand())/RAND_MAX)*Ly/ny;
-                double z = V(2)+(k+0.5*qin+(1-qin)*double(rand())/RAND_MAX)*Lz/nz;
-                if (Mass == 0.0)
-                	Particles.Push(new Particle(tag,Vec3_t(x,y,z),Vec3_t(0,0,0),4/3*M_PI*R*R*R*Density,Density,R,h,false));
-                else
-                	Particles.Push(new Particle(tag,Vec3_t(x,y,z),Vec3_t(0,0,0),Mass,Density,R,h,false));
-            }
-        }
+		double x = V(0)+(i+0.5*qin+(1-qin)*double(rand())/RAND_MAX)*Lx/nx;
+		double y = V(1)+(j+0.5*qin+(1-qin)*double(rand())/RAND_MAX)*Ly/ny;
+		double z = V(2)+(k+0.5*qin+(1-qin)*double(rand())/RAND_MAX)*Lz/nz;
+		Particles.Push(new Particle(tag,Vec3_t(x,y,z),Vec3_t(0,0,0),Mass,Density,h,false));
     }
-    std::cout << "\n  Total No. of particles   = " << Particles.Size() << std::endl;
-}
 
-inline void Domain::AddRandomBoxFixed(int tag, Vec3_t const & V, double Lx, double Ly, double Lz, size_t nx, size_t ny, size_t nz, double Mass, double Density, double h, double R, size_t RandomSeed)
-{
-    Util::Stopwatch stopwatch;
-    std::cout << "\n--------------Generating random packing of particles by AddRandomBox-------------------------------" << std::endl;
-
-    double qin = 0.95;
-    srand(RandomSeed);
-    for (size_t i=0; i<nx; i++)
-    {
-        for (size_t j=0; j<ny; j++)
-        {
-            for (size_t k=0; k<nz; k++)
-            {
-            	double x,y,z;
-                x = V(0)+(i+(1-qin)*double(rand())/RAND_MAX)*R*sin(M_PI/6);
-                if ((i%2)==0.0) y = V(1)+(j+0.5+(1-qin)*double(rand())/RAND_MAX)*R*sin(M_PI/6);
-                else y = V(1)+(j+(1-qin)*double(rand())/RAND_MAX)*R*sin(M_PI/6);
-                if ((j%2)==0.0) z = V(2)+(k+(1-qin)*double(rand())/RAND_MAX)*R;
-//                else z = V(2)+(k+0.5+(1-qin)*double(rand())/RAND_MAX)*R;
-               	Particles.Push(new Particle(tag,Vec3_t(x,y,z),Vec3_t(0,0,0),Mass,Density,R,h,false));
-            }
-        }
-    }
-    std::cout << "\n  Total No. of particles   = " << Particles.Size() << std::endl;
+    std::cout << "\nNo. of added particles = " << Particles.Size()-PrePS << std::endl;
 }
 
 inline void Domain::DelParticles (int const & Tags)
 {
     Array<int> idxs; // indices to be deleted
+
+	#pragma omp parallel for
     for (size_t i=0; i<Particles.Size(); ++i)
-    	{
+    {
         if (Particles[i]->ID==Tags) idxs.Push(i);
-    	}
+    }
     if (idxs.Size()<1) throw new Fatal("Domain::DelParticles: Could not find any particle to be deleted");
     Particles.DelItems (idxs);
-    std::cout << "\n" << "Particles with Tag No. " << Tags << " has been deleted" << std::endl;
 
+    std::cout << "\n" << "Particles with Tag No. " << Tags << " has been deleted" << std::endl;
 }
 
 inline void Domain::CheckParticleLeave ()
@@ -274,36 +258,26 @@ inline void Domain::CheckParticleLeave ()
 	{
 		std::cout<< DelParticles.Size()<< " Particles are leaving the Domain"<<std::endl;
 
+		for(size_t i =0; i<Particles.Size(); i++)
+		for(size_t j =0; j<Particles.Size(); j++)
+		{
+			ExInteract[i][j] = -1;
+		}
+
 		Particles.DelItems(DelParticles);
 
-		for(size_t i =0; i<Particles.Size(); i++)
-	    	{
-	    	for(size_t j =0; j<Particles.Size(); j++)
-	    		{
-	    		ExInteract[i][j] = -1;
-	    		}
-	    	}
-
-		#pragma omp parallel for
-		for (size_t i=0; i<Interactions.Size(); i++)
-	    {
-	    	delete [] Interactions[i];
-	    }
+		size_t Max = Interactions.Size();
+		for (size_t i=1; i<=Max ; i++) Interactions.DelItem(Max-i);
 		PInteractions.Resize(0);
 	    Interactions.Resize(0);
 
-	    bool update=false;
-
-		#pragma omp parallel for
-	    for (size_t i=0; i<Particles.Size(); i++)
-	    {
-		if (Particles[i]->CellUpdate(CellSize,BLPF))
-			{
-			update=true;
-			}
-	    }
-
-	    if (!update) ListandInteractionUpdate();
+		CellReset();
+	    for (size_t a=0; a<Particles.Size(); a++)
+	    	{
+	        Particles[a]->LL = -1;
+	    	}
+	    ListGenerate();
+	    UpdateInteractions();
 	}
 }
 
@@ -312,8 +286,8 @@ inline void Domain::CellInitiate ()
 	// Calculate Domain Size
 	BLPF = Particles[0]->x;
 	TRPR = Particles[0]->x;
-	hmax = 0.0;
 
+	#pragma omp parallel for
 	for (size_t i=0; i<Particles.Size(); i++)
     {
 		if (Particles[i]->x(0) > TRPR(0)) TRPR(0) = Particles[i]->x(0);
@@ -332,39 +306,38 @@ inline void Domain::CellInitiate ()
 
     if ((BLPF(0) < 0.0) | (BLPF(0) < 0.0) | (BLPF(0) < 0.0))
     	{
-    	std::cout << "\nProblem to allocate Cells !!!!!!!!!!!!!" << std::endl;
+    	std::cout << "Problem to allocate Cells!" << std::endl;
     	std::cout << "Particle with minus coordinate" << std::endl;
     	abort();
     	}
 
     // Calculate Cells Properties
-    	switch (Dimension)
-        {case 1:
-            CellNo[0] = (int) (floor((TRPR(0)-BLPF(0))/(Cellfac*hmax)));
-            CellNo[1] = 1;
-            CellNo[2] = 1;
-            CellSize  = Vec3_t ((TRPR(0)-BLPF(0))/CellNo[0],0.0,0.0);
-            break;
-        case 2:
-            CellNo[0] = (int) (floor((TRPR(0)-BLPF(0))/(Cellfac*hmax)));
-            CellNo[1] = (int) (floor((TRPR(1)-BLPF(1))/(Cellfac*hmax)));
-            CellNo[2] = 1;
-            CellSize  = Vec3_t ((TRPR(0)-BLPF(0))/CellNo[0],(TRPR(1)-BLPF(1))/CellNo[1],0.0);
-            break;
-        case 3:
-            CellNo[0] = (int) (floor((TRPR(0)-BLPF(0))/(Cellfac*hmax)));
-            CellNo[1] = (int) (floor((TRPR(1)-BLPF(1))/(Cellfac*hmax)));
-            CellNo[2] = (int) (floor((TRPR(2)-BLPF(2))/(Cellfac*hmax)));
-            CellSize  = Vec3_t ((TRPR(0)-BLPF(0))/CellNo[0],(TRPR(1)-BLPF(1))/CellNo[1],(TRPR(2)-BLPF(2))/CellNo[2]);
-        	break;
-        default:
-        	std::cout << "Please correct dimension and run again" << std::endl;
-        	break;
-        }
+	switch (Dimension)
+	{case 1:
+		CellNo[0] = (int) (floor((TRPR(0)-BLPF(0))/(Cellfac*hmax)));
+		CellNo[1] = 1;
+		CellNo[2] = 1;
+		CellSize  = Vec3_t ((TRPR(0)-BLPF(0))/CellNo[0],0.0,0.0);
+		break;
+	case 2:
+		CellNo[0] = (int) (floor((TRPR(0)-BLPF(0))/(Cellfac*hmax)));
+		CellNo[1] = (int) (floor((TRPR(1)-BLPF(1))/(Cellfac*hmax)));
+		CellNo[2] = 1;
+		CellSize  = Vec3_t ((TRPR(0)-BLPF(0))/CellNo[0],(TRPR(1)-BLPF(1))/CellNo[1],0.0);
+		break;
+	case 3:
+		CellNo[0] = (int) (floor((TRPR(0)-BLPF(0))/(Cellfac*hmax)));
+		CellNo[1] = (int) (floor((TRPR(1)-BLPF(1))/(Cellfac*hmax)));
+		CellNo[2] = (int) (floor((TRPR(2)-BLPF(2))/(Cellfac*hmax)));
+		CellSize  = Vec3_t ((TRPR(0)-BLPF(0))/CellNo[0],(TRPR(1)-BLPF(1))/CellNo[1],(TRPR(2)-BLPF(2))/CellNo[2]);
+		break;
+	default:
+		std::cout << "Please correct dimension and run again" << std::endl;
+		break;
+	}
 
-    if (Periodic) CellNo[0] = CellNo[0]+2;
+    if (Periodic) CellNo[0] += 2;
 
-    std::cout << "cell size = " << CellSize << std::endl;
     std::cout << "No of Cells in X Direction = " << CellNo[0] << std::endl;
     std::cout << "No of Cells in Y Direction = " << CellNo[1] << std::endl;
     std::cout << "No of Cells in Z Direction = " << CellNo[2] << std::endl;
@@ -497,23 +470,22 @@ inline void Domain::ListGenerate ()
 
 	if (Periodic)
 	{
-	       for(int j =0; j<CellNo[1]; j++){
-	           for(int k = 0; k<CellNo[2];k++){
-	              HOC[CellNo[0]-1][j][k] =  HOC[1][j][k];
-	              HOC[CellNo[0]-2][j][k] =  HOC[0][j][k];
-	           }
-	       }
+	   for(int j =0; j<CellNo[1]; j++)
+	   for(int k =0; k<CellNo[2];k++)
+	   {
+		  HOC[CellNo[0]-1][j][k] =  HOC[1][j][k];
+		  HOC[CellNo[0]-2][j][k] =  HOC[0][j][k];
+	   }
 	}
 }
 
 inline void Domain::CellReset ()
 {
-    for(int i =0; i<CellNo[0]; i++){
-       for(int j =0; j<CellNo[1]; j++){
-           for(int k = 0; k<CellNo[2];k++){
-              HOC[i][j][k] = -1;
-           }
-       }
+    for(int i =0; i<CellNo[0]; i++)
+    for(int j =0; j<CellNo[1]; j++)
+    for(int k =0; k<CellNo[2];k++)
+    {
+    	HOC[i][j][k] = -1;
     }
 }
 
@@ -538,24 +510,25 @@ inline void Domain::ListandInteractionUpdate()
 inline void Domain::CreateInteraction(int a, int b)
 {
 	if (Particles[a]->IsFree || Particles[b]->IsFree)
-          {
-			if (ExInteract [a][b] == -1)
-			{
-				Interactions.Push(new Interaction(Particles[a],Particles[b],Dimension,Alpha,Beta,MaxVel,MU,XSPH));
-				ExInteract [a][b] = Interactions.size() - 1;
-				ExInteract [b][a] = Interactions.size() - 1;
-				PInteractions.Push(Interactions[ ExInteract [a][b] ]);
-			}
-			else
-			{
-				PInteractions.Push(Interactions[ ExInteract [a][b] ]);
-			}
+    {
+		if (ExInteract [a][b] == -1)
+		{
+			Interactions.Push(new Interaction(Particles[a],Particles[b],Dimension,Alpha,Beta,Cs,MU,XSPH,TI,InitialDist,P0,PresEq));
+			ExInteract [a][b] = Interactions.size() - 1;
+			ExInteract [b][a] = Interactions.size() - 1;
+			PInteractions.Push(Interactions[ ExInteract [a][b] ]);
+		}
+		else
+		{
+			PInteractions.Push(Interactions[ ExInteract [a][b] ]);
+		}
 
-			if (!Particles[a]->IsFree || !Particles[b]->IsFree)
-			{
-				IinSI.Push(ExInteract [a][b]);
-			}
-          }
+		// Pressure boundary
+		if (!Particles[a]->IsFree || !Particles[b]->IsFree)
+		{
+			IinSI.Push(ExInteract [a][b]);
+		}
+	}
 }
 
 inline void Domain::NeighbourSearch(int q1, int q2, int q3)
@@ -605,17 +578,15 @@ inline void Domain::NeighbourSearch(int q1, int q2, int q3)
 		if (q3+1< CellNo[2])
 		{
 			for (int j=q2-1; j<=q2+1; j++)
+			for (int i=q1-1; i<=q1+1; i++)
 			{
-				for (int i=q1-1; i<=q1+1; i++)
+				if (i<CellNo[0] && i>=0 && j<CellNo[1] && j>=0)
 				{
-					if (i<CellNo[0] && i>=0 && j<CellNo[1] && j>=0)
+					temp2 = HOC[i][j][q3+1];
+					while (temp2 != -1)
 					{
-						temp2 = HOC[i][j][q3+1];
-						while (temp2 != -1)
-						{
-							CreateInteraction(temp1, temp2);
-							temp2 = Particles[temp2]->LL;
-						}
+						CreateInteraction(temp1, temp2);
+						temp2 = Particles[temp2]->LL;
 					}
 				}
 			}
@@ -638,41 +609,30 @@ inline void Domain::InitiateInteractions()
     	}
 
 	// Delete old interactions
-    for (size_t i=0; i<Interactions.Size(); ++i)
-    {
-        if (Interactions[i]!=NULL) delete Interactions[i];
-    }
+	size_t Max = Interactions.Size();
+	for (size_t i=1; i<=Max ; i++) Interactions.DelItem(Max-i);
     PInteractions.Resize(0);
     IinSI.Resize(0);
 
     if (!Periodic)
     {
 		for (int q3=0; q3<CellNo[2]; q3++)
+		for (int q2=0; q2<CellNo[1]; q2++)
+		for (int q1=0; q1<CellNo[0]; q1++)
 		{
-			for (int q2=0; q2<CellNo[1]; q2++)
-			{
-				for (int q1=0; q1<CellNo[0]; q1++)
-				{
-					if (HOC[q1][q2][q3]==-1) continue;
-					else  NeighbourSearch(q1,q2,q3);
-				}
-			}
+			if (HOC[q1][q2][q3]==-1) continue;
+			else  NeighbourSearch(q1,q2,q3);
 		}
     }
     else
     {
 		for (int q3=0; q3<CellNo[2]; q3++)
+		for (int q2=0; q2<CellNo[1]; q2++)
+		for (int q1=1; q1<CellNo[0]-1; q1++)
 		{
-			for (int q2=0; q2<CellNo[1]; q2++)
-			{
-				for (int q1=1; q1<CellNo[0]-1; q1++)
-				{
-					if (HOC[q1][q2][q3]==-1) continue;
-					else  NeighbourSearch(q1,q2,q3);
-				}
-			}
+			if (HOC[q1][q2][q3]==-1) continue;
+			else  NeighbourSearch(q1,q2,q3);
 		}
-
     }
 }
 
@@ -684,31 +644,22 @@ inline void Domain::UpdateInteractions()
     if (!Periodic)
     {
 		for (int q3=0; q3<CellNo[2]; q3++)
+		for (int q2=0; q2<CellNo[1]; q2++)
+		for (int q1=0; q1<CellNo[0]; q1++)
 		{
-			for (int q2=0; q2<CellNo[1]; q2++)
-			{
-				for (int q1=0; q1<CellNo[0]; q1++)
-				{
-					if (HOC[q1][q2][q3]==-1) continue;
-					else  NeighbourSearch(q1,q2,q3);
-				}
-			}
+			if (HOC[q1][q2][q3]==-1) continue;
+			else  NeighbourSearch(q1,q2,q3);
 		}
     }
     else
     {
 		for (int q3=0; q3<CellNo[2]; q3++)
+		for (int q2=0; q2<CellNo[1]; q2++)
+		for (int q1=1; q1<CellNo[0]-1; q1++)
 		{
-			for (int q2=0; q2<CellNo[1]; q2++)
-			{
-				for (int q1=1; q1<CellNo[0]-1; q1++)
-				{
-					if (HOC[q1][q2][q3]==-1) continue;
-					else  NeighbourSearch(q1,q2,q3);
-				}
-			}
+			if (HOC[q1][q2][q3]==-1) continue;
+			else  NeighbourSearch(q1,q2,q3);
 		}
-
     }
 }
 
@@ -776,6 +727,16 @@ inline void Domain::Move (double dt)
 {
 	#pragma omp parallel for
 	for (size_t i=0; i<Particles.Size(); i++) Particles[i]->Move(dt,Periodic,TRPR(0),BLPF(0),hmax);
+
+	if (RigidBody)
+	{
+		RBForce = 0.0;
+	#pragma omp parallel for
+	for (size_t i=0; i<Particles.Size(); i++)
+		{
+		if (Particles[i]->ID==RBTag) RBForce +=Particles[i]->Mass*Particles[i]->a;
+		}
+	}
 }
 
 inline void Domain::ConstVel ()
@@ -784,21 +745,17 @@ inline void Domain::ConstVel ()
 	{
 		int temp;
 		for (int q3=0; q3<CellNo[2]; q3++)
+		for (int q2=0; q2<CellNo[1]; q2++)
+		for (int q1=CellNo[0]-6; q1<CellNo[0]-2; q1++)
 		{
-			for (int q2=0; q2<CellNo[1]; q2++)
+			if (HOC[q1][q2][q3]==-1) continue;
+			else
 			{
-				for (int q1=CellNo[0]-6; q1<CellNo[0]-2; q1++)
+				temp = HOC[q1][q2][q3];
+				while (temp != -1)
 				{
-					if (HOC[q1][q2][q3]==-1) continue;
-					else
-					{
-						temp = HOC[q1][q2][q3];
-						while (temp != -1)
-						{
-							if (Particles[temp]->IsFree) Particles[temp]->v = Vec3_t (ConstVelPeriodic,0.0,0.0);
-							temp = Particles[temp]->LL;
-						}
-					}
+					if (Particles[temp]->IsFree) Particles[temp]->v = Vec3_t (ConstVelPeriodic,0.0,0.0);
+					temp = Particles[temp]->LL;
 				}
 			}
 		}
@@ -808,27 +765,22 @@ inline void Domain::ConstVel ()
 	{
 		int temp;
 		for (int q3=0; q3<CellNo[2]; q3++)
+		for (int q2=0; q2<CellNo[1]; q2++)
+		for (int q1=0; q1<4; q1++)
 		{
-			for (int q2=0; q2<CellNo[1]; q2++)
+			if (HOC[q1][q2][q3]==-1) continue;
+			else
 			{
-				for (int q1=0; q1<4; q1++)
+				temp = HOC[q1][q2][q3];
+				while (temp != -1)
 				{
-					if (HOC[q1][q2][q3]==-1) continue;
-					else
-					{
-						temp = HOC[q1][q2][q3];
-						while (temp != -1)
-						{
-							if (Particles[temp]->IsFree) Particles[temp]->v = Vec3_t (ConstVelPeriodic,0.0,0.0);
-							temp = Particles[temp]->LL;
-						}
-					}
+					if (Particles[temp]->IsFree) Particles[temp]->v = Vec3_t (ConstVelPeriodic,0.0,0.0);
+					temp = Particles[temp]->LL;
 				}
 			}
 		}
 	}
 }
-
 
 inline void Domain::ConstVelPart2 ()
 {
@@ -836,21 +788,17 @@ inline void Domain::ConstVelPart2 ()
 	{
 		int temp;
 		for (int q3=0; q3<CellNo[2]; q3++)
+		for (int q2=0; q2<CellNo[1]; q2++)
+		for (int q1=CellNo[0]-6; q1<CellNo[0]-2; q1++)
 		{
-			for (int q2=0; q2<CellNo[1]; q2++)
+			if (HOC[q1][q2][q3]==-1) continue;
+			else
 			{
-				for (int q1=CellNo[0]-6; q1<CellNo[0]-2; q1++)
+				temp = HOC[q1][q2][q3];
+				while (temp != -1)
 				{
-					if (HOC[q1][q2][q3]==-1) continue;
-					else
-					{
-						temp = HOC[q1][q2][q3];
-						while (temp != -1)
-						{
-							if (Particles[temp]->IsFree) Particles[temp]->a = Vec3_t (0.0,0.0,0.0);
-							temp = Particles[temp]->LL;
-						}
-					}
+					if (Particles[temp]->IsFree) Particles[temp]->a = Vec3_t (0.0,0.0,0.0);
+					temp = Particles[temp]->LL;
 				}
 			}
 		}
@@ -860,21 +808,17 @@ inline void Domain::ConstVelPart2 ()
 	{
 		int temp;
 		for (int q3=0; q3<CellNo[2]; q3++)
+		for (int q2=0; q2<CellNo[1]; q2++)
+		for (int q1=0; q1<4; q1++)
 		{
-			for (int q2=0; q2<CellNo[1]; q2++)
+			if (HOC[q1][q2][q3]==-1) continue;
+			else
 			{
-				for (int q1=0; q1<4; q1++)
+				temp = HOC[q1][q2][q3];
+				while (temp != -1)
 				{
-					if (HOC[q1][q2][q3]==-1) continue;
-					else
-					{
-						temp = HOC[q1][q2][q3];
-						while (temp != -1)
-						{
-							if (Particles[temp]->IsFree) Particles[temp]->a = Vec3_t (0.0,0.0,0.0);
-							temp = Particles[temp]->LL;
-						}
-					}
+					if (Particles[temp]->IsFree) Particles[temp]->a = Vec3_t (0.0,0.0,0.0);
+					temp = Particles[temp]->LL;
 				}
 			}
 		}
@@ -899,12 +843,13 @@ inline void Domain::AvgParticleVelocity ()
 	AvgVelocity = AvgVelocity / j;
 }
 
-	inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheFileKey, size_t Nproc)
+inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheFileKey, size_t Nproc)
 {
+    std::cout << "\nTotal No. of particles = " << Particles.Size()<< std::endl;
     Util::Stopwatch stopwatch;
-    std::cout << "\n--------------Solving------------------------------------------------------------------------------" << std::endl;
+    std::cout << "\n--------------Solving---------------------------------------------------------------" << std::endl;
 
-    idx_out = 1;
+    size_t idx_out = 1;
     double tout = Time;
 
     size_t save_out = 1;
@@ -913,10 +858,12 @@ inline void Domain::AvgParticleVelocity ()
     CellInitiate();
     ListGenerate();
     InitiateInteractions();
-	#pragma omp parallel for
-	for (size_t i=0; i<Particles.Size(); i++)
+
+    // Initialization of constant velocity
+	if (Periodic && ConstVelPeriodic>0.0)
 	{
-		if (Particles[i]->IsFree) Particles[i]->v = Vec3_t (ConstVelPeriodic,0.0,0.0);
+		#pragma omp parallel for
+		for (size_t i=0; i<Particles.Size(); i++) if (Particles[i]->IsFree) Particles[i]->v = Vec3_t (ConstVelPeriodic,0.0,0.0);
 	}
 
     while (Time<tf)
@@ -927,7 +874,6 @@ inline void Domain::AvgParticleVelocity ()
     	ConstVelPart2();
     	Move(dt);
     	AvgParticleVelocity ();
-
 
         // output
         if (Time>=tout)
@@ -970,7 +916,6 @@ inline void Domain::AvgParticleVelocity ()
 
 inline void Domain::WriteXDMF (char const * FileKey)
 {
-
 	String fn(FileKey);
     fn.append(".hdf5");
     hid_t file_id;
@@ -985,6 +930,7 @@ inline void Domain::WriteXDMF (char const * FileKey)
     float * sh	     = new float[  Particles.Size()];
     int   * Tag      = new int  [  Particles.Size()];
     int   * IsFree   = new int  [  Particles.Size()];
+    float * Force    = new float[3];
 
 
     for (size_t i=0;i<Particles.Size();i++)
@@ -1005,6 +951,9 @@ inline void Domain::WriteXDMF (char const * FileKey)
         else
         	IsFree[i] = int  (0);
     }
+    Force  [0] = float(RBForce(0));
+    Force  [1] = float(RBForce(1));
+    Force  [2] = float(RBForce(2));
 
     int data[1];
     String dsname;
@@ -1031,6 +980,10 @@ inline void Domain::WriteXDMF (char const * FileKey)
     H5LTmake_dataset_int(file_id,dsname.CStr(),1,dims,Tag);
     dsname.Printf("IsFree");
     H5LTmake_dataset_int(file_id,dsname.CStr(),1,dims,IsFree);
+    dims[0] = 3;
+    dsname.Printf("Rigid_Body_Force");
+    H5LTmake_dataset_float(file_id,dsname.CStr(),1,dims,Force);
+
 
 
     delete [] Posvec;
@@ -1041,12 +994,11 @@ inline void Domain::WriteXDMF (char const * FileKey)
     delete [] sh;
     delete [] Tag;
     delete [] IsFree;
+    delete [] Force;
 
-
-    //Closing the file
+   //Closing the file
     H5Fflush(file_id,H5F_SCOPE_GLOBAL);
     H5Fclose(file_id);
-
 
     //Writing xmf file
     std::ostringstream oss;
@@ -1126,8 +1078,6 @@ inline void Domain::Save (char const * FileKey)
         H5LTmake_dataset_double(group_id,"Rho",1,dims,dat);
         dat[0] = Particles[i]->hr;
         H5LTmake_dataset_double(group_id,"h",1,dims,dat);
-        dat[0] = Particles[i]->R;
-        H5LTmake_dataset_double(group_id,"Radius",1,dims,dat);
 
         int tag[1];
         tag[0] = Particles[i]->ID;
@@ -1185,7 +1135,7 @@ inline void Domain::Load (char const * FileKey)
         par.Printf("/Particle_%08d",i);
         group_id = H5Gopen2(file_id, par.CStr(),H5P_DEFAULT);
 
-        Particles.Push(new Particle(0,Vec3_t(0,0,0),Vec3_t(0,0,0),0,0,0,0,false));
+        Particles.Push(new Particle(0,Vec3_t(0,0,0),Vec3_t(0,0,0),0,0,0,false));
 
         // Loading vectorial variables
         double cd[3];
@@ -1208,9 +1158,6 @@ inline void Domain::Load (char const * FileKey)
         H5LTread_dataset_double(group_id,"h",dat);
         Particles[Particles.Size()-1]->hr = dat[0];
         Particles[Particles.Size()-1]->h = dat[0];			// Because of the constructor in Particle
-
-        H5LTread_dataset_double(group_id,"Radius",dat);
-        Particles[Particles.Size()-1]->R = dat[0];
 
         int datint[1];
         H5LTread_dataset_int(group_id,"Tag",datint);
