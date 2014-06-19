@@ -228,7 +228,6 @@ inline void Domain::DelParticles (int const & Tags)
 {
     Array<int> idxs; // indices to be deleted
 
-	#pragma omp parallel for
     for (size_t i=0; i<Particles.Size(); ++i)
     {
         if (Particles[i]->ID==Tags) idxs.Push(i);
@@ -243,7 +242,6 @@ inline void Domain::CheckParticleLeave ()
 {
 	Array <int> DelParticles;
 
-	#pragma omp parallel for
 	for (size_t i=0; i<Particles.Size(); i++)
     {
 		if (!Periodic){
@@ -266,12 +264,18 @@ inline void Domain::CheckParticleLeave ()
 
 		Particles.DelItems(DelParticles);
 
-		size_t Max = Interactions.Size();
-		for (size_t i=1; i<=Max ; i++) Interactions.DelItem(Max-i);
+		#pragma omp parallel for
+		for (size_t i=0; i<Interactions.Size(); i++)
+		{
+		delete [] Interactions[i];
+		}
+		std::cout << Interactions.Size()<< std::endl;
+
 		PInteractions.Resize(0);
 	    Interactions.Resize(0);
 
 		CellReset();
+		#pragma omp parallel for
 	    for (size_t a=0; a<Particles.Size(); a++)
 	    	{
 	        Particles[a]->LL = -1;
@@ -677,47 +681,47 @@ inline void Domain::StartAcceleration (Vec3_t const & a)
 inline void Domain::ComputeAcceleration (double dt)
 {
 
-	if (PressureBoundary)
-	{
-		// Get max value of pressure from neighbor for solid body particles
-		#pragma omp parallel for
-		for (size_t i=0; i<Particles.Size(); i++) if (!Particles[i]->IsFree) Particles[i]->Pressure=0.0;
-
-		#pragma omp parallel for
-		for (size_t i=0; i<IinSI.Size(); i++)
-		{
-			if (Interactions[IinSI [i]]->P1->IsFree && !Interactions[IinSI [i]]->P2->IsFree)
-			{
-				if (Interactions[IinSI [i]]->P2->Pressure < Interactions[IinSI [i]]->P1->Pressure) Interactions[IinSI [i]]->P2->Pressure = Interactions[IinSI [i]]->P1->Pressure;
-			}
-			else
-			{
-				if (Interactions[IinSI [i]]->P1->Pressure < Interactions[IinSI [i]]->P2->Pressure) Interactions[IinSI [i]]->P1->Pressure = Interactions[IinSI [i]]->P2->Pressure;
-
-			}
-		}
-	}
-	else
-	{
-		// Get max value of pressure from neighbor for solid body particles
-		#pragma omp parallel for
-		for (size_t i=0; i<Particles.Size(); i++) if (!Particles[i]->IsFree) Particles[i]->Pressure=0.0;
-
-		#pragma omp parallel for
-		for (size_t i=0; i<IinSI.Size(); i++)
-		{
-			if (Interactions[IinSI [i]]->P1->IsFree && !Interactions[IinSI [i]]->P2->IsFree)
-			{
-				if (Interactions[IinSI [i]]->P2->Pressure == 0.0) Interactions[IinSI [i]]->P2->Pressure = Interactions[IinSI [i]]->P1->Pressure;
-				else Interactions[IinSI [i]]->P2->Pressure = (Interactions[IinSI [i]]->P2->Pressure + Interactions[IinSI [i]]->P1->Pressure)/2;
-			}
-			else
-			{
-				if (Interactions[IinSI [i]]->P1->Pressure == 0.0) Interactions[IinSI [i]]->P1->Pressure = Interactions[IinSI [i]]->P2->Pressure;
-				else Interactions[IinSI [i]]->P1->Pressure = (Interactions[IinSI [i]]->P1->Pressure + Interactions[IinSI [i]]->P2->Pressure)/2;
-			}
-		}
-	}
+//	if (PressureBoundary)
+//	{
+//		// Get max value of pressure from neighbor for solid body particles
+//		#pragma omp parallel for
+//		for (size_t i=0; i<Particles.Size(); i++) if (!Particles[i]->IsFree) Particles[i]->Pressure=0.0;
+//
+//		#pragma omp parallel for
+//		for (size_t i=0; i<IinSI.Size(); i++)
+//		{
+//			if (Interactions[IinSI [i]]->P1->IsFree && !Interactions[IinSI [i]]->P2->IsFree)
+//			{
+//				if (Interactions[IinSI [i]]->P2->Pressure < Interactions[IinSI [i]]->P1->Pressure) Interactions[IinSI [i]]->P2->Pressure = Interactions[IinSI [i]]->P1->Pressure;
+//			}
+//			else
+//			{
+//				if (Interactions[IinSI [i]]->P1->Pressure < Interactions[IinSI [i]]->P2->Pressure) Interactions[IinSI [i]]->P1->Pressure = Interactions[IinSI [i]]->P2->Pressure;
+//
+//			}
+//		}
+//	}
+//	else
+//	{
+//		// Get max value of pressure from neighbor for solid body particles
+//		#pragma omp parallel for
+//		for (size_t i=0; i<Particles.Size(); i++) if (!Particles[i]->IsFree) Particles[i]->Pressure=0.0;
+//
+//		#pragma omp parallel for
+//		for (size_t i=0; i<IinSI.Size(); i++)
+//		{
+//			if (Interactions[IinSI [i]]->P1->IsFree && !Interactions[IinSI [i]]->P2->IsFree)
+//			{
+//				if (Interactions[IinSI [i]]->P2->Pressure == 0.0) Interactions[IinSI [i]]->P2->Pressure = Interactions[IinSI [i]]->P1->Pressure;
+//				else Interactions[IinSI [i]]->P2->Pressure = (Interactions[IinSI [i]]->P2->Pressure + Interactions[IinSI [i]]->P1->Pressure)/2;
+//			}
+//			else
+//			{
+//				if (Interactions[IinSI [i]]->P1->Pressure == 0.0) Interactions[IinSI [i]]->P1->Pressure = Interactions[IinSI [i]]->P2->Pressure;
+//				else Interactions[IinSI [i]]->P1->Pressure = (Interactions[IinSI [i]]->P1->Pressure + Interactions[IinSI [i]]->P2->Pressure)/2;
+//			}
+//		}
+//	}
 
 	#pragma omp parallel for
 	for (size_t i=0; i<PInteractions.Size(); i++) PInteractions[i]->CalcForce(dt);
