@@ -23,7 +23,6 @@
 #include <stdio.h>			/// for NULL
 #include <algorithm>		/// for min,max
 
-
 #include <Interaction.h>
 
 // HDF File Output
@@ -34,7 +33,10 @@
 #include <mechsys/util/string.h>
 
 namespace SPH {
-
+//struct MtData
+//{
+//	Array<std::pair<int,int> > Pairs;
+//};
 
 
 class Domain
@@ -64,14 +66,14 @@ public:
     void ConstVel					();																									///< Give a defined velocity to the first and last 4 column of cells in X direction
     void ConstVelPart2				();																									///< Give a zero acceleration to all constant velocity zone (Correction for the first part)
     void AvgParticleVelocity		();																									///< Calculate the average velocity of whole domain (free particles)
-    void Solve						(double tf, double dt, double dtOut, char const * TheFileKey, size_t Nproc);						///< The solving function
+    void Solve						(double tf, double dt, double dtOut, char const * TheFileKey);										///< The solving function
 
     void InitiateInteractions		();																									///< Reset the interaction array and make the first Interaction and PInteraction array
     void CellInitiate				();																									///< Find the size of the domain as a cube, make cells and HOCs
     void ListGenerate				();																									///< Generate linked-list
 
-    void NeighbourSearch			(int q1, int q2, int q3);																			///< Find neighbor cells and make interaction for cell(q1,q2,q3)
     void CreateInteraction			(int a, int b);																						///< Create interaction between two particles and put it in PInteractions
+    void YZCellsSearch				(int q1);																							///< Create pairs of particles in XZ plan of cells
 
     void CellReset					();																									///< Reset HOCs to initial value of -1
     void ListandInteractionUpdate	();																									///< Checks if linked-list needs to be updated
@@ -128,6 +130,10 @@ public:
 
     double					AvgVelocity;		///< Average velocity of the whole domain
 
+    size_t					Nproc;				///< No of threads which are going to use in parallel calculation
+
+    omp_lock_t maz_lock;						///< Open MP lock to lock Interactions array
+
 };
 /////////////////////////////////////////////////////////////////////////////////////////// Implementation /////
 
@@ -166,6 +172,9 @@ inline Domain::Domain ()
 
     AvgVelocity = 0.0;
     hmax	= 0.0;
+
+    omp_init_lock (&maz_lock);
+    Nproc	= 1;
 }
 
 inline Domain::~Domain ()
@@ -269,7 +278,6 @@ inline void Domain::CheckParticleLeave ()
 		{
 		delete [] Interactions[i];
 		}
-		std::cout << Interactions.Size()<< std::endl;
 
 		PInteractions.Resize(0);
 	    Interactions.Resize(0);
@@ -439,6 +447,11 @@ inline void Domain::ListGenerate ()
                     if ((BLPF(1) - Particles[a]->x(1))<=hmax) j=0;
                             else std::cout<<"Leaving"<<std::endl;
             }
+            if (k<0)
+            {
+                    if ((BLPF(2) - Particles[a]->x(2))<=hmax) k=0;
+                            else std::cout<<"Leaving"<<std::endl;
+            }
             if (Periodic)
             {
             	if (i>=CellNo[0])
@@ -459,6 +472,11 @@ inline void Domain::ListGenerate ()
             if (j>=CellNo[1])
             {
                     if ((Particles[a]->x(1) - TRPR(1))<=hmax) j=CellNo[1]-1;
+                            else std::cout<<"Leaving"<<std::endl;
+            }
+            if (k>=CellNo[2])
+            {
+                    if ((Particles[a]->x(2) - TRPR(2))<=hmax) k=CellNo[2]-1;
                             else std::cout<<"Leaving"<<std::endl;
             }
 
@@ -535,67 +553,162 @@ inline void Domain::CreateInteraction(int a, int b)
 	}
 }
 
-inline void Domain::NeighbourSearch(int q1, int q2, int q3)
+inline void Domain::YZCellsSearch(int q1)
 {
-	int temp1, temp2;
-	temp1 = HOC[q1][q2][q3];
-
-	while (temp1 != -1)
+	if (Nproc>1)
 	{
-		// The current cell  => selfcell interactions
-		temp2 = Particles[temp1]->LL;
-		while (temp2 != -1)
-		{
-			CreateInteraction(temp1, temp2);
-			temp2 = Particles[temp2]->LL;
-		}
+		// Parallel
+		Array<std::pair<size_t,size_t> > LocalPairs;
 
-		// (q1 + 1, q2 , q3)
-		if (q1+1< CellNo[0])
+		for (int q3=0; q3<CellNo[2]; q3++)
 		{
-			temp2 = HOC[q1+1][q2][q3];
-			while (temp2 != -1)
+			for (int q2=0; q2<CellNo[1]; q2++)
 			{
-				CreateInteraction(temp1, temp2);
-				temp2 = Particles[temp2]->LL;
-			}
-		}
-
-		// (q1 + a, q2 + 1, q3) & a[-1,1]
-		if (q2+1< CellNo[1])
-		{
-			for (int i = q1-1; i <= q1+1; i++)
-			{
-				if (i<CellNo[0] && i>=0)
+				if (HOC[q1][q2][q3]==-1) continue;
+				else
 				{
-					temp2 = HOC[i][q2+1][q3];
+					int temp1, temp2;
+					temp1 = HOC[q1][q2][q3];
+
+					while (temp1 != -1)
+					{
+						// The current cell  => self cell interactions
+						temp2 = Particles[temp1]->LL;
+						while (temp2 != -1)
+						{
+							LocalPairs.Push(std::make_pair(temp1, temp2));
+							temp2 = Particles[temp2]->LL;
+						}
+
+						// (q1 + 1, q2 , q3)
+						if (q1+1< CellNo[0])
+						{
+							temp2 = HOC[q1+1][q2][q3];
+							while (temp2 != -1)
+							{
+								LocalPairs.Push(std::make_pair(temp1, temp2));
+								temp2 = Particles[temp2]->LL;
+							}
+						}
+
+						// (q1 + a, q2 + 1, q3) & a[-1,1]
+						if (q2+1< CellNo[1])
+						{
+							for (int i = q1-1; i <= q1+1; i++)
+							{
+								if (i<CellNo[0] && i>=0)
+								{
+									temp2 = HOC[i][q2+1][q3];
+									while (temp2 != -1)
+									{
+										LocalPairs.Push(std::make_pair(temp1, temp2));
+										temp2 = Particles[temp2]->LL;
+									}
+								}
+							}
+						}
+
+						// (q1 + a, q2 + b, q3 + 1) & a,b[-1,1] => all 9 cells above the current cell
+						if (q3+1< CellNo[2])
+						{
+							for (int j=q2-1; j<=q2+1; j++)
+							for (int i=q1-1; i<=q1+1; i++)
+							{
+								if (i<CellNo[0] && i>=0 && j<CellNo[1] && j>=0)
+								{
+									temp2 = HOC[i][j][q3+1];
+									while (temp2 != -1)
+									{
+										LocalPairs.Push(std::make_pair(temp1, temp2));
+										temp2 = Particles[temp2]->LL;
+									}
+								}
+							}
+						}
+						temp1 = Particles[temp1]->LL;
+					}
+				}
+			}
+			omp_set_lock(&maz_lock);
+				 for (size_t i=0; i<LocalPairs.Size();i++)
+				{
+					CreateInteraction(LocalPairs[i].first,LocalPairs[i].second);
+				}
+			omp_unset_lock(&maz_lock);
+			LocalPairs.Clear();
+		}
+	}
+	else
+	{
+		// Serial
+		for (int q3=0; q3<CellNo[2]; q3++)
+		for (int q2=0; q2<CellNo[1]; q2++)
+		{
+			if (HOC[q1][q2][q3]==-1) continue;
+			else
+			{
+				int temp1, temp2;
+				temp1 = HOC[q1][q2][q3];
+
+				while (temp1 != -1)
+				{
+					// The current cell  => self cell interactions
+					temp2 = Particles[temp1]->LL;
 					while (temp2 != -1)
 					{
 						CreateInteraction(temp1, temp2);
 						temp2 = Particles[temp2]->LL;
 					}
-				}
-			}
-		}
 
-		// (q1 + a, q2 + b, q3 + 1) & a,b[-1,1] => all 9 cells above the current cell
-		if (q3+1< CellNo[2])
-		{
-			for (int j=q2-1; j<=q2+1; j++)
-			for (int i=q1-1; i<=q1+1; i++)
-			{
-				if (i<CellNo[0] && i>=0 && j<CellNo[1] && j>=0)
-				{
-					temp2 = HOC[i][j][q3+1];
-					while (temp2 != -1)
+					// (q1 + 1, q2 , q3)
+					if (q1+1< CellNo[0])
 					{
-						CreateInteraction(temp1, temp2);
-						temp2 = Particles[temp2]->LL;
+						temp2 = HOC[q1+1][q2][q3];
+						while (temp2 != -1)
+						{
+							CreateInteraction(temp1, temp2);
+							temp2 = Particles[temp2]->LL;
+						}
 					}
+
+					// (q1 + a, q2 + 1, q3) & a[-1,1]
+					if (q2+1< CellNo[1])
+					{
+						for (int i = q1-1; i <= q1+1; i++)
+						{
+							if (i<CellNo[0] && i>=0)
+							{
+								temp2 = HOC[i][q2+1][q3];
+								while (temp2 != -1)
+								{
+									CreateInteraction(temp1, temp2);
+									temp2 = Particles[temp2]->LL;
+								}
+							}
+						}
+					}
+
+					// (q1 + a, q2 + b, q3 + 1) & a,b[-1,1] => all 9 cells above the current cell
+					if (q3+1< CellNo[2])
+					{
+						for (int j=q2-1; j<=q2+1; j++)
+						for (int i=q1-1; i<=q1+1; i++)
+						{
+							if (i<CellNo[0] && i>=0 && j<CellNo[1] && j>=0)
+							{
+								temp2 = HOC[i][j][q3+1];
+								while (temp2 != -1)
+								{
+									CreateInteraction(temp1, temp2);
+									temp2 = Particles[temp2]->LL;
+								}
+							}
+						}
+					}
+					temp1 = Particles[temp1]->LL;
 				}
 			}
 		}
-		temp1 = Particles[temp1]->LL;
 	}
 }
 
@@ -620,22 +733,18 @@ inline void Domain::InitiateInteractions()
 
     if (!Periodic)
     {
-		for (int q3=0; q3<CellNo[2]; q3++)
-		for (int q2=0; q2<CellNo[1]; q2++)
+		#pragma omp parallel for schedule (static) num_threads(Nproc)
 		for (int q1=0; q1<CellNo[0]; q1++)
 		{
-			if (HOC[q1][q2][q3]==-1) continue;
-			else  NeighbourSearch(q1,q2,q3);
+			YZCellsSearch(q1);
 		}
     }
     else
     {
-		for (int q3=0; q3<CellNo[2]; q3++)
-		for (int q2=0; q2<CellNo[1]; q2++)
+		#pragma omp parallel for schedule (static) num_threads(Nproc)
 		for (int q1=1; q1<CellNo[0]-1; q1++)
 		{
-			if (HOC[q1][q2][q3]==-1) continue;
-			else  NeighbourSearch(q1,q2,q3);
+			YZCellsSearch(q1);
 		}
     }
 }
@@ -647,22 +756,18 @@ inline void Domain::UpdateInteractions()
 
     if (!Periodic)
     {
-		for (int q3=0; q3<CellNo[2]; q3++)
-		for (int q2=0; q2<CellNo[1]; q2++)
+		#pragma omp parallel for schedule (static) num_threads(Nproc)
 		for (int q1=0; q1<CellNo[0]; q1++)
 		{
-			if (HOC[q1][q2][q3]==-1) continue;
-			else  NeighbourSearch(q1,q2,q3);
+			YZCellsSearch(q1);
 		}
     }
     else
     {
-		for (int q3=0; q3<CellNo[2]; q3++)
-		for (int q2=0; q2<CellNo[1]; q2++)
+		#pragma omp parallel for schedule (static) num_threads(Nproc)
 		for (int q1=1; q1<CellNo[0]-1; q1++)
 		{
-			if (HOC[q1][q2][q3]==-1) continue;
-			else  NeighbourSearch(q1,q2,q3);
+			YZCellsSearch(q1);
 		}
     }
 }
@@ -847,7 +952,7 @@ inline void Domain::AvgParticleVelocity ()
 	AvgVelocity = AvgVelocity / j;
 }
 
-inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheFileKey, size_t Nproc)
+inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheFileKey)
 {
     std::cout << "\nTotal No. of particles = " << Particles.Size()<< std::endl;
     Util::Stopwatch stopwatch;
@@ -873,11 +978,11 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
     while (Time<tf)
     {
     	StartAcceleration(Gravity);
-    	ConstVel();
+		ConstVel();
     	ComputeAcceleration(dt);
     	ConstVelPart2();
     	Move(dt);
-    	AvgParticleVelocity ();
+    	if (Periodic) AvgParticleVelocity ();
 
         // output
         if (Time>=tout)
@@ -888,7 +993,7 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
                 fn.Printf    ("%s_%04d", TheFileKey, idx_out);
                 WriteXDMF    (fn.CStr());
                 std::cout << "\n" << "Output No. " << idx_out << " at " << Time << " has been generated" << std::endl;
-                std::cout << AvgVelocity<< std::endl;
+                if (Periodic) std::cout << AvgVelocity<< std::endl;
             	}
             idx_out++;
             tout += dtOut;

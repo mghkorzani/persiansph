@@ -225,7 +225,7 @@ inline double Interaction::SoundSpeed(double Density, double Density0)
 		break;
 	default:
 		std::cout << "Please correct Pressure Equation No, otherwise Eq. (0) is used" << std::endl;
-		return P0+(Cs*Cs)*(Density-Density0);
+		return Cs;
 		break;
     }
 }
