@@ -24,22 +24,20 @@ using std::endl;
 
 int main(int argc, char **argv) try
 {
-    size_t Nproc	= 8;
-
 	SPH::Domain		dom;
-
 	dom.Dimension	= 2;
 
 	dom.Periodic	= true;
 	dom.ConstVelPeriodic= 0.2;
 
 	dom.RigidBody	= true;
-	dom.RBTag		=4;
+	dom.RBTag		= 4;
 
 	dom.Cs			= 4;
 	dom.MU			= 0.001;
 	dom.P0			= 2000.0;
 	dom.PresEq		= 0;
+
 
 	dom.AddBoxLength(1 ,Vec3_t ( 1.00001125 , 1.00158625+0.0000225 , 0.0 ), 0.0056475 , 0 , 0 , 251 , 1 , 1 , 5.0625e-7 , 1000 , 2.475e-5 , true);
 	dom.AddBoxLength(1 ,Vec3_t ( 1.00001125 , 1.00160875+0.0000225 , 0.0 ), 0.0056475 , 0 , 0 , 251 , 1 , 1 , 5.0625e-7 , 1000 , 2.475e-5 , true);
@@ -109,9 +107,9 @@ int main(int argc, char **argv) try
 	dom.AddSingleParticle(4,Vec3_t ( 1.001035 , 1.0009 , 0.0 ), 5.0625e-7 , 1000 , 2.475e-5 , true);
 
 
-// 	       dom.WriteXDMF("maz");
+//	dom.WriteXDMF("maz");
 
-	dom.Solve(/*tf*/0.5,/*dt*/0.000001,/*dtOut*/0.0002,"test07",Nproc);
+	dom.Solve(/*tf*/0.5,/*dt*/0.000001,/*dtOut*/0.0002,"test06");
 	return 0;
 }
 MECHSYS_CATCH

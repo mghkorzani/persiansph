@@ -26,18 +26,10 @@ int main(int argc, char **argv) try
 {
         SPH::Domain		dom;
         dom.Gravity		= 0.0002,0.0,0.0;
-        dom.Dimension	= 3;
-        dom.Alpha		= 0.0;
-        dom.Beta		= 0.0;
-        dom.MaxVel		= 0.05;
-        dom.AutoSaveInt	= 1.0;
-        dom.Cellfac		= 2;
-        size_t Nproc	= 8;
+        dom.Dimension	= 2;
+        dom.Cs			= 10*0.05;
         dom.Periodic	= true;
         dom.MU			= 0.001;
-        dom.PressureBoundary= false;
-        dom.XSPH			= 0.0;
-        dom.ConstVelPeriodic= 0.0;
 
         dom.AddBoxLength(1,Vec3_t ( 1.000 , 1.050 ,0.0  ), 0.2 ,  0,  0,100 ,  1 ,  1, 0, 1000, 0.002, true);
 //        dom.AddBoxLength(1,Vec3_t ( 1.001 , 1.051 ,0.0  ),0.198,  0,  0,99  ,  1 ,  1, 0, 1000, 0.002, true);
@@ -58,7 +50,7 @@ int main(int argc, char **argv) try
 //        dom.AddRandomBoxFixed(3,Vec3_t ( 1.0  , 0.9995   ,0.0  ), 0.2 ,0.05,  0,200 ,100 ,  1, 0.00000025, 1000, 0.0016, 0.001);
 
 //        dom.WriteXDMF("test05");
-        dom.Solve(/*tf*/10.0,/*dt*/0.0001,/*dtOut*/0.005,"test05",Nproc);
+        dom.Solve(/*tf*/10.0,/*dt*/0.0001,/*dtOut*/0.005,"test01");
         return 0;
 }
 MECHSYS_CATCH

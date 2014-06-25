@@ -28,12 +28,13 @@ int main(int argc, char **argv) try
 
 	dom.Dimension	= 3;
 	dom.Gravity     = 0.0,-9.81,0.0;
-	dom.Cs			= 1.5;
-	dom.Alpha		= 0.05;
+	dom.Cs			= 3.0;
+	dom.Alpha		= 0.03;
 	dom.P0			= 0.0;
 	dom.PresEq		= 0;
-	dom.Nproc		= 1;
-	dom.TI			= 0.1;
+
+	dom.TI			= 0.05;
+	dom.InitialDist = 0.000045;
 
 	dom.AddBoxLength(1 ,Vec3_t ( 1.0 , 1.0 , 1.0                ), 0.0045 , 0.00225 , 0               , 100 , 50 , 1 , 9.1125e-11 , 1000 , 5.00e-5 , true);
 	dom.AddBoxLength(1 ,Vec3_t ( 1.0 , 1.0-2.25e-5 , 1.0-2.25e-5        ), 0.0045 , 0.00225 , 0               , 100 , 50 , 1 , 9.1125e-11 , 1000 , 5.00e-5 , true);
@@ -54,7 +55,7 @@ int main(int argc, char **argv) try
 
 //	dom.WriteXDMF("maz");
 
-	dom.Solve(/*tf*/0.005,/*dt*/0.00001,/*dtOut*/0.0005,"test07");
+	dom.Solve(/*tf*/0.5,/*dt*/0.000001,/*dtOut*/0.0005,"test07");
 	return 0;
 }
 MECHSYS_CATCH

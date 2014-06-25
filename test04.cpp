@@ -26,12 +26,10 @@ int main(int argc, char **argv) try
 {
         SPH::Domain dom;
         dom.Gravity = 0.0,-9.81,0.0;
-        dom.Dimension = 3;
+        dom.Dimension = 23;
         dom.Alpha = 1.0;
         dom.Beta = 1.0;
-        dom.MaxVel = sqrt(2*9.81*0.20);
-        dom.AutoSaveInt = 0.0;
-        size_t Nproc = 64;
+        dom.Cs = 10*sqrt(2*9.81*0.20);
 
         dom.Load("Auto Save_test02_0029");
         dom.AddBoxLength(1,Vec3_t (-0.099,-0.076,0.0 ), 0.3 ,  0 ,  0, 150,  1,  1, 0, 1000, 0.002, true);
@@ -60,7 +58,7 @@ int main(int argc, char **argv) try
         }
 //        dom.WriteXDMF("test04");
 
-        dom.Solve(/*tf*/15.0,/*dt*/0.00005,/*dtOut*/0.005,"test04",Nproc);
+        dom.Solve(/*tf*/15.0,/*dt*/0.00005,/*dtOut*/0.005,"test04");
         return 0;
 }
 MECHSYS_CATCH
