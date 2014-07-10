@@ -55,7 +55,7 @@ int main(int argc, char **argv) try
 
 //	dom.WriteXDMF("maz");
 
-	dom.Solve(/*tf*/0.5,/*dt*/0.000001,/*dtOut*/0.0005,"test07");
+	dom.Solve(/*tf*/0.005,/*dt*/0.000001,/*dtOut*/0.0005,"test07");
 	return 0;
 }
 MECHSYS_CATCH

@@ -28,88 +28,91 @@ int main(int argc, char **argv) try
 	dom.Dimension	= 2;
 
 	dom.Periodic	= true;
-	dom.ConstVelPeriodic= 0.2;
+	dom.ConstVelPeriodic= 1.0e3;
 
 	dom.RigidBody	= true;
 	dom.RBTag		= 4;
 
-	dom.Cs			= 4;
-	dom.MU			= 0.001;
-	dom.P0			= 2000.0;
-	dom.PresEq		= 0;
+	dom.Cs			= 4.0e4;
+	dom.MU			= 1.0e-6;
+	dom.P0			= 2.0e5;
+	dom.PresEq		= 1;
 
+//	dom.TI			= 0.05;
+//	dom.InitialDist = 0.01;
 
-	dom.AddBoxLength(1 ,Vec3_t ( 1.00001125 , 1.00158625+0.0000225 , 0.0 ), 0.0056475 , 0 , 0 , 251 , 1 , 1 , 5.0625e-7 , 1000 , 2.475e-5 , true);
-	dom.AddBoxLength(1 ,Vec3_t ( 1.00001125 , 1.00160875+0.0000225 , 0.0 ), 0.0056475 , 0 , 0 , 251 , 1 , 1 , 5.0625e-7 , 1000 , 2.475e-5 , true);
-	dom.AddBoxLength(1 ,Vec3_t ( 1.00001125 , 1.00021375+0.0000225 , 0.0 ), 0.0056475 , 0 , 0 , 251 , 1 , 1 , 5.0625e-7 , 1000 , 2.475e-5 , true);
-	dom.AddBoxLength(1 ,Vec3_t ( 1.00001125 , 1.00019125+0.0000225 , 0.0 ), 0.0056475 , 0 , 0 , 251 , 1 , 1 , 5.0625e-7 , 1000 , 2.475e-5 , true);
+	dom.AddBoxLength(1 ,Vec3_t ( 1.0-113*0.01 , 1.0-47*0.01 , 0.0 ), 226*0.01 , 0 , 0 , 226 , 1 , 1 , 1.0e-7 , 1.0e-3 , 0.0115 , true);
+	dom.AddBoxLength(1 ,Vec3_t ( 1.0-113*0.01 , 1.0-46*0.01 , 0.0 ), 226*0.01 , 0 , 0 , 226 , 1 , 1 , 1.0e-7 , 1.0e-3 , 0.0115 , true);
+	dom.AddBoxLength(1 ,Vec3_t ( 1.0-113*0.01 , 1.0+45*0.01 , 0.0 ), 226*0.01 , 0 , 0 , 226 , 1 , 1 , 1.0e-7 , 1.0e-3 , 0.0115 , true);
+	dom.AddBoxLength(1 ,Vec3_t ( 1.0-113*0.01 , 1.0+46*0.01 , 0.0 ), 226*0.01 , 0 , 0 , 226 , 1 , 1 , 1.0e-7 , 1.0e-3 , 0.0115 , true);
 
 	double xa,ya,xb,yb,yc;
 
-	dom.AddRandomBox(3 ,Vec3_t ( 1.000 , 1.000225+0.0000225 , 0.0 ), 0.005625 , 0.00135 ,  0 , 250 , 60 , 1 , 5.0625e-7 , 1000, 2.475e-5);
+	dom.AddRandomBox(3 ,Vec3_t ( 1.0-113*0.01 , 1.0-45*0.01 , 0.0 ), 200*0.01 ,100*0.01  ,  0 , 205 , 94 , 1 , 1.0e-7 , 1.0e-3, 0.0115);
 
 	for (size_t a=0; a<dom.Particles.Size(); a++)
 	{
 		xb=dom.Particles[a]->x(0);
 		yb=dom.Particles[a]->x(1);
-		if (((xb-1.001125)*(xb-1.001125)+(yb-1.0009)*(yb-1.0009)<=0.000000018))
-			{
+		if (((xb-1.0)*(xb-1.0)+(yb-1.0)*(yb-1.0)<=0.014))
+		{
 			dom.Particles[a]->ID=4;
 			dom.Particles[a]->IsFree=false;
-			}
+		}
 	}
 	dom.DelParticles(4);
 
-	xa=1.0010125;
-	ya=sqrt (0.00000001265625-(xa-1.001125)*(xa-1.001125))+1.0009;
+	xa=0.8875;
+	ya=sqrt (0.01265625-(xa-1.0)*(xa-1.0))+1.0;
 
-	while (xa<=1.0012375)
+	while (xa<=1.1125)
 	{
-		dom.AddSingleParticle(4,Vec3_t ( xa , ya , 0.0 ), 5.0625e-7 , 1000 , 2.475e-5 , true);
-
-		xb= xa+0.000000000001;
-		yb=sqrt (0.00000001265625-(xb-1.001125)*(xb-1.001125))+1.0009;
-		while(sqrt((xb-xa)*(xb-xa)+(yb-ya)*(yb-ya))<=0.000019)
-			{
-				xb=xb+0.000000000001;
-				yb=sqrt (0.00000001265625-(xb-1.001125)*(xb-1.001125))+1.0009;
-			}
+		xb= xa+0.0001;
+		yb=sqrt (0.01265625-(xb-1.0)*(xb-1.0))+1.0;
+		while(sqrt((xb-xa)*(xb-xa)+(yb-ya)*(yb-ya))<=0.009)
+		{
+			xb=xb+0.0001;
+			yb=sqrt (0.01265625-(xb-1.0)*(xb-1.0))+1.0;
+		}
 		xa=xb;
 		ya=yb;
-		yc=(-sqrt (0.00000001265625-(xa-1.001125)*(xa-1.001125))+1.0009);
-
-		if (yc>0.0) dom.AddSingleParticle(4,Vec3_t ( xa , yc , 0.0 ), 5.0625e-7 , 1000 , 2.475e-5 , true);
-	}
-
-	xa=1.00103505;
-	ya=sqrt (8.1e-9-(xa-1.001125)*(xa-1.001125))+1.0009;
-
-	while (xa<=1.001215)
-	{
-		xb= xa+0.000000000001;
-		yb=sqrt (8.1e-9-(xb-1.001125)*(xb-1.001125))+1.0009;
-		while(sqrt((xb-xa)*(xb-xa)+(yb-ya)*(yb-ya))<=0.000019)
-			{
-				xb=xb+0.000000000001;
-				yb=sqrt (8.1e-9-(xb-1.001125)*(xb-1.001125))+1.0009;
-			}
-		xa=xb;
-		ya=yb;
-
-		yc=(-sqrt (8.1e-9-(xa-1.001125)*(xa-1.001125))+1.0009);
+		yc=(-sqrt (0.01265625-(xa-1.0)*(xa-1.0))+1.0);
 
 		if (yc>0.0)
-			{
-			dom.AddSingleParticle(4,Vec3_t ( xa , yc , 0.0 ), 5.0625e-7 , 1000 , 2.475e-5 , true);
-			dom.AddSingleParticle(4,Vec3_t ( xa , 1.0009+1.0009-yc , 0.0 ), 5.0625e-7 , 1000 , 2.475e-5 , true);
-			}
+		{
+			dom.AddSingleParticle(4,Vec3_t ( xa ,         yc , 0.0 ), 1.0e-7 , 1.0e-3 , 0.0115 , true);
+			dom.AddSingleParticle(4,Vec3_t ( xa , 1.0+1.0-yc , 0.0 ), 1.0e-7 , 1.0e-3 , 0.0115 , true);
+		}
 	}
-	dom.AddSingleParticle(4,Vec3_t ( 1.001035 , 1.0009 , 0.0 ), 5.0625e-7 , 1000 , 2.475e-5 , true);
 
+	xa=0.8975;
+	ya=sqrt (0.01050625-(xa-1.0)*(xa-1.0))+1.0;
+
+	while (xa<=1.1025)
+	{
+		xb= xa+0.0001;
+		yb=sqrt (0.01050625-(xb-1.0)*(xb-1.0))+1.0;
+		while(sqrt((xb-xa)*(xb-xa)+(yb-ya)*(yb-ya))<=0.009)
+		{
+			xb=xb+0.0001;
+			yb=sqrt (0.01050625-(xb-1.0)*(xb-1.0))+1.0;
+		}
+		xa=xb;
+		ya=yb;
+
+		yc=(-sqrt (0.01050625-(xa-1.0)*(xa-1.0))+1.0);
+
+		if (yc>0.0)
+		{
+			dom.AddSingleParticle(4,Vec3_t ( xa ,         yc , 0.0 ), 1.0e-7 , 1.0e-3 , 0.0115 , true);
+			dom.AddSingleParticle(4,Vec3_t ( xa , 1.0+1.0-yc , 0.0 ), 1.0e-7 , 1.0e-3 , 0.0115 , true);
+		}
+	}
+	dom.AddSingleParticle(4,Vec3_t ( 1.1025 , 1.0 , 0.0 ), 1.0e-7 , 1.0e-3 , 0.0115 , true);
 
 //	dom.WriteXDMF("maz");
 
-	dom.Solve(/*tf*/0.5,/*dt*/0.000001,/*dtOut*/0.0002,"test06");
+	dom.Solve(/*tf*/0.1,/*dt*/0.00000001,/*dtOut*/0.000001,"test06");
 	return 0;
 }
 MECHSYS_CATCH

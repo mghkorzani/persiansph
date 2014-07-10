@@ -217,17 +217,25 @@ inline void Domain::AddRandomBox(int tag, Vec3_t const & V, double Lx, double Ly
     std::cout << "\n--------------Generating random packing of particles by AddRandomBox----------------" << std::endl;
 
     size_t PrePS = Particles.Size();
-
+    double a;
+    a=0.011;
     double qin = 0.95;
     srand(RandomSeed);
     for (size_t i=0; i<nx; i++)
-    for (size_t j=0; j<ny; j++)
-    for (size_t k=0; k<nz; k++)
+    for (size_t j=0; j<ny; j=j+2)
+//    for (size_t k=0; k<nz; k++)
     {
-		double x = V(0)+(i+0.5*qin+(1-qin)*double(rand())/RAND_MAX)*Lx/nx;
-		double y = V(1)+(j+0.5*qin+(1-qin)*double(rand())/RAND_MAX)*Ly/ny;
-		double z = V(2)+(k+0.5*qin+(1-qin)*double(rand())/RAND_MAX)*Lz/nz;
-		Particles.Push(new Particle(tag,Vec3_t(x,y,z),Vec3_t(0,0,0),Mass,Density,h,false));
+    	double x = V(0) + i*a;
+    	double y = V(1) + sqrt(3)/2*j*a;
+
+//		double x = V(0)+(i+(1-qin)*double(rand())/RAND_MAX)*Lx/nx;
+//		double y = V(1)+(j+(1-qin)*double(rand())/RAND_MAX)*Ly/ny;
+//		double z = V(2)+(k+(1-qin)*double(rand())/RAND_MAX)*Lz/nz;
+		Particles.Push(new Particle(tag,Vec3_t(x,y,0.0),Vec3_t(0,0,0),Mass,Density,h,false));
+    	x = V(0) + (i+0.5)*a;
+    	y = V(1) + (sqrt(3)/2*j+sqrt(3)/2)*a;
+		Particles.Push(new Particle(tag,Vec3_t(x,y,0.0),Vec3_t(0,0,0),Mass,Density,h,false));
+
     }
 
     std::cout << "\nNo. of added particles = " << Particles.Size()-PrePS << std::endl;
@@ -316,12 +324,12 @@ inline void Domain::CellInitiate ()
 	TRPR += hmax;
 	BLPF -= hmax;
 
-    if ((BLPF(0) < 0.0) | (BLPF(0) < 0.0) | (BLPF(0) < 0.0))
-    	{
-    	std::cout << "Problem to allocate Cells!" << std::endl;
-    	std::cout << "Particle with minus coordinate" << std::endl;
-    	abort();
-    	}
+//    if ((BLPF(0) < 0.0) | (BLPF(0) < 0.0) | (BLPF(0) < 0.0))
+//    	{
+//    	std::cout << "Problem to allocate Cells!" << std::endl;
+//    	std::cout << "Particle with minus coordinate" << std::endl;
+//    	abort();
+//    	}
 
     // Calculate Cells Properties
 	switch (Dimension)
@@ -350,6 +358,9 @@ inline void Domain::CellInitiate ()
 
     if (Periodic) CellNo[0] += 2;
 
+    std::cout << "Min domain Point = " << BLPF << std::endl;
+    std::cout << "Max domain Point = " << TRPR << std::endl;
+    std::cout << "Cell Size = " << CellSize << std::endl;
     std::cout << "No of Cells in X Direction = " << CellNo[0] << std::endl;
     std::cout << "No of Cells in Y Direction = " << CellNo[1] << std::endl;
     std::cout << "No of Cells in Z Direction = " << CellNo[2] << std::endl;
@@ -906,7 +917,11 @@ inline void Domain::ConstVelPart2 ()
 				temp = HOC[q1][q2][q3];
 				while (temp != -1)
 				{
-					if (Particles[temp]->IsFree) Particles[temp]->a = Vec3_t (0.0,0.0,0.0);
+					if (Particles[temp]->IsFree)
+						{
+						Particles[temp]->a = Vec3_t (0.0,0.0,0.0);
+						Particles[temp]->Pressure = P0;
+						}
 					temp = Particles[temp]->LL;
 				}
 			}
@@ -926,7 +941,11 @@ inline void Domain::ConstVelPart2 ()
 				temp = HOC[q1][q2][q3];
 				while (temp != -1)
 				{
-					if (Particles[temp]->IsFree) Particles[temp]->a = Vec3_t (0.0,0.0,0.0);
+					if (Particles[temp]->IsFree)
+						{
+						Particles[temp]->a = Vec3_t (0.0,0.0,0.0);
+						Particles[temp]->Pressure = P0;
+						}
 					temp = Particles[temp]->LL;
 				}
 			}
@@ -978,7 +997,7 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
     while (Time<tf)
     {
     	StartAcceleration(Gravity);
-		ConstVel();
+    	ConstVel();
     	ComputeAcceleration(dt);
     	ConstVelPart2();
     	Move(dt);
