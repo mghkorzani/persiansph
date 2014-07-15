@@ -53,8 +53,7 @@ public:
     void AddSingleParticle			(int tag, Vec3_t const & x, double Mass, double Density, double h, bool Fixed);						///< Add one particle
     void AddBoxLength				(int tag, Vec3_t const &V, double Lx, double Ly, double Lz, size_t nx, size_t ny, size_t nz,
     									double Mass, double Density, double h, bool Fixed);												///< Add a cube of particles with a defined dimensions
-    void AddRandomBox				(int tag, Vec3_t const &V, double Lx, double Ly, double Lz, size_t nx, size_t ny, size_t nz,
-    									double Mass, double Density, double h, size_t RandomSeed=100);									///< Add a cube of random positioned particles with a defined dimensions
+    void AddRandomBox				(int tag, Vec3_t const &V, double Lx, double Ly, double Lz,double r, double Density, double h);		///< Add a cube of random positioned particles with a defined dimensions
 
     void DelParticles				(int const & Tags);																					///< Delete particles by tag
     void CheckParticleLeave			();																									///< Check if any particle are leaving the domain or not
@@ -211,31 +210,89 @@ inline void Domain::AddBoxLength(int tag, Vec3_t const & V, double Lx, double Ly
     std::cout << "\nNo. of added particles = " << Particles.Size()-PrePS << std::endl;
 }
 
-inline void Domain::AddRandomBox(int tag, Vec3_t const & V, double Lx, double Ly, double Lz, size_t nx, size_t ny, size_t nz, double Mass, double Density, double h, size_t RandomSeed)
+inline void Domain::AddRandomBox(int tag, Vec3_t const & V, double Lx, double Ly, double Lz,double r, double Density, double h)
 {
     Util::Stopwatch stopwatch;
     std::cout << "\n--------------Generating random packing of particles by AddRandomBox----------------" << std::endl;
 
     size_t PrePS = Particles.Size();
-    double a;
-    a=0.011;
-    double qin = 0.95;
-    srand(RandomSeed);
-    for (size_t i=0; i<nx; i++)
-    for (size_t j=0; j<ny; j=j+2)
-//    for (size_t k=0; k<nz; k++)
+
+    double x,y,xp,yp;
+    size_t i,j;
+
+    double qin = 0.05;
+    srand(100);
+
+    if (Dimension==3)
     {
-    	double x = V(0) + i*a;
-    	double y = V(1) + sqrt(3)/2*j*a;
+        double z,zp;
+        size_t k=0;
+        zp = V(2);
 
-//		double x = V(0)+(i+(1-qin)*double(rand())/RAND_MAX)*Lx/nx;
-//		double y = V(1)+(j+(1-qin)*double(rand())/RAND_MAX)*Ly/ny;
-//		double z = V(2)+(k+(1-qin)*double(rand())/RAND_MAX)*Lz/nz;
-		Particles.Push(new Particle(tag,Vec3_t(x,y,0.0),Vec3_t(0,0,0),Mass,Density,h,false));
-    	x = V(0) + (i+0.5)*a;
-    	y = V(1) + (sqrt(3)/2*j+sqrt(3)/2)*a;
-		Particles.Push(new Particle(tag,Vec3_t(x,y,0.0),Vec3_t(0,0,0),Mass,Density,h,false));
+        while (zp <= (V(2)+Lz-r))
+		{
+			j = 0;
+			yp = V(1);
+			while (yp <= (V(1)+Ly-r))
+			{
+				i = 0;
+				xp = V(0);
+				while (xp <= (V(0)+Lx-r))
+				{
+					if ((k%2!=0) && (j%2!=0)) x = V(0) + (2*i+(j%2)+(k%2)-1)*r; else x = V(0) + (2*i+(j%2)+(k%2)+1)*r;
+					y = V(1) + (sqrt(3.0)*(j+(1.0/3.0)*(k%2))+1)*r;
+					z = V(2) + ((2*sqrt(6.0)/3)*k+1)*r;
+					Particles.Push(new Particle(tag,Vec3_t((x + qin*r*double(rand())/RAND_MAX),(y+ qin*r*double(rand())/RAND_MAX),(z+ qin*r*double(rand())/RAND_MAX)),Vec3_t(0,0,0),0.0,Density,h,false));
+					std::cout<<x<<std::endl;
+					i++;
+					if ((k%2!=0) && (j%2!=0)) xp = V(0) + (2*i+(j%2)+(k%2)-1)*r; else xp = V(0) + (2*i+(j%2)+(k%2)+1)*r;
+				}
+				j++;
+				yp = V(1) + (sqrt(3.0)*(j+(1.0/3.0)*(k%2))+1)*r;
+			}
+			k++;
+			zp = V(2) + ((2*sqrt(6.0)/3)*k+1)*r;
+		}
 
+        Vec3_t temp, Max=V;
+        #pragma omp parallel for
+		for (size_t i=PrePS; i<Particles.Size(); i++)
+		{
+			if (Particles[i]->x(0) > Max(0)) Max(0) = Particles[i]->x(0);
+			if (Particles[i]->x(1) > Max(1)) Max(1) = Particles[i]->x(1);
+			if (Particles[i]->x(2) > Max(2)) Max(2) = Particles[i]->x(2);
+		}
+		Max +=r;
+		temp = Max-V;
+		double Mass = temp(0)*temp(1)*temp(2)*Density/(Particles.Size()-PrePS);
+
+		#pragma omp parallel for
+		for (size_t i=PrePS; i<Particles.Size(); i++)
+		{
+			Particles[i]->Mass = Mass;
+		}
+    }
+
+    if (Dimension==2)
+    {
+		j = 0;
+		yp = V(1);
+
+		while (yp <= (V(1)+Ly-r))
+		{
+			i = 0;
+			xp = V(0);
+			while (xp <= (V(0)+Lx-r))
+			{
+				x = V(0) + (2*i+(j%2)+1)*r;
+				y = V(1) + (sqrt(3.0)*j+1)*r;
+				Particles.Push(new Particle(tag,Vec3_t((x + qin*r*double(rand())/RAND_MAX),(y+ qin*r*double(rand())/RAND_MAX),0.0),Vec3_t(0,0,0),(sqrt(3.0)*r*r)*Density,Density,h,false));
+				i++;
+				xp = V(0) + (2*i+(j%2)+1)*r;
+			}
+			j++;
+			yp = V(1) + (sqrt(3.0)*j+1)*r;
+		}
     }
 
     std::cout << "\nNo. of added particles = " << Particles.Size()-PrePS << std::endl;
