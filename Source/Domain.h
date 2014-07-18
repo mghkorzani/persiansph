@@ -130,8 +130,9 @@ public:
     double					AvgVelocity;		///< Average velocity of the whole domain
 
     size_t					Nproc;				///< No of threads which are going to use in parallel calculation
+    omp_lock_t 				maz_lock;			///< Open MP lock to lock Interactions array
 
-    omp_lock_t maz_lock;						///< Open MP lock to lock Interactions array
+    double					deltat;				///< Time Step
 
 };
 /////////////////////////////////////////////////////////////////////////////////////////// Implementation /////
@@ -174,6 +175,8 @@ inline Domain::Domain ()
 
     omp_init_lock (&maz_lock);
     Nproc	= 1;
+
+    deltat	=0.0;
 }
 
 inline Domain::~Domain ()
@@ -363,6 +366,7 @@ inline void Domain::CellInitiate ()
 	// Calculate Domain Size
 	BLPF = Particles[0]->x;
 	TRPR = Particles[0]->x;
+	double rho = 0.0;
 
 	#pragma omp parallel for
 	for (size_t i=0; i<Particles.Size(); i++)
@@ -376,17 +380,12 @@ inline void Domain::CellInitiate ()
         if (Particles[i]->x(2) < BLPF(2)) BLPF(2) = Particles[i]->x(2);
 
         if (Particles[i]->h > hmax) hmax=Particles[i]->h;
+        if (Particles[i]->Density > rho) rho=Particles[i]->Density;
     }
 
 	TRPR += hmax;
 	BLPF -= hmax;
 
-//    if ((BLPF(0) < 0.0) | (BLPF(0) < 0.0) | (BLPF(0) < 0.0))
-//    	{
-//    	std::cout << "Problem to allocate Cells!" << std::endl;
-//    	std::cout << "Particle with minus coordinate" << std::endl;
-//    	abort();
-//    	}
 
     // Calculate Cells Properties
 	switch (Dimension)
@@ -415,9 +414,20 @@ inline void Domain::CellInitiate ()
 
     if (Periodic) CellNo[0] += 2;
 
+    double t1,t2;
+    t1 = 0.25*hmax/(Cs+ConstVelPeriodic);
+    t2 = 0.125*hmax*hmax*rho/MU;
+
+    std::cout << "Max time step should be ";
+    std::cout << "Min value of {"<< t1 <<" , "<< t2 <<" }" << std::endl;
+    if (deltat > std::min(t1,t2)) std::cout << "Please decrease the time step"<< std::endl;
+    std::cout << std::endl;
+
     std::cout << "Min domain Point = " << BLPF << std::endl;
     std::cout << "Max domain Point = " << TRPR << std::endl;
+    std::cout << std::endl;
     std::cout << "Cell Size = " << CellSize << std::endl;
+    std::cout << std::endl;
     std::cout << "No of Cells in X Direction = " << CellNo[0] << std::endl;
     std::cout << "No of Cells in Y Direction = " << CellNo[1] << std::endl;
     std::cout << "No of Cells in Z Direction = " << CellNo[2] << std::endl;
@@ -898,6 +908,13 @@ inline void Domain::ComputeAcceleration (double dt)
 
 	#pragma omp parallel for
 	for (size_t i=0; i<PInteractions.Size(); i++) PInteractions[i]->CalcForce(dt);
+
+	//Min time step calculation
+	double temp=0.25*sqrt(Particles[1]->h/norm(Particles[1]->a));
+	#pragma omp parallel for
+	for (size_t i=0; i<Particles.Size(); i++) if ((0.25*sqrt(Particles[i]->h/norm(Particles[i]->a))) < temp) temp = (0.25*sqrt(Particles[i]->h/norm(Particles[i]->a)));
+    if (deltat > temp) std::cout << "Please decrease the time step to"<< temp << std::endl;
+
 }
 
 inline void Domain::Move (double dt)
@@ -1036,6 +1053,8 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
 
     size_t idx_out = 1;
     double tout = Time;
+
+    deltat = dt;
 
     size_t save_out = 1;
     double sout = AutoSaveInt;

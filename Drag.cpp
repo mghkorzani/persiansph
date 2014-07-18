@@ -28,14 +28,14 @@ int main(int argc, char **argv) try
 	dom.Dimension	= 2;
 
 	dom.Periodic	= true;
-	dom.ConstVelPeriodic= 40;
+	dom.ConstVelPeriodic= 10;
 
 	dom.RigidBody	= true;
 	dom.RBTag		= 4;
 
-	dom.Cs			= 1000;
-	dom.MU			= 1.0e-6;
-	dom.P0			= 100.0;
+	dom.Cs			= 500;
+	dom.Alpha		= 0.03;
+	dom.P0			= 5.0;
 	dom.PresEq		= 0;
 
 
@@ -49,7 +49,7 @@ int main(int argc, char **argv) try
 
 	double xa,ya,xb,yb,yc;
 
-	dom.AddRandomBox(3 ,Vec3_t ( 1.0-113.5*0.01 , 1.0-35*0.01 , 0.0 ), 225*0.01 ,70*0.01  ,  0 , 0.005 ,1.0e-3, 0.011);
+	dom.AddRandomBox(3 ,Vec3_t ( 1.0-113.5*0.01 , 1.0-35*0.01 , 0.0 ), 226*0.01 ,70*0.01  ,  0 , 0.005 ,1.0e-3, 0.011);
 
 	for (size_t a=0; a<dom.Particles.Size(); a++)
 	{
@@ -113,7 +113,7 @@ int main(int argc, char **argv) try
 
 //	dom.WriteXDMF("maz");
 
-	dom.Solve(/*tf*/0.1,/*dt*/0.000001,/*dtOut*/0.0001,"test06");
+	dom.Solve(/*tf*/0.3,/*dt*/0.000001,/*dtOut*/0.00001,"test06");
 	return 0;
 }
 MECHSYS_CATCH

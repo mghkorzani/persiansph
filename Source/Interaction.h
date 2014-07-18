@@ -85,8 +85,11 @@ inline void Interaction::CalcForce(double dt)
     double dj = P2->Density;
     double mi = P1->Mass;
     double mj = P2->Mass;
-    double Pi = P1->Pressure = Pressure(P1->Density,P1->RefDensity);
-    double Pj = P2->Pressure = Pressure(P2->Density,P2->RefDensity);
+    double Pi;
+    double Pj;
+
+    if (P1->IsFree) Pi = P1->Pressure = Pressure(P1->Density,P1->RefDensity); else Pi=0.0;
+    if (P2->IsFree) Pj = P2->Pressure = Pressure(P2->Density,P2->RefDensity); else Pj=0.0;
 
     Vec3_t vij = P1->v - P2->v;
     Vec3_t rij = P1->x - P2->x;

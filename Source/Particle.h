@@ -117,12 +117,16 @@ inline void Particle::Move (double dt, bool periodic, double domainmax, double d
 				x(0) -= (domainmax-domainmin-2*hmax);
 			}
 		}
-		else
-		{
-			double dens = Density;
-			Density = Densityb + 2*dt*dDensity;
-			Densityb = dens;
-		}
+//		else
+//		{
+////			// Evolve velocity
+////			v = vb + 2*dt*a;
+//
+//			// Evolve density
+//			double dens = Density;
+//			Density = Densityb + 2*dt*dDensity;
+//			Densityb = dens;
+//		}
 
 		ct++;
 	}
@@ -149,13 +153,16 @@ inline void Particle::Move (double dt, bool periodic, double domainmax, double d
 				x(0) -=(domainmax-domainmin-2*hmax);
 			}
 		}
-		else
-		{
-			double dens = Density;
-			Density = Density + dt*dDensity;
-			Densityb = dens;
-
-		}
+//		else
+//		{
+////			// Evolve velocity
+////			v = v + dt*a;
+//
+//			// Evolve density
+//			double dens = Density;
+//			Density = Density + dt*dDensity;
+//			Densityb = dens;
+//		}
 
 		ct=0;
 	}
