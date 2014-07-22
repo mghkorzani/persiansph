@@ -107,6 +107,7 @@ public:
     int		                CellNo[3];      	///< No. of cells for linked list
     double 					Cellfac;			///< Factor which should be multiplied by h to change the size of cells (Min 2)
 	double 					hmax;				///< Max of h for the cell size  determination
+    Vec3_t                  DomSize;			///< Each component of the vector is the domain size in that direction if periodic boundary condition is defined in that direction as well
 
     int					*** HOC;				///< Array of "Head of Chain" for each cell
     int					 ** ExInteract;			///< Array to save existing interaction No. of "Interactions" to use in "PInteractions"
@@ -118,7 +119,9 @@ public:
     double 					P0;					///< background pressure for equation of state
     int						PresEq;				///< Selecting variable to choose a equation of state
 
-    bool					Periodic; 			///< If it is true, periodic boundary condition along x direction will be considered
+    bool					PeriodicX; 			///< If it is true, periodic boundary condition along x direction will be considered
+    bool					PeriodicY; 			///< If it is true, periodic boundary condition along y direction will be considered
+    bool					PeriodicZ; 			///< If it is true, periodic boundary condition along z direction will be considered
     double					ConstVelPeriodic;	///< Define a constant velocity in the left and the right side of the domain in x direction in periodic condition
 
     bool					PressureBoundary;	///< If it is true, it will get max pressure for solid boundary from neighbors but if false, mean value.
@@ -144,7 +147,7 @@ inline Domain::Domain ()
     AutoSaveInt = 0.0;
 
     Dimension = 2;
-
+    DomSize	= 0.0,0.0,0.0;
     Alpha	= 0.0;
     Beta	= 0.0;
     MU		= 0.0;
@@ -161,7 +164,9 @@ inline Domain::Domain ()
     P0		= 0.0;
     PresEq	= 0;
 
-    Periodic = false;
+    PeriodicX = false;
+    PeriodicY = false;
+    PeriodicZ = false;
     ConstVelPeriodic = 0.0;
 
     PressureBoundary = false;
@@ -278,6 +283,26 @@ inline void Domain::AddRandomBox(int tag, Vec3_t const & V, double Lx, double Ly
 
     if (Dimension==2)
     {
+//		j = 0;
+//		yp = V(1);
+//
+//		while (yp <= (V(1)+Ly-r))
+//		{
+//			i = 0;
+//			xp = V(0);
+//			while (xp <= (V(0)+Lx-r))
+//			{
+//				x = V(0) + (2*i+1)*r;
+//				y = V(1) + (2*j+1)*r;
+////				Particles.Push(new Particle(tag,Vec3_t((x + qin*r*double(rand())/RAND_MAX),(y+ qin*r*double(rand())/RAND_MAX),0.0),Vec3_t(0,0,0),(sqrt(3.0)*r*r)*Density,Density,h,false));
+//				Particles.Push(new Particle(tag,Vec3_t(x,y,0.0),Vec3_t(0,0,0),(sqrt(3.0)*r*r)*Density,Density,h,false));
+//				i++;
+//				xp = V(0) + (2*i+1)*r;
+//			}
+//			j++;
+//			yp = V(1) + (2*j+1)*r;
+//		}
+
 		j = 0;
 		yp = V(1);
 
@@ -290,6 +315,7 @@ inline void Domain::AddRandomBox(int tag, Vec3_t const & V, double Lx, double Ly
 				x = V(0) + (2*i+(j%2)+1)*r;
 				y = V(1) + (sqrt(3.0)*j+1)*r;
 				Particles.Push(new Particle(tag,Vec3_t((x + qin*r*double(rand())/RAND_MAX),(y+ qin*r*double(rand())/RAND_MAX),0.0),Vec3_t(0,0,0),(sqrt(3.0)*r*r)*Density,Density,h,false));
+//				Particles.Push(new Particle(tag,Vec3_t(x,y,0.0),Vec3_t(0,0,0),(sqrt(3.0)*r*r)*Density,Density,h,false));
 				i++;
 				xp = V(0) + (2*i+(j%2)+1)*r;
 			}
@@ -321,12 +347,12 @@ inline void Domain::CheckParticleLeave ()
 
 	for (size_t i=0; i<Particles.Size(); i++)
     {
-		if (!Periodic){
+		if (!PeriodicX && !PeriodicY && !PeriodicZ){
 			if ((Particles[i]->x(0) >= TRPR(0)) || (Particles[i]->x(1) >= TRPR(1)) || (Particles[i]->x(2) >= TRPR(2)) ||
 					(Particles[i]->x(0) <= BLPF(0)) || (Particles[i]->x(1) <= BLPF(1)) || (Particles[i]->x(2) <= BLPF(2))) DelParticles.Push(i);}
-		else{
-			if ((Particles[i]->x(1) >= TRPR(1)) || (Particles[i]->x(2) >= TRPR(2)) ||
-					(Particles[i]->x(1) <= BLPF(1)) || (Particles[i]->x(2) <= BLPF(2))) DelParticles.Push(i);}
+//		else{
+//			if ((Particles[i]->x(1) >= TRPR(1)) || (Particles[i]->x(2) >= TRPR(2)) ||
+//					(Particles[i]->x(1) <= BLPF(1)) || (Particles[i]->x(2) <= BLPF(2))) DelParticles.Push(i);}
     }
 
 	if (DelParticles.Size()>0)
@@ -383,28 +409,57 @@ inline void Domain::CellInitiate ()
         if (Particles[i]->Density > rho) rho=Particles[i]->Density;
     }
 
-	TRPR += hmax;
-	BLPF -= hmax;
-
+	//Because of Hexagonal close packing in x direction domain is modified
+	if (!PeriodicX) {TRPR(0) += hmax/2;	BLPF(0) -= hmax/2;}
+	TRPR(1) += hmax/2;
+	BLPF(1) -= hmax/2;
+	TRPR(2) += hmax/2;
+	BLPF(2) -= hmax/2;
 
     // Calculate Cells Properties
 	switch (Dimension)
 	{case 1:
-		CellNo[0] = (int) (floor((TRPR(0)-BLPF(0))/(Cellfac*hmax)));
+		if (abs(((TRPR(0)-BLPF(0))/(Cellfac*hmax))-ceil((TRPR(0)-BLPF(0))/(Cellfac*hmax)))<(hmax/10.0))
+			CellNo[0] = int(ceil((TRPR(0)-BLPF(0))/(Cellfac*hmax)));
+		else
+			CellNo[0] = int(floor((TRPR(0)-BLPF(0))/(Cellfac*hmax)));
+
 		CellNo[1] = 1;
 		CellNo[2] = 1;
+
 		CellSize  = Vec3_t ((TRPR(0)-BLPF(0))/CellNo[0],0.0,0.0);
 		break;
 	case 2:
-		CellNo[0] = (int) (floor((TRPR(0)-BLPF(0))/(Cellfac*hmax)));
-		CellNo[1] = (int) (floor((TRPR(1)-BLPF(1))/(Cellfac*hmax)));
+		if (abs(((TRPR(0)-BLPF(0))/(Cellfac*hmax))-ceil((TRPR(0)-BLPF(0))/(Cellfac*hmax)))<(hmax/10.0))
+			CellNo[0] = int(ceil((TRPR(0)-BLPF(0))/(Cellfac*hmax)));
+		else
+			CellNo[0] = int(floor((TRPR(0)-BLPF(0))/(Cellfac*hmax)));
+
+		if (abs(((TRPR(1)-BLPF(1))/(Cellfac*hmax))-ceil((TRPR(1)-BLPF(1))/(Cellfac*hmax)))<(hmax/10.0))
+			CellNo[1] = int(ceil((TRPR(1)-BLPF(1))/(Cellfac*hmax)));
+		else
+			CellNo[1] = int(floor((TRPR(1)-BLPF(1))/(Cellfac*hmax)));
+
 		CellNo[2] = 1;
+
 		CellSize  = Vec3_t ((TRPR(0)-BLPF(0))/CellNo[0],(TRPR(1)-BLPF(1))/CellNo[1],0.0);
 		break;
 	case 3:
-		CellNo[0] = (int) (floor((TRPR(0)-BLPF(0))/(Cellfac*hmax)));
-		CellNo[1] = (int) (floor((TRPR(1)-BLPF(1))/(Cellfac*hmax)));
-		CellNo[2] = (int) (floor((TRPR(2)-BLPF(2))/(Cellfac*hmax)));
+		if (abs(((TRPR(0)-BLPF(0))/(Cellfac*hmax))-ceil((TRPR(0)-BLPF(0))/(Cellfac*hmax)))<(hmax/10.0))
+			CellNo[0] = int(ceil((TRPR(0)-BLPF(0))/(Cellfac*hmax)));
+		else
+			CellNo[0] = int(floor((TRPR(0)-BLPF(0))/(Cellfac*hmax)));
+
+		if (abs(((TRPR(1)-BLPF(1))/(Cellfac*hmax))-ceil((TRPR(1)-BLPF(1))/(Cellfac*hmax)))<(hmax/10.0))
+			CellNo[1] = int(ceil((TRPR(1)-BLPF(1))/(Cellfac*hmax)));
+		else
+			CellNo[1] = int(floor((TRPR(1)-BLPF(1))/(Cellfac*hmax)));
+
+		if (abs(((TRPR(2)-BLPF(2))/(Cellfac*hmax))-ceil((TRPR(2)-BLPF(2))/(Cellfac*hmax)))<(hmax/10.0))
+			CellNo[2] = int(ceil((TRPR(2)-BLPF(2))/(Cellfac*hmax)));
+		else
+			CellNo[2] = int(floor((TRPR(2)-BLPF(2))/(Cellfac*hmax)));
+
 		CellSize  = Vec3_t ((TRPR(0)-BLPF(0))/CellNo[0],(TRPR(1)-BLPF(1))/CellNo[1],(TRPR(2)-BLPF(2))/CellNo[2]);
 		break;
 	default:
@@ -412,8 +467,15 @@ inline void Domain::CellInitiate ()
 		break;
 	}
 
-    if (Periodic) CellNo[0] += 2;
+    if (PeriodicX) CellNo[0] += 2;
+    if (PeriodicY) CellNo[1] += 2;
+    if (PeriodicZ) CellNo[2] += 2;
 
+    if (PeriodicX) DomSize[0] = (TRPR(0)-BLPF(0));
+    if (PeriodicY) DomSize[1] = (TRPR(1)-BLPF(1));
+    if (PeriodicZ) DomSize[2] = (TRPR(2)-BLPF(2));
+
+    std::cout << DomSize[0]<< " "<< DomSize[1]<< " "<< DomSize[2]<< std::endl;
     double t1,t2;
     t1 = 0.25*hmax/(Cs+ConstVelPeriodic);
     t2 = 0.125*hmax*hmax*rho/MU;
@@ -477,23 +539,11 @@ inline void Domain::ListGenerate ()
                     if ((BLPF(1) - Particles[a]->x(1)) <= hmax) j=0;
                             else std::cout<<"Leaving j<0"<<std::endl;
             }
-            if (Periodic)
-            {
-            	if (i>=CellNo[0]-2)
-				{
-						if ((Particles[a]->x(0) - TRPR(0)) <= hmax) i=CellNo[0]-3;
-								else std::cout<<"Leaving i>=CellNo"<<std::endl;
-				}
-            }
-            else
-            {
-            	if (i>=CellNo[0])
-				{
-						if ((Particles[a]->x(0) - TRPR(0)) <= hmax) i=CellNo[0]-1;
-								else std::cout<<"Leaving i>=CellNo"<<std::endl;
-				}
-
-            }
+			if (i>=CellNo[0])
+			{
+					if ((Particles[a]->x(0) - TRPR(0)) <= hmax) i=CellNo[0]-1;
+							else std::cout<<"Leaving i>=CellNo"<<std::endl;
+			}
             if (j>=CellNo[1])
             {
                     if ((Particles[a]->x(1) - TRPR(1)) <= hmax) j=CellNo[1]-1;
@@ -530,23 +580,11 @@ inline void Domain::ListGenerate ()
                     if ((BLPF(2) - Particles[a]->x(2))<=hmax) k=0;
                             else std::cout<<"Leaving"<<std::endl;
             }
-            if (Periodic)
-            {
-            	if (i>=CellNo[0])
-				{
-						if ((Particles[a]->x(0) - TRPR(0))<=hmax) i=CellNo[0]-3;
-								else std::cout<<"Leaving"<<std::endl;
-				}
-            }
-            else
-            {
-            	if (i>=CellNo[0])
-				{
-						if ((Particles[a]->x(0) - TRPR(0))<=hmax) i=CellNo[0]-1;
-								else std::cout<<"Leaving"<<std::endl;
-				}
-
-            }
+			if (i>=CellNo[0])
+			{
+					if ((Particles[a]->x(0) - TRPR(0))<=hmax) i=CellNo[0]-1;
+							else std::cout<<"Leaving"<<std::endl;
+			}
             if (j>=CellNo[1])
             {
                     if ((Particles[a]->x(1) - TRPR(1))<=hmax) j=CellNo[1]-1;
@@ -568,13 +606,31 @@ inline void Domain::ListGenerate ()
 		break;
 	}
 
-	if (Periodic)
+	if (PeriodicX)
 	{
 	   for(int j =0; j<CellNo[1]; j++)
-	   for(int k =0; k<CellNo[2];k++)
+	   for(int k =0; k<CellNo[2]; k++)
 	   {
 		  HOC[CellNo[0]-1][j][k] =  HOC[1][j][k];
 		  HOC[CellNo[0]-2][j][k] =  HOC[0][j][k];
+	   }
+	}
+	if (PeriodicY)
+	{
+	   for(int i =0; i<CellNo[0]; i++)
+	   for(int k =0; k<CellNo[2]; k++)
+	   {
+		  HOC[i][CellNo[1]-1][k] =  HOC[i][1][k];
+		  HOC[i][CellNo[1]-2][k] =  HOC[i][0][k];
+	   }
+	}
+	if (PeriodicZ)
+	{
+	   for(int i =0; i<CellNo[0]; i++)
+	   for(int j =0; j<CellNo[1]; j++)
+	   {
+		  HOC[i][j][CellNo[2]-1] =  HOC[i][j][1];
+		  HOC[i][j][CellNo[2]-2] =  HOC[i][j][0];
 	   }
 	}
 }
@@ -613,7 +669,7 @@ inline void Domain::CreateInteraction(int a, int b)
     {
 		if (ExInteract [a][b] == -1)
 		{
-			Interactions.Push(new Interaction(Particles[a],Particles[b],Dimension,Alpha,Beta,Cs,MU,XSPH,TI,InitialDist,P0,PresEq));
+			Interactions.Push(new Interaction(Particles[a],Particles[b],Dimension,Alpha,Beta,Cs,MU,XSPH,TI,InitialDist,P0,PresEq,DomSize));
 			ExInteract [a][b] = Interactions.size() - 1;
 			ExInteract [b][a] = Interactions.size() - 1;
 			PInteractions.Push(Interactions[ ExInteract [a][b] ]);
@@ -633,14 +689,15 @@ inline void Domain::CreateInteraction(int a, int b)
 
 inline void Domain::YZCellsSearch(int q1)
 {
+	int q3,q2;
 	if (Nproc!=1)
 	{
 		// Parallel
 		Array<std::pair<size_t,size_t> > LocalPairs;
 
-		for (int q3=0; q3<CellNo[2]; q3++)
+		for (PeriodicZ ? q3=1 : q3=0;PeriodicZ ? (q3<(CellNo[2]-1)) : (q3<CellNo[2]); q3++)
 		{
-			for (int q2=0; q2<CellNo[1]; q2++)
+			for (PeriodicY ? q2=1 : q2=0;PeriodicY ? (q2<(CellNo[1]-1)) : (q2<CellNo[1]); q2++)
 			{
 				if (HOC[q1][q2][q3]==-1) continue;
 				else
@@ -719,8 +776,8 @@ inline void Domain::YZCellsSearch(int q1)
 	else
 	{
 		// Serial
-		for (int q3=0; q3<CellNo[2]; q3++)
-		for (int q2=0; q2<CellNo[1]; q2++)
+		for (PeriodicZ ? q3=1 : q3=0;PeriodicZ ? (q3<(CellNo[2]-1)) : (q3<CellNo[2]); q3++)
+		for (PeriodicY ? q2=1 : q2=0;PeriodicY ? (q2<(CellNo[1]-1)) : (q2<CellNo[1]); q2++)
 		{
 			if (HOC[q1][q2][q3]==-1) continue;
 			else
@@ -808,22 +865,17 @@ inline void Domain::InitiateInteractions()
 	for (size_t i=1; i<=Max ; i++) Interactions.DelItem(Max-i);
     PInteractions.Resize(0);
     IinSI.Resize(0);
+    int q1;
 
-    if (!Periodic)
+    if (PeriodicX)
     {
 		#pragma omp parallel for schedule (static) num_threads(Nproc)
-		for (int q1=0; q1<CellNo[0]; q1++)
-		{
-			YZCellsSearch(q1);
-		}
-    }
+		for (q1=1;q1<(CellNo[0]-1); q1++)	YZCellsSearch(q1);
+	}
     else
     {
 		#pragma omp parallel for schedule (static) num_threads(Nproc)
-		for (int q1=1; q1<CellNo[0]-1; q1++)
-		{
-			YZCellsSearch(q1);
-		}
+    	for (q1=0;q1<CellNo[0]; q1++)	YZCellsSearch(q1);
     }
 }
 
@@ -831,22 +883,17 @@ inline void Domain::UpdateInteractions()
 {
 	PInteractions.Resize(0);
     IinSI.Resize(0);
+    int q1;
 
-    if (!Periodic)
+    if (PeriodicX)
     {
 		#pragma omp parallel for schedule (static) num_threads(Nproc)
-		for (int q1=0; q1<CellNo[0]; q1++)
-		{
-			YZCellsSearch(q1);
-		}
-    }
+		for (q1=1;q1<(CellNo[0]-1); q1++)	YZCellsSearch(q1);
+	}
     else
     {
 		#pragma omp parallel for schedule (static) num_threads(Nproc)
-		for (int q1=1; q1<CellNo[0]-1; q1++)
-		{
-			YZCellsSearch(q1);
-		}
+    	for (q1=0;q1<CellNo[0]; q1++)	YZCellsSearch(q1);
     }
 }
 
@@ -907,7 +954,7 @@ inline void Domain::ComputeAcceleration (double dt)
 //	}
 
 	#pragma omp parallel for
-	for (size_t i=0; i<PInteractions.Size(); i++) PInteractions[i]->CalcForce(dt);
+	for (size_t i=0; i<PInteractions.Size(); i++) PInteractions[i]->CalcForce(dt,Cellfac);
 
 	//Min time step calculation
 	double temp=0.25*sqrt(Particles[1]->h/norm(Particles[1]->a));
@@ -920,7 +967,7 @@ inline void Domain::ComputeAcceleration (double dt)
 inline void Domain::Move (double dt)
 {
 	#pragma omp parallel for
-	for (size_t i=0; i<Particles.Size(); i++) Particles[i]->Move(dt,Periodic,TRPR(0),BLPF(0),hmax);
+	for (size_t i=0; i<Particles.Size(); i++) Particles[i]->Move(dt,DomSize,TRPR,BLPF);
 
 	if (RigidBody)
 	{
@@ -935,32 +982,32 @@ inline void Domain::Move (double dt)
 
 inline void Domain::ConstVel ()
 {
-	if (Periodic && ConstVelPeriodic>0.0)
-	{
-		int temp;
-		for (int q3=0; q3<CellNo[2]; q3++)
-		for (int q2=0; q2<CellNo[1]; q2++)
-		for (int q1=CellNo[0]-6; q1<CellNo[0]-2; q1++)
-		{
-			if (HOC[q1][q2][q3]==-1) continue;
-			else
-			{
-				temp = HOC[q1][q2][q3];
-				while (temp != -1)
-				{
-					if (Particles[temp]->IsFree) Particles[temp]->v = Vec3_t (ConstVelPeriodic,0.0,0.0);
-					temp = Particles[temp]->LL;
-				}
-			}
-		}
-	}
+//	if (PeriodicX && ConstVelPeriodic>0.0)
+//	{
+//		int temp;
+//		for (int q3=0; q3<CellNo[2]; q3++)
+//		for (int q2=0; q2<CellNo[1]; q2++)
+//		for (int q1=CellNo[0]-4; q1<CellNo[0]-2; q1++)
+//		{
+//			if (HOC[q1][q2][q3]==-1) continue;
+//			else
+//			{
+//				temp = HOC[q1][q2][q3];
+//				while (temp != -1)
+//				{
+//					if (Particles[temp]->IsFree) Particles[temp]->v = Vec3_t (ConstVelPeriodic,0.0,0.0);
+//					temp = Particles[temp]->LL;
+//				}
+//			}
+//		}
+//	}
 
-	if (Periodic && ConstVelPeriodic>0.0)
+	if (PeriodicX && ConstVelPeriodic>0.0)
 	{
 		int temp;
 		for (int q3=0; q3<CellNo[2]; q3++)
 		for (int q2=0; q2<CellNo[1]; q2++)
-		for (int q1=0; q1<4; q1++)
+		for (int q1=0; q1<2; q1++)
 		{
 			if (HOC[q1][q2][q3]==-1) continue;
 			else
@@ -978,36 +1025,36 @@ inline void Domain::ConstVel ()
 
 inline void Domain::ConstVelPart2 ()
 {
-	if (Periodic && ConstVelPeriodic>0.0)
-	{
-		int temp;
-		for (int q3=0; q3<CellNo[2]; q3++)
-		for (int q2=0; q2<CellNo[1]; q2++)
-		for (int q1=CellNo[0]-6; q1<CellNo[0]-2; q1++)
-		{
-			if (HOC[q1][q2][q3]==-1) continue;
-			else
-			{
-				temp = HOC[q1][q2][q3];
-				while (temp != -1)
-				{
-					if (Particles[temp]->IsFree)
-						{
-						Particles[temp]->a = Vec3_t (0.0,0.0,0.0);
-						Particles[temp]->Pressure = P0;
-						}
-					temp = Particles[temp]->LL;
-				}
-			}
-		}
-	}
+//	if (PeriodicX && ConstVelPeriodic>0.0)
+//	{
+//		int temp;
+//		for (int q3=0; q3<CellNo[2]; q3++)
+//		for (int q2=0; q2<CellNo[1]; q2++)
+//		for (int q1=CellNo[0]-4; q1<CellNo[0]-2; q1++)
+//		{
+//			if (HOC[q1][q2][q3]==-1) continue;
+//			else
+//			{
+//				temp = HOC[q1][q2][q3];
+//				while (temp != -1)
+//				{
+//					if (Particles[temp]->IsFree)
+//						{
+//						Particles[temp]->a = Vec3_t (0.0,0.0,0.0);
+//						Particles[temp]->Pressure = P0;
+//						}
+//					temp = Particles[temp]->LL;
+//				}
+//			}
+//		}
+//	}
 
-	if (Periodic && ConstVelPeriodic>0.0)
+	if (PeriodicX && ConstVelPeriodic>0.0)
 	{
 		int temp;
 		for (int q3=0; q3<CellNo[2]; q3++)
 		for (int q2=0; q2<CellNo[1]; q2++)
-		for (int q1=0; q1<4; q1++)
+		for (int q1=0; q1<2; q1++)
 		{
 			if (HOC[q1][q2][q3]==-1) continue;
 			else
@@ -1064,7 +1111,7 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
     InitiateInteractions();
 
     // Initialization of constant velocity
-	if (Periodic && ConstVelPeriodic>0.0)
+	if (PeriodicX && ConstVelPeriodic>0.0)
 	{
 		#pragma omp parallel for
 		for (size_t i=0; i<Particles.Size(); i++) if (Particles[i]->IsFree) Particles[i]->v = Vec3_t (ConstVelPeriodic,0.0,0.0);
@@ -1077,7 +1124,8 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
     	ComputeAcceleration(dt);
     	ConstVelPart2();
     	Move(dt);
-    	if (Periodic) AvgParticleVelocity ();
+//    	if (PeriodicX) AvgParticleVelocity ();
+    	AvgParticleVelocity();
 
         // output
         if (Time>=tout)
@@ -1088,7 +1136,7 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
                 fn.Printf    ("%s_%04d", TheFileKey, idx_out);
                 WriteXDMF    (fn.CStr());
                 std::cout << "\n" << "Output No. " << idx_out << " at " << Time << " has been generated" << std::endl;
-                if (Periodic) std::cout << AvgVelocity<< std::endl;
+                if (PeriodicX) std::cout << AvgVelocity<< std::endl;
             	}
             idx_out++;
             tout += dtOut;

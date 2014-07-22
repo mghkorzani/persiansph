@@ -27,35 +27,31 @@ int main(int argc, char **argv) try
 	SPH::Domain		dom;
 	dom.Dimension	= 2;
 
-	dom.Periodic	= true;
+	dom.PeriodicX	= true;
+	dom.PeriodicY	= true;
 	dom.ConstVelPeriodic= 10;
 
 	dom.RigidBody	= true;
 	dom.RBTag		= 4;
 
-	dom.Cs			= 500;
+	dom.Cs			= 1000;
 	dom.Alpha		= 0.03;
-	dom.P0			= 5.0;
+	dom.P0			= 10.0;
 	dom.PresEq		= 0;
 
 
-	dom.TI			= 0.05;
-	dom.InitialDist = 0.01;
-
-	dom.AddBoxLength(1 ,Vec3_t ( 1.0-113*0.01 , 1.0-36.5*0.01 , 0.0 ), 226*0.01 , 0 , 0 , 226 , 1 , 1 , 1.0e-7 , 1.0e-3 , 0.011 , true);
-	dom.AddBoxLength(1 ,Vec3_t ( 1.0-113*0.01 , 1.0-35.5*0.01 , 0.0 ), 226*0.01 , 0 , 0 , 226 , 1 , 1 , 1.0e-7 , 1.0e-3 , 0.011 , true);
-	dom.AddBoxLength(1 ,Vec3_t ( 1.0-113*0.01 , 1.0+35*0.01   , 0.0 ), 226*0.01 , 0 , 0 , 226 , 1 , 1 , 1.0e-7 , 1.0e-3 , 0.011 , true);
-	dom.AddBoxLength(1 ,Vec3_t ( 1.0-113*0.01 , 1.0+36*0.01   , 0.0 ), 226*0.01 , 0 , 0 , 226 , 1 , 1 , 1.0e-7 , 1.0e-3 , 0.011 , true);
+//	dom.TI			= 0.1;
+//	dom.InitialDist = 0.01;
 
 	double xa,ya,xb,yb,yc;
 
-	dom.AddRandomBox(3 ,Vec3_t ( 1.0-113.5*0.01 , 1.0-35*0.01 , 0.0 ), 226*0.01 ,70*0.01  ,  0 , 0.005 ,1.0e-3, 0.011);
+	dom.AddRandomBox(3 ,Vec3_t ( -112.5*0.01 , -35*0.01 , 0.0 ), 225*0.01 ,70*0.01  ,  0 , 0.005 ,1.0e-3, 0.011);
 
 	for (size_t a=0; a<dom.Particles.Size(); a++)
 	{
 		xb=dom.Particles[a]->x(0);
 		yb=dom.Particles[a]->x(1);
-		if (((xb-1.0)*(xb-1.0)+(yb-1.0)*(yb-1.0)<=0.014))
+		if ((xb*xb+yb*yb<=0.014))
 		{
 			dom.Particles[a]->ID=4;
 			dom.Particles[a]->IsFree=false;
@@ -63,57 +59,56 @@ int main(int argc, char **argv) try
 	}
 	dom.DelParticles(4);
 
-	xa=0.8875;
-	ya=sqrt (0.01265625-(xa-1.0)*(xa-1.0))+1.0;
+	xa=-0.1125;
+	ya=sqrt (0.01265625-xa*xa);
 
-	while (xa<=1.1125)
+	while (xa<=0.1125)
 	{
-		xb= xa+0.0001;
-		yb=sqrt (0.01265625-(xb-1.0)*(xb-1.0))+1.0;
+		dom.AddSingleParticle(4,Vec3_t ( xa ,  ya , 0.0 ), 1.0e-7 , 1.0e-3 , 0.011 , true);
+		xb= xa+0.00001;
+		yb=sqrt (0.01265625-xb*xb);
 		while(sqrt((xb-xa)*(xb-xa)+(yb-ya)*(yb-ya))<=0.009)
 		{
-			xb=xb+0.0001;
-			yb=sqrt (0.01265625-(xb-1.0)*(xb-1.0))+1.0;
+			xb=xb+0.00001;
+			yb=sqrt (0.01265625-xb*xb);
 		}
 		xa=xb;
 		ya=yb;
-		yc=(-sqrt (0.01265625-(xa-1.0)*(xa-1.0))+1.0);
+		yc=sqrt (0.01265625-xa*xa);
 
 		if (yc>0.0)
 		{
-			dom.AddSingleParticle(4,Vec3_t ( xa ,         yc , 0.0 ), 1.0e-7 , 1.0e-3 , 0.011 , true);
-			dom.AddSingleParticle(4,Vec3_t ( xa , 1.0+1.0-yc , 0.0 ), 1.0e-7 , 1.0e-3 , 0.011 , true);
+			dom.AddSingleParticle(4,Vec3_t ( xa , -yc , 0.0 ), 1.0e-7 , 1.0e-3 , 0.011 , true);
 		}
 	}
 
-	xa=0.8975;
-	ya=sqrt (0.01050625-(xa-1.0)*(xa-1.0))+1.0;
+	xa=-0.1075;
+	ya=sqrt (0.01155625-xa*xa);
 
-	while (xa<=1.1025)
+	while (xa<=0.1075)
 	{
-		xb= xa+0.0001;
-		yb=sqrt (0.01050625-(xb-1.0)*(xb-1.0))+1.0;
+		dom.AddSingleParticle(4,Vec3_t ( xa ,  ya , 0.0 ), 1.0e-7 , 1.0e-3 , 0.011 , true);
+		xb= xa+0.00001;
+		yb=sqrt (0.01155625-xb*xb);
 		while(sqrt((xb-xa)*(xb-xa)+(yb-ya)*(yb-ya))<=0.009)
 		{
-			xb=xb+0.0001;
-			yb=sqrt (0.01050625-(xb-1.0)*(xb-1.0))+1.0;
+			xb=xb+0.00001;
+			yb=sqrt (0.01155625-xb*xb);
 		}
 		xa=xb;
 		ya=yb;
 
-		yc=(-sqrt (0.01050625-(xa-1.0)*(xa-1.0))+1.0);
+		yc=sqrt (0.01155625-xa*xa);
 
 		if (yc>0.0)
 		{
-			dom.AddSingleParticle(4,Vec3_t ( xa ,         yc , 0.0 ), 1.0e-7 , 1.0e-3 , 0.011 , true);
-			dom.AddSingleParticle(4,Vec3_t ( xa , 1.0+1.0-yc , 0.0 ), 1.0e-7 , 1.0e-3 , 0.011 , true);
+			dom.AddSingleParticle(4,Vec3_t ( xa , -yc , 0.0 ), 1.0e-7 , 1.0e-3 , 0.011 , true);
 		}
 	}
-	dom.AddSingleParticle(4,Vec3_t ( 1.1025 , 1.0 , 0.0 ), 1.0e-7 , 1.0e-3 , 0.011 , true);
 
 //	dom.WriteXDMF("maz");
 
-	dom.Solve(/*tf*/0.3,/*dt*/0.000001,/*dtOut*/0.00001,"test06");
+	dom.Solve(/*tf*/0.3,/*dt*/1.0e-6,/*dtOut*/3.0e-5,"test06");
 	return 0;
 }
 MECHSYS_CATCH

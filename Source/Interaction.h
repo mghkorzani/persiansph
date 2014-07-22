@@ -28,9 +28,10 @@ class Interaction
 {
 public:
     // Constructor
-    		Interaction	(Particle * Pt1, Particle * Pt2,size_t Dim0, double Alpha0, double Beta0, double Cs0, double MU0, double XSPHC0, double TIC0, double InitialDist0, double P00, int PresEq0);
+    		Interaction	(Particle * Pt1, Particle * Pt2,size_t Dim0, double Alpha0, double Beta0,
+    				double Cs0, double MU0, double XSPHC0, double TIC0, double InitialDist0, double P00, int PresEq0, Vec3_t domsize);
     // Methods
-    void	CalcForce	(double dt);						///< Calculates the contact force between particles
+    void	CalcForce	(double dt, double CF);				///< Calculates the contact force between particles
     double	Kernel		(double r,double h);				///< Kernel function
     double	GradKernel	(double r,double h);				///< Gradient of the kernel function
     double	Pressure	(double Density, double Density0);	///< Equation of state for a weakly compressible fluid
@@ -54,11 +55,13 @@ public:
 
     double		P0;				///< Background pressure
     int			PresEq;			///< Selection function for the various equation of state
+    Vec3_t		DomainSize;		///< Domain size which also show the periodic Boundary as well
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////// Implementation /////
 
-inline Interaction::Interaction (Particle * Pt1, Particle * Pt2,size_t Dim0, double Alpha0, double Beta0, double Cs0, double MU0, double XSPHC0, double TIC0, double InitialDist0, double P00, int PresEq0)
+inline Interaction::Interaction (Particle * Pt1, Particle * Pt2,size_t Dim0, double Alpha0, double Beta0,
+		double Cs0, double MU0, double XSPHC0, double TIC0, double InitialDist0, double P00, int PresEq0, Vec3_t domsize)
 {
     P1		= Pt1;
     P2		= Pt2;
@@ -77,9 +80,10 @@ inline Interaction::Interaction (Particle * Pt1, Particle * Pt2,size_t Dim0, dou
 
     P0		= P00;
     PresEq	= PresEq0;
+    DomainSize = domsize;
 }
 
-inline void Interaction::CalcForce(double dt)
+inline void Interaction::CalcForce(double dt, double CF)
 {
 	double di = P1->Density;
     double dj = P2->Density;
@@ -93,6 +97,10 @@ inline void Interaction::CalcForce(double dt)
 
     Vec3_t vij = P1->v - P2->v;
     Vec3_t rij = P1->x - P2->x;
+
+	if (DomainSize(0)>0.0) {if (rij(0)>2*CF*h || rij(0)<-2*CF*h) {(P1->CC[0]>P2->CC[0]) ? rij(0) -= DomainSize(0) : rij(0) += DomainSize(0);}}
+	if (DomainSize(1)>0.0) {if (rij(1)>2*CF*h || rij(1)<-2*CF*h) {(P1->CC[1]>P2->CC[1]) ? rij(1) -= DomainSize(1) : rij(1) += DomainSize(1);}}
+	if (DomainSize(2)>0.0) {if (rij(2)>2*CF*h || rij(2)<-2*CF*h) {(P1->CC[2]>P2->CC[2]) ? rij(2) -= DomainSize(2) : rij(2) += DomainSize(2);}}
 
     //Artificial Viscosity
     double PIij = 0.0;
