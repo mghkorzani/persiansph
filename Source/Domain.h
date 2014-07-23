@@ -982,26 +982,6 @@ inline void Domain::Move (double dt)
 
 inline void Domain::ConstVel ()
 {
-//	if (PeriodicX && ConstVelPeriodic>0.0)
-//	{
-//		int temp;
-//		for (int q3=0; q3<CellNo[2]; q3++)
-//		for (int q2=0; q2<CellNo[1]; q2++)
-//		for (int q1=CellNo[0]-4; q1<CellNo[0]-2; q1++)
-//		{
-//			if (HOC[q1][q2][q3]==-1) continue;
-//			else
-//			{
-//				temp = HOC[q1][q2][q3];
-//				while (temp != -1)
-//				{
-//					if (Particles[temp]->IsFree) Particles[temp]->v = Vec3_t (ConstVelPeriodic,0.0,0.0);
-//					temp = Particles[temp]->LL;
-//				}
-//			}
-//		}
-//	}
-
 	if (PeriodicX && ConstVelPeriodic>0.0)
 	{
 		int temp;
@@ -1025,30 +1005,6 @@ inline void Domain::ConstVel ()
 
 inline void Domain::ConstVelPart2 ()
 {
-//	if (PeriodicX && ConstVelPeriodic>0.0)
-//	{
-//		int temp;
-//		for (int q3=0; q3<CellNo[2]; q3++)
-//		for (int q2=0; q2<CellNo[1]; q2++)
-//		for (int q1=CellNo[0]-4; q1<CellNo[0]-2; q1++)
-//		{
-//			if (HOC[q1][q2][q3]==-1) continue;
-//			else
-//			{
-//				temp = HOC[q1][q2][q3];
-//				while (temp != -1)
-//				{
-//					if (Particles[temp]->IsFree)
-//						{
-//						Particles[temp]->a = Vec3_t (0.0,0.0,0.0);
-//						Particles[temp]->Pressure = P0;
-//						}
-//					temp = Particles[temp]->LL;
-//				}
-//			}
-//		}
-//	}
-
 	if (PeriodicX && ConstVelPeriodic>0.0)
 	{
 		int temp;
@@ -1079,15 +1035,29 @@ inline void Domain::AvgParticleVelocity ()
 	AvgVelocity = 0.0;
 	int j = 0;
 
-	#pragma omp parallel for
-	for (size_t i=0; i<Particles.Size(); i++)
+	if (PeriodicX && ConstVelPeriodic>0.0)
+	{
+		int temp;
+		for (int q3=0; q3<CellNo[2]; q3++)
+		for (int q2=0; q2<CellNo[1]; q2++)
+		for (int q1=CellNo[0]-4; q1<CellNo[0]-2; q1++)
 		{
-		if (Particles[i]->IsFree)
+			if (HOC[q1][q2][q3]==-1) continue;
+			else
 			{
-			AvgVelocity += Particles[i]->v(0);
-			j++;
+				temp = HOC[q1][q2][q3];
+				while (temp != -1)
+				{
+					if (Particles[temp]->IsFree) Particles[temp]->v = Vec3_t (ConstVelPeriodic,0.0,0.0);
+					{
+					AvgVelocity += Particles[temp]->v(0);
+					j++;
+					}
+					temp = Particles[temp]->LL;
+				}
 			}
 		}
+	}
 
 	AvgVelocity = AvgVelocity / j;
 }
@@ -1124,7 +1094,6 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
     	ComputeAcceleration(dt);
     	ConstVelPart2();
     	Move(dt);
-//    	if (PeriodicX) AvgParticleVelocity ();
     	AvgParticleVelocity();
 
         // output
@@ -1160,7 +1129,6 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
        }
 
        Time += dt;
-
        CheckParticleLeave();
        ListandInteractionUpdate();
     }

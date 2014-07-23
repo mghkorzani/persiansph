@@ -128,16 +128,16 @@ inline void Particle::Move (double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3
 				(x(2)<(domainmin(2))) ? x(2) += Domainsize(2) : x(2);
 			}
 		}
-//		else
-//		{
-////			// Evolve velocity
-////			v = vb + 2*dt*a;
-//
-//			// Evolve density
-//			double dens = Density;
-//			Density = Densityb + 2*dt*dDensity;
-//			Densityb = dens;
-//		}
+		else
+		{
+//			// Evolve velocity
+//			v = vb + 2*dt*a;
+
+			// Evolve density
+			double dens = Density;
+			Density = Densityb + 2*dt*dDensity;
+			Densityb = dens;
+		}
 
 		ct++;
 	}
@@ -175,16 +175,16 @@ inline void Particle::Move (double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3
 				(x(2)<(domainmin(2))) ? x(2) += Domainsize(2) : x(2);
 			}
 		}
-//		else
-//		{
-////			// Evolve velocity
-////			v = v + dt*a;
-//
-//			// Evolve density
-//			double dens = Density;
-//			Density = Density + dt*dDensity;
-//			Densityb = dens;
-//		}
+		else
+		{
+//			// Evolve velocity
+//			v = v + dt*a;
+
+			// Evolve density
+			double dens = Density;
+			Density = Density + dt*dDensity;
+			Densityb = dens;
+		}
 
 		ct=0;
 	}

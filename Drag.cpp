@@ -35,7 +35,7 @@ int main(int argc, char **argv) try
 	dom.RBTag		= 4;
 
 	dom.Cs			= 1000;
-	dom.Alpha		= 0.03;
+	dom.Alpha		= 0.1;
 	dom.P0			= 10.0;
 	dom.PresEq		= 0;
 
@@ -45,7 +45,7 @@ int main(int argc, char **argv) try
 
 	double xa,ya,xb,yb,yc;
 
-	dom.AddRandomBox(3 ,Vec3_t ( -112.5*0.01 , -35*0.01 , 0.0 ), 225*0.01 ,70*0.01  ,  0 , 0.005 ,1.0e-3, 0.011);
+	dom.AddRandomBox(3 ,Vec3_t ( -112.5*0.01 , -42*0.01 , 0.0 ), 225*0.01 ,84*0.01  ,  0 , 0.005 ,1.0e-3, 0.011);
 
 	for (size_t a=0; a<dom.Particles.Size(); a++)
 	{
@@ -82,23 +82,23 @@ int main(int argc, char **argv) try
 		}
 	}
 
-	xa=-0.1075;
-	ya=sqrt (0.01155625-xa*xa);
+	xa=-0.1050;
+	ya=sqrt (0.011025-xa*xa);
 
-	while (xa<=0.1075)
+	while (xa<=0.1050)
 	{
 		dom.AddSingleParticle(4,Vec3_t ( xa ,  ya , 0.0 ), 1.0e-7 , 1.0e-3 , 0.011 , true);
 		xb= xa+0.00001;
-		yb=sqrt (0.01155625-xb*xb);
+		yb=sqrt (0.011025-xb*xb);
 		while(sqrt((xb-xa)*(xb-xa)+(yb-ya)*(yb-ya))<=0.009)
 		{
 			xb=xb+0.00001;
-			yb=sqrt (0.01155625-xb*xb);
+			yb=sqrt (0.011025-xb*xb);
 		}
 		xa=xb;
 		ya=yb;
 
-		yc=sqrt (0.01155625-xa*xa);
+		yc=sqrt (0.011025-xa*xa);
 
 		if (yc>0.0)
 		{
@@ -108,7 +108,7 @@ int main(int argc, char **argv) try
 
 //	dom.WriteXDMF("maz");
 
-	dom.Solve(/*tf*/0.3,/*dt*/1.0e-6,/*dtOut*/3.0e-5,"test06");
+	dom.Solve(/*tf*/0.3,/*dt*/2.0e-6,/*dtOut*/3.0e-5,"test06");
 	return 0;
 }
 MECHSYS_CATCH

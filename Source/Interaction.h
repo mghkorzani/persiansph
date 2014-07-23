@@ -92,13 +92,17 @@ inline void Interaction::CalcForce(double dt, double CF)
     double Pi;
     double Pj;
 
-    if (P1->IsFree) Pi = P1->Pressure = Pressure(P1->Density,P1->RefDensity); else Pi=0.0;
-    if (P2->IsFree) Pj = P2->Pressure = Pressure(P2->Density,P2->RefDensity); else Pj=0.0;
+//    if (P1->IsFree) Pi = P1->Pressure = Pressure(P1->Density,P1->RefDensity); else Pi=0.0;
+//    if (P2->IsFree) Pj = P2->Pressure = Pressure(P2->Density,P2->RefDensity); else Pj=0.0;
+
+    Pi = P1->Pressure = Pressure(P1->Density,P1->RefDensity);
+    Pj = P2->Pressure = Pressure(P2->Density,P2->RefDensity);
 
     Vec3_t vij = P1->v - P2->v;
     Vec3_t rij = P1->x - P2->x;
 
-	if (DomainSize(0)>0.0) {if (rij(0)>2*CF*h || rij(0)<-2*CF*h) {(P1->CC[0]>P2->CC[0]) ? rij(0) -= DomainSize(0) : rij(0) += DomainSize(0);}}
+    //Correction of rij for Periodic BC
+    if (DomainSize(0)>0.0) {if (rij(0)>2*CF*h || rij(0)<-2*CF*h) {(P1->CC[0]>P2->CC[0]) ? rij(0) -= DomainSize(0) : rij(0) += DomainSize(0);}}
 	if (DomainSize(1)>0.0) {if (rij(1)>2*CF*h || rij(1)<-2*CF*h) {(P1->CC[1]>P2->CC[1]) ? rij(1) -= DomainSize(1) : rij(1) += DomainSize(1);}}
 	if (DomainSize(2)>0.0) {if (rij(2)>2*CF*h || rij(2)<-2*CF*h) {(P1->CC[2]>P2->CC[2]) ? rij(2) -= DomainSize(2) : rij(2) += DomainSize(2);}}
 
@@ -116,10 +120,7 @@ inline void Interaction::CalcForce(double dt, double CF)
     double TIij = 0.0, TIji = 0.0;
     if ((TIC > 0.0) && (Pi < 0.0) && (Pj < 0.0))
     {
-        double pa,pb;
-    	pa = abs(Pi);
-    	pb = abs(Pj);
-        TIij = TIji= TIC*(pa/(di*di)+pb/(dj*dj))*pow((Kernel(norm(rij),h)/Kernel(InitialDist,h)),4);
+        TIij = TIji= TIC*(-Pi/(di*di)-Pj/(dj*dj))*pow((Kernel(norm(rij),h)/Kernel(InitialDist,h)),4);
         if (!P1->IsFree) TIij = 0.0;
         if (!P2->IsFree) TIji = 0.0;
     }
