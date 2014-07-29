@@ -47,6 +47,7 @@ public:
     Vec3_t  v;				///< Velocity of the particle n+1,
     Vec3_t	VXSPH;			///< Mean Velocity of neighbor particles
     Vec3_t  a;				///< Acceleration of the particle
+    double	ZWab;			///< Summation of the mb/db*Wab
 
     double 	Pressure;		///< Pressure at the position of the particle
     double	Density;		///< Density at the position of the particle n+1
@@ -66,7 +67,7 @@ public:
     omp_lock_t my_lock;		///< Open MP lock
 
     // Methods
-    void Move			(double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3_t domainmin);	///< Update the important quantities of a particle
+    void Move			(double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3_t domainmin, bool ShepardFilter);	///< Update the important quantities of a particle
     bool CellUpdate		(Vec3_t CellSize, Vec3_t BLPF);										///< Check if the particle cell needs to be updated
 
 };
@@ -92,7 +93,7 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
 
 }
 
-inline void Particle::Move (double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3_t domainmin)
+inline void Particle::Move (double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3_t domainmin, bool ShepardFilter)
 {
 	if (ct<30)
 	{
@@ -130,10 +131,7 @@ inline void Particle::Move (double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3
 		}
 		else
 		{
-//			// Evolve velocity
-//			v = vb + 2*dt*a;
-
-			// Evolve density
+			// Evolve density for boundary particles
 			double dens = Density;
 			Density = Densityb + 2*dt*dDensity;
 			Densityb = dens;
@@ -155,9 +153,18 @@ inline void Particle::Move (double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3
 			vb = temp;
 
 			// Evolve density
-			double dens = Density;
-			Density = Density + dt*dDensity;
-			Densityb = dens;
+			if (!ShepardFilter)
+			{
+				double dens = Density;
+				Density = Density + dt*dDensity;
+				Densityb = dens;
+			}
+			else
+			{
+				// Shepard filter
+				Density = dDensity/ZWab;
+				Densityb = Density;
+			}
 
 			if (Domainsize(0)>0.0)
 			{
@@ -177,13 +184,19 @@ inline void Particle::Move (double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3
 		}
 		else
 		{
-//			// Evolve velocity
-//			v = v + dt*a;
-
-			// Evolve density
-			double dens = Density;
-			Density = Density + dt*dDensity;
-			Densityb = dens;
+			// Evolve density for boundary particles
+			if (!ShepardFilter)
+			{
+				double dens = Density;
+				Density = Density + dt*dDensity;
+				Densityb = dens;
+			}
+			else
+			{
+				// Shepard filter
+				Density = dDensity/ZWab;
+				Densityb = Density;
+			}
 		}
 
 		ct=0;

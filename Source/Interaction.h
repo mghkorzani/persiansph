@@ -31,7 +31,7 @@ public:
     		Interaction	(Particle * Pt1, Particle * Pt2,size_t Dim0, double Alpha0, double Beta0,
     				double Cs0, double MU0, double XSPHC0, double TIC0, double InitialDist0, double P00, int PresEq0, Vec3_t domsize);
     // Methods
-    void	CalcForce	(double dt, double CF);				///< Calculates the contact force between particles
+    void	CalcForce	(double dt, double CF, bool ShepardFilter);	///< Calculates the contact force between particles
     double	Kernel		(double r,double h);				///< Kernel function
     double	GradKernel	(double r,double h);				///< Gradient of the kernel function
     double	Pressure	(double Density, double Density0);	///< Equation of state for a weakly compressible fluid
@@ -83,7 +83,7 @@ inline Interaction::Interaction (Particle * Pt1, Particle * Pt2,size_t Dim0, dou
     DomainSize = domsize;
 }
 
-inline void Interaction::CalcForce(double dt, double CF)
+inline void Interaction::CalcForce(double dt, double CF, bool ShepardFilter)
 {
 	double di = P1->Density;
     double dj = P2->Density;
@@ -91,9 +91,6 @@ inline void Interaction::CalcForce(double dt, double CF)
     double mj = P2->Mass;
     double Pi;
     double Pj;
-
-//    if (P1->IsFree) Pi = P1->Pressure = Pressure(P1->Density,P1->RefDensity); else Pi=0.0;
-//    if (P2->IsFree) Pj = P2->Pressure = Pressure(P2->Density,P2->RefDensity); else Pj=0.0;
 
     Pi = P1->Pressure = Pressure(P1->Density,P1->RefDensity);
     Pj = P2->Pressure = Pressure(P2->Density,P2->RefDensity);
@@ -124,15 +121,11 @@ inline void Interaction::CalcForce(double dt, double CF)
         if (!P1->IsFree) TIij = 0.0;
         if (!P2->IsFree) TIji = 0.0;
     }
-    else
-    	{
-    	TIij = 0.0;
-    	TIji = 0.0;
-    	}
 
     //Real Viscosity
     Vec3_t VI = 0.0;
-    if (MU!=0.0) VI = 8*MU/((di+dj)*(di+dj)*dot(rij,rij))*dot(rij,GradKernel(norm(rij),h)*(rij/norm(rij)))*vij;
+//    if (MU!=0.0) VI = 4*MU/(di*dj*norm(rij))*GradKernel(norm(rij),h)*vij;  //Morris et al 1997
+    if (MU!=0.0) VI = 8*MU/((di+dj)*(di+dj)*(dot(rij,rij)+0.01*h*h))*dot(rij,GradKernel(norm(rij),h)*(rij/norm(rij)))*vij; //Shao et al 2003
 
     // XSPH Monaghan
     if (XSPHC != 0.0)
@@ -146,27 +139,29 @@ inline void Interaction::CalcForce(double dt, double CF)
 		omp_unset_lock(&P2->my_lock);
     }
 
-//    omp_set_lock(&P1->my_lock);
-//		P1->a			+= -mj*(Pi/(di*di)+Pj/(dj*dj)+PIij+TIij)*GradKernel(norm(rij),h)*(rij/norm(rij))+ mj*VI;
-//    P1->dDensity	+= (di*mj/dj)*dot((vij+P1->VXSPH-P2->VXSPH),(rij/norm(rij)))*GradKernel(norm(rij),h);
-//    omp_unset_lock(&P1->my_lock);
-//
-//
-//    omp_set_lock(&P2->my_lock);
-//    P2->a			-= -mi*(Pi/(di*di)+Pj/(dj*dj)+PIij+TIji)*GradKernel(norm(rij),h)*(rij/norm(rij))+ mi*VI;
-//    P2->dDensity	+= (dj*mi/di)*dot((-vij+P2->VXSPH-P1->VXSPH),(-rij/norm(rij)))*GradKernel(norm(rij),h);
-//    omp_unset_lock(&P2->my_lock);
 
     omp_set_lock(&P1->my_lock);
-	P1->a			+= -mj*(Pi/(di*dj)+Pj/(di*dj)+PIij+TIij)*GradKernel(norm(rij),h)*(rij/norm(rij))+ mj*VI;
-	P1->dDensity	+= (di*mj/dj)*dot((vij+P1->VXSPH-P2->VXSPH),(rij/norm(rij)))*GradKernel(norm(rij),h);
-	omp_unset_lock(&P1->my_lock);
+    P1->a += -mj*(Pi/(di*di)+Pj/(dj*dj)+PIij+TIij)*GradKernel(norm(rij),h)*(rij/norm(rij))+ mj*VI;
+    if (P1->ct==30 && ShepardFilter)
+    {
+    	P1->dDensity += mj*Kernel(norm(rij),h);
+    	P1->ZWab +=mj/dj*Kernel(norm(rij),h);
+    }
+    else
+        P1->dDensity	+= (di*mj/dj)*dot((vij+P1->VXSPH-P2->VXSPH),(rij/norm(rij)))*GradKernel(norm(rij),h);
+    omp_unset_lock(&P1->my_lock);
 
 
-	omp_set_lock(&P2->my_lock);
-	P2->a			-= -mi*(Pi/(di*dj)+Pj/(di*dj)+PIij+TIji)*GradKernel(norm(rij),h)*(rij/norm(rij))+ mi*VI;
-	P2->dDensity	+= (dj*mi/di)*dot((-vij+P2->VXSPH-P1->VXSPH),(-rij/norm(rij)))*GradKernel(norm(rij),h);
-	omp_unset_lock(&P2->my_lock);
+    omp_set_lock(&P2->my_lock);
+    P2->a -= -mi*(Pi/(di*di)+Pj/(dj*dj)+PIij+TIji)*GradKernel(norm(rij),h)*(rij/norm(rij))+ mi*VI;
+    if (P2->ct==30 && ShepardFilter)
+    {
+    	P2->dDensity += mi*Kernel(norm(rij),h);
+    	P2->ZWab +=mi/di*Kernel(norm(rij),h);
+    }
+    else
+    	P2->dDensity	+= (dj*mi/di)*dot((-vij+P2->VXSPH-P1->VXSPH),(-rij/norm(rij)))*GradKernel(norm(rij),h);
+    omp_unset_lock(&P2->my_lock);
 }
 
 inline double Interaction::Kernel(double r,double h)

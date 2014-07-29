@@ -86,6 +86,7 @@ public:
     Array <Particle*>		Particles;     	 	///< Array of particles
     Array <Interaction*>	Interactions;  	 	///< Array of interactions
     Array <Interaction*>	PInteractions; 	 	///< Array of possible interactions
+    double					R;					///< Particle Radius in addrandombox
 
     Array <int>				IinSI;				///< Array to save Interaction No for fixed particles
 
@@ -136,6 +137,7 @@ public:
     omp_lock_t 				maz_lock;			///< Open MP lock to lock Interactions array
 
     double					deltat;				///< Time Step
+    bool					Shepard;
 
 };
 /////////////////////////////////////////////////////////////////////////////////////////// Implementation /////
@@ -181,7 +183,8 @@ inline Domain::Domain ()
     omp_init_lock (&maz_lock);
     Nproc	= 1;
 
-    deltat	=0.0;
+    deltat	= 0.0;
+    Shepard = true;
 }
 
 inline Domain::~Domain ()
@@ -228,7 +231,7 @@ inline void Domain::AddRandomBox(int tag, Vec3_t const & V, double Lx, double Ly
     double x,y,xp,yp;
     size_t i,j;
 
-    double qin = 0.05;
+    double qin = 0.03;
     srand(100);
 
     if (Dimension==3)
@@ -323,6 +326,8 @@ inline void Domain::AddRandomBox(int tag, Vec3_t const & V, double Lx, double Ly
 			yp = V(1) + (sqrt(3.0)*j+1)*r;
 		}
     }
+    R = r;
+    std::cout << j << std::endl;
 
     std::cout << "\nNo. of added particles = " << Particles.Size()-PrePS << std::endl;
 }
@@ -411,15 +416,13 @@ inline void Domain::CellInitiate ()
 
 	//Because of Hexagonal close packing in x direction domain is modified
 	if (!PeriodicX) {TRPR(0) += hmax/2;	BLPF(0) -= hmax/2;}
-	TRPR(1) += hmax/2;
-	BLPF(1) -= hmax/2;
-	TRPR(2) += hmax/2;
-	BLPF(2) -= hmax/2;
+	if (!PeriodicY) {TRPR(1) += hmax/2;	BLPF(1) -= hmax/2;}else{TRPR(1) += R; BLPF(1) -= R;}
+	if (!PeriodicZ) {TRPR(2) += hmax/2;	BLPF(2) -= hmax/2;}else{TRPR(2) += R; BLPF(2) -= R;}
 
     // Calculate Cells Properties
 	switch (Dimension)
 	{case 1:
-		if (abs(((TRPR(0)-BLPF(0))/(Cellfac*hmax))-ceil((TRPR(0)-BLPF(0))/(Cellfac*hmax)))<(hmax/10.0))
+		if (double (ceil(((TRPR(0)-BLPF(0))/(Cellfac*hmax)))-((TRPR(0)-BLPF(0))/(Cellfac*hmax)))<(hmax/10.0))
 			CellNo[0] = int(ceil((TRPR(0)-BLPF(0))/(Cellfac*hmax)));
 		else
 			CellNo[0] = int(floor((TRPR(0)-BLPF(0))/(Cellfac*hmax)));
@@ -428,14 +431,15 @@ inline void Domain::CellInitiate ()
 		CellNo[2] = 1;
 
 		CellSize  = Vec3_t ((TRPR(0)-BLPF(0))/CellNo[0],0.0,0.0);
+
 		break;
 	case 2:
-		if (abs(((TRPR(0)-BLPF(0))/(Cellfac*hmax))-ceil((TRPR(0)-BLPF(0))/(Cellfac*hmax)))<(hmax/10.0))
+		if (double (ceil(((TRPR(0)-BLPF(0))/(Cellfac*hmax)))-((TRPR(0)-BLPF(0))/(Cellfac*hmax)))<(hmax/10.0))
 			CellNo[0] = int(ceil((TRPR(0)-BLPF(0))/(Cellfac*hmax)));
 		else
 			CellNo[0] = int(floor((TRPR(0)-BLPF(0))/(Cellfac*hmax)));
 
-		if (abs(((TRPR(1)-BLPF(1))/(Cellfac*hmax))-ceil((TRPR(1)-BLPF(1))/(Cellfac*hmax)))<(hmax/10.0))
+		if (double (ceil(((TRPR(1)-BLPF(1))/(Cellfac*hmax)))-((TRPR(1)-BLPF(1))/(Cellfac*hmax)))<(hmax/10.0))
 			CellNo[1] = int(ceil((TRPR(1)-BLPF(1))/(Cellfac*hmax)));
 		else
 			CellNo[1] = int(floor((TRPR(1)-BLPF(1))/(Cellfac*hmax)));
@@ -445,17 +449,17 @@ inline void Domain::CellInitiate ()
 		CellSize  = Vec3_t ((TRPR(0)-BLPF(0))/CellNo[0],(TRPR(1)-BLPF(1))/CellNo[1],0.0);
 		break;
 	case 3:
-		if (abs(((TRPR(0)-BLPF(0))/(Cellfac*hmax))-ceil((TRPR(0)-BLPF(0))/(Cellfac*hmax)))<(hmax/10.0))
+		if (double (ceil(((TRPR(0)-BLPF(0))/(Cellfac*hmax)))-((TRPR(0)-BLPF(0))/(Cellfac*hmax)))<(hmax/10.0))
 			CellNo[0] = int(ceil((TRPR(0)-BLPF(0))/(Cellfac*hmax)));
 		else
 			CellNo[0] = int(floor((TRPR(0)-BLPF(0))/(Cellfac*hmax)));
 
-		if (abs(((TRPR(1)-BLPF(1))/(Cellfac*hmax))-ceil((TRPR(1)-BLPF(1))/(Cellfac*hmax)))<(hmax/10.0))
+		if (double (ceil(((TRPR(1)-BLPF(1))/(Cellfac*hmax)))-((TRPR(1)-BLPF(1))/(Cellfac*hmax)))<(hmax/10.0))
 			CellNo[1] = int(ceil((TRPR(1)-BLPF(1))/(Cellfac*hmax)));
 		else
 			CellNo[1] = int(floor((TRPR(1)-BLPF(1))/(Cellfac*hmax)));
 
-		if (abs(((TRPR(2)-BLPF(2))/(Cellfac*hmax))-ceil((TRPR(2)-BLPF(2))/(Cellfac*hmax)))<(hmax/10.0))
+		if (double (ceil(((TRPR(2)-BLPF(2))/(Cellfac*hmax)))-((TRPR(2)-BLPF(2))/(Cellfac*hmax)))<(hmax/10.0))
 			CellNo[2] = int(ceil((TRPR(2)-BLPF(2))/(Cellfac*hmax)));
 		else
 			CellNo[2] = int(floor((TRPR(2)-BLPF(2))/(Cellfac*hmax)));
@@ -475,7 +479,6 @@ inline void Domain::CellInitiate ()
     if (PeriodicY) DomSize[1] = (TRPR(1)-BLPF(1));
     if (PeriodicZ) DomSize[2] = (TRPR(2)-BLPF(2));
 
-    std::cout << DomSize[0]<< " "<< DomSize[1]<< " "<< DomSize[2]<< std::endl;
     double t1,t2;
     t1 = 0.25*hmax/(Cs+ConstVelPeriodic);
     t2 = 0.125*hmax*hmax*rho/MU;
@@ -905,6 +908,7 @@ inline void Domain::StartAcceleration (Vec3_t const & a)
         Particles[i]->a = a;
         Particles[i]->dDensity = 0.0;
         Particles[i]->VXSPH=0.0;
+        Particles[i]->ZWab=0.0;
     }
 }
 
@@ -954,7 +958,7 @@ inline void Domain::ComputeAcceleration (double dt)
 //	}
 
 	#pragma omp parallel for
-	for (size_t i=0; i<PInteractions.Size(); i++) PInteractions[i]->CalcForce(dt,Cellfac);
+	for (size_t i=0; i<PInteractions.Size(); i++) PInteractions[i]->CalcForce(dt,Cellfac,Shepard);
 
 	//Min time step calculation
 	double temp=0.25*sqrt(Particles[1]->h/norm(Particles[1]->a));
@@ -967,7 +971,7 @@ inline void Domain::ComputeAcceleration (double dt)
 inline void Domain::Move (double dt)
 {
 	#pragma omp parallel for
-	for (size_t i=0; i<Particles.Size(); i++) Particles[i]->Move(dt,DomSize,TRPR,BLPF);
+	for (size_t i=0; i<Particles.Size(); i++) Particles[i]->Move(dt,DomSize,TRPR,BLPF,Shepard);
 
 	if (RigidBody)
 	{
@@ -1048,7 +1052,7 @@ inline void Domain::AvgParticleVelocity ()
 				temp = HOC[q1][q2][q3];
 				while (temp != -1)
 				{
-					if (Particles[temp]->IsFree) Particles[temp]->v = Vec3_t (ConstVelPeriodic,0.0,0.0);
+					if (Particles[temp]->IsFree)
 					{
 					AvgVelocity += Particles[temp]->v(0);
 					j++;
@@ -1081,11 +1085,11 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
     InitiateInteractions();
 
     // Initialization of constant velocity
-	if (PeriodicX && ConstVelPeriodic>0.0)
-	{
-		#pragma omp parallel for
-		for (size_t i=0; i<Particles.Size(); i++) if (Particles[i]->IsFree) Particles[i]->v = Vec3_t (ConstVelPeriodic,0.0,0.0);
-	}
+//	if (PeriodicX && ConstVelPeriodic>0.0)
+//	{
+//		#pragma omp parallel for
+//		for (size_t i=0; i<Particles.Size(); i++) if (Particles[i]->IsFree) Particles[i]->v = Vec3_t (ConstVelPeriodic,0.0,0.0);
+//	}
 
     while (Time<tf)
     {
