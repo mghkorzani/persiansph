@@ -1096,7 +1096,7 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
     	StartAcceleration(Gravity);
     	ConstVel();
     	ComputeAcceleration(dt);
-    	ConstVelPart2();
+//    	ConstVelPart2();
     	Move(dt);
     	AvgParticleVelocity();
 

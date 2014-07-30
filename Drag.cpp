@@ -29,15 +29,15 @@ int main(int argc, char **argv) try
 
 	dom.PeriodicX	= true;
 	dom.PeriodicY	= true;
-	dom.ConstVelPeriodic= 10;
+	dom.ConstVelPeriodic= 85;
 
 	dom.RigidBody	= true;
 	dom.RBTag		= 4;
 
-	dom.Cs			= 500;
+	dom.Cs			= 2200;
 //	dom.Alpha		= 0.05;
-	dom.MU			= 1.0e-6;
-	dom.P0			= 10.0;
+	dom.MU			= 1.0e-3;
+	dom.P0			= 50.0;
 	dom.PresEq		= 0;
 //	dom.Shepard		= false;
 
@@ -157,7 +157,7 @@ int main(int argc, char **argv) try
 
 //	dom.WriteXDMF("maz");
 
-	dom.Solve(/*tf*/0.5,/*dt*/2.5e-6,/*dtOut*/5.0e-5,"test06");
+	dom.Solve(/*tf*/0.5,/*dt*/0.5e-6,/*dtOut*/5.0e-5,"test06");
 	return 0;
 }
 MECHSYS_CATCH
