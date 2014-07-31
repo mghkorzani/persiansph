@@ -116,6 +116,7 @@ public:
     bool					RigidBody; 			///< If it is true, A rigid body with RTag will be considered
     int						RBTag;				///< Tag of particles for rigid body
     Vec3_t					RBForce;			///< Rigid body force
+    Vec3_t					RBForceVis;			///< Rigid body force viscosity
 
     double 					P0;					///< background pressure for equation of state
     int						PresEq;				///< Selecting variable to choose a equation of state
@@ -162,6 +163,7 @@ inline Domain::Domain ()
     RigidBody = false;
     RBTag	= 0;
     RBForce = 0.0;
+    RBForceVis = 0.0;
 
     P0		= 0.0;
     PresEq	= 0;
@@ -907,8 +909,9 @@ inline void Domain::StartAcceleration (Vec3_t const & a)
     {
         Particles[i]->a = a;
         Particles[i]->dDensity = 0.0;
-        Particles[i]->VXSPH=0.0;
-        Particles[i]->ZWab=0.0;
+        Particles[i]->VXSPH = 0.0;
+        Particles[i]->ZWab = 0.0;
+        Particles[i]->Vis = 0.0;
     }
 }
 
@@ -976,10 +979,15 @@ inline void Domain::Move (double dt)
 	if (RigidBody)
 	{
 		RBForce = 0.0;
-	#pragma omp parallel for
-	for (size_t i=0; i<Particles.Size(); i++)
+		RBForceVis = 0.0;
+		#pragma omp parallel for
+		for (size_t i=0; i<Particles.Size(); i++)
 		{
-		if (Particles[i]->ID==RBTag) RBForce +=Particles[i]->Mass*Particles[i]->a;
+			if (Particles[i]->ID==RBTag)
+			{
+				RBForce +=Particles[i]->Mass*Particles[i]->a;
+				RBForceVis +=Particles[i]->Mass*Particles[i]->Vis;
+			}
 		}
 	}
 }
@@ -1154,7 +1162,7 @@ inline void Domain::WriteXDMF (char const * FileKey)
     float * sh	     = new float[  Particles.Size()];
     int   * Tag      = new int  [  Particles.Size()];
     int   * IsFree   = new int  [  Particles.Size()];
-    float * Force    = new float[3];
+    float * Force    = new float[6];
 
 
     for (size_t i=0;i<Particles.Size();i++)
@@ -1178,6 +1186,9 @@ inline void Domain::WriteXDMF (char const * FileKey)
     Force  [0] = float(RBForce(0));
     Force  [1] = float(RBForce(1));
     Force  [2] = float(RBForce(2));
+    Force  [3] = float(RBForceVis(0));
+    Force  [4] = float(RBForceVis(1));
+    Force  [5] = float(RBForceVis(2));
 
     int data[1];
     String dsname;
@@ -1204,7 +1215,7 @@ inline void Domain::WriteXDMF (char const * FileKey)
     H5LTmake_dataset_int(file_id,dsname.CStr(),1,dims,Tag);
     dsname.Printf("IsFree");
     H5LTmake_dataset_int(file_id,dsname.CStr(),1,dims,IsFree);
-    dims[0] = 3;
+    dims[0] = 6;
     dsname.Printf("Rigid_Body_Force");
     H5LTmake_dataset_float(file_id,dsname.CStr(),1,dims,Force);
 

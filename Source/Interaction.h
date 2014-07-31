@@ -142,6 +142,7 @@ inline void Interaction::CalcForce(double dt, double CF, bool ShepardFilter)
 
     omp_set_lock(&P1->my_lock);
     P1->a += -mj*(Pi/(di*di)+Pj/(dj*dj)+PIij+TIij)*GradKernel(norm(rij),h)*(rij/norm(rij))+ mj*VI;
+    P1->Vis += mj*VI;
     if (P1->ct==30 && ShepardFilter)
     {
     	P1->dDensity += mj*Kernel(norm(rij),h);
@@ -154,6 +155,7 @@ inline void Interaction::CalcForce(double dt, double CF, bool ShepardFilter)
 
     omp_set_lock(&P2->my_lock);
     P2->a -= -mi*(Pi/(di*di)+Pj/(dj*dj)+PIij+TIji)*GradKernel(norm(rij),h)*(rij/norm(rij))+ mi*VI;
+    P2->Vis -= mi*VI;
     if (P2->ct==30 && ShepardFilter)
     {
     	P2->dDensity += mi*Kernel(norm(rij),h);

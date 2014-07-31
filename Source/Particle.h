@@ -65,6 +65,7 @@ public:
     int		ct;				///< Correction step for the Verlet Algorithm
 
     omp_lock_t my_lock;		///< Open MP lock
+    Vec3_t  Vis;			///< To check viscosity force
 
     // Methods
     void Move			(double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3_t domainmin, bool ShepardFilter);	///< Update the important quantities of a particle
