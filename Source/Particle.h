@@ -48,6 +48,7 @@ public:
     Vec3_t	VXSPH;			///< Mean Velocity of neighbor particles
     Vec3_t  a;				///< Acceleration of the particle
     double	ZWab;			///< Summation of the mb/db*Wab
+    double	SumDen;			///< Summation of neighbor particle density
 
     double 	Pressure;		///< Pressure at the position of the particle
     double	Density;		///< Density at the position of the particle n+1
@@ -91,7 +92,7 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
     LL=0;
     omp_init_lock(&my_lock);
     VXSPH = 0.0;
-
+    ZWab = 0.0;
 }
 
 inline void Particle::Move (double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3_t domainmin, bool ShepardFilter)
@@ -137,7 +138,6 @@ inline void Particle::Move (double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3
 			Density = Densityb + 2*dt*dDensity;
 			Densityb = dens;
 		}
-
 		ct++;
 	}
 	else
@@ -154,17 +154,17 @@ inline void Particle::Move (double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3
 			vb = temp;
 
 			// Evolve density
-			if (!ShepardFilter)
+			if (ShepardFilter && !isnan(SumDen/ZWab))
+			{
+				// Shepard filter
+				Density = SumDen/ZWab;
+				Densityb = Density;
+			}
+			else
 			{
 				double dens = Density;
 				Density = Density + dt*dDensity;
 				Densityb = dens;
-			}
-			else
-			{
-				// Shepard filter
-				Density = dDensity/ZWab;
-				Densityb = Density;
 			}
 
 			if (Domainsize(0)>0.0)
@@ -186,20 +186,19 @@ inline void Particle::Move (double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3
 		else
 		{
 			// Evolve density for boundary particles
-			if (!ShepardFilter)
+			if (ShepardFilter && !isnan(SumDen/ZWab))
+			{
+				// Shepard filter
+				Density = SumDen/ZWab;
+				Densityb = Density;
+			}
+			else
 			{
 				double dens = Density;
 				Density = Density + dt*dDensity;
 				Densityb = dens;
 			}
-			else
-			{
-				// Shepard filter
-				Density = dDensity/ZWab;
-				Densityb = Density;
-			}
 		}
-
 		ct=0;
 	}
 }

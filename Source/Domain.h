@@ -417,7 +417,7 @@ inline void Domain::CellInitiate ()
     }
 
 	//Because of Hexagonal close packing in x direction domain is modified
-	if (!PeriodicX) {TRPR(0) += hmax/2;	BLPF(0) -= hmax/2;}
+	if (!PeriodicX) {TRPR(0) += hmax/2;	BLPF(0) -= hmax/2;}else{TRPR(0) += R/50; BLPF(0) -= R/50;}
 	if (!PeriodicY) {TRPR(1) += hmax/2;	BLPF(1) -= hmax/2;}else{TRPR(1) += R; BLPF(1) -= R;}
 	if (!PeriodicZ) {TRPR(2) += hmax/2;	BLPF(2) -= hmax/2;}else{TRPR(2) += R; BLPF(2) -= R;}
 
@@ -538,6 +538,13 @@ inline void Domain::ListGenerate ()
             {
                     if ((BLPF(0) - Particles[a]->x(0)) <= hmax) i=0;
                             else std::cout<<"Leaving i<0"<<std::endl;
+                    std::cout<<"No = "<<a<<std::endl;
+                    std::cout<<"X = "<<Particles[a]->x<<std::endl;
+                    std::cout<<"V = "<<Particles[a]->v<<std::endl;
+                    std::cout<<"a = "<<Particles[a]->a<<std::endl;
+                    std::cout<<"P = "<<Particles[a]->Pressure<<std::endl;
+                    std::cout<<"Rho = "<<Particles[a]->Density<<std::endl;
+
             }
             if (j<0)
             {
@@ -911,7 +918,13 @@ inline void Domain::StartAcceleration (Vec3_t const & a)
         Particles[i]->dDensity = 0.0;
         Particles[i]->VXSPH = 0.0;
         Particles[i]->ZWab = 0.0;
+        Particles[i]->SumDen = 0.0;
         Particles[i]->Vis = 0.0;
+        if (isnan(Particles[i]->dDensity) || isnan(Particles[i]->Density) || isnan(norm(Particles[i]->v)) || isnan(norm(Particles[i]->x)) || isnan(norm(Particles[i]->a)))
+        {
+            std::cout<<"NaN Particle No = "<<i<<std::endl;
+        }
+
     }
 }
 
@@ -1101,7 +1114,7 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
 
     while (Time<tf)
     {
-    	StartAcceleration(Gravity);
+		StartAcceleration(Gravity);
     	ConstVel();
     	ComputeAcceleration(dt);
 //    	ConstVelPart2();

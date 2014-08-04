@@ -145,11 +145,10 @@ inline void Interaction::CalcForce(double dt, double CF, bool ShepardFilter)
     P1->Vis += mj*VI;
     if (P1->ct==30 && ShepardFilter)
     {
-    	P1->dDensity += mj*Kernel(norm(rij),h);
+    	P1->SumDen += mj*Kernel(norm(rij),h);
     	P1->ZWab +=mj/dj*Kernel(norm(rij),h);
     }
-    else
-        P1->dDensity	+= (di*mj/dj)*dot((vij+P1->VXSPH-P2->VXSPH),(rij/norm(rij)))*GradKernel(norm(rij),h);
+    P1->dDensity += (di*mj/dj)*dot((vij+P1->VXSPH-P2->VXSPH),(rij/norm(rij)))*GradKernel(norm(rij),h);
     omp_unset_lock(&P1->my_lock);
 
 
@@ -158,11 +157,10 @@ inline void Interaction::CalcForce(double dt, double CF, bool ShepardFilter)
     P2->Vis -= mi*VI;
     if (P2->ct==30 && ShepardFilter)
     {
-    	P2->dDensity += mi*Kernel(norm(rij),h);
+    	P2->SumDen += mi*Kernel(norm(rij),h);
     	P2->ZWab +=mi/di*Kernel(norm(rij),h);
     }
-    else
-    	P2->dDensity	+= (dj*mi/di)*dot((-vij+P2->VXSPH-P1->VXSPH),(-rij/norm(rij)))*GradKernel(norm(rij),h);
+    P2->dDensity += (dj*mi/di)*dot((-vij+P2->VXSPH-P1->VXSPH),(-rij/norm(rij)))*GradKernel(norm(rij),h);
     omp_unset_lock(&P2->my_lock);
 }
 
