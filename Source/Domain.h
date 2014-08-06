@@ -119,7 +119,8 @@ public:
     Vec3_t					RBForceVis;			///< Rigid body force viscosity
 
     double 					P0;					///< background pressure for equation of state
-    int						PresEq;				///< Selecting variable to choose a equation of state
+    size_t					PresEq;				///< Selecting variable to choose a equation of state
+    size_t					KernelType;			///< Selecting variable to choose a kernel
 
     bool					PeriodicX; 			///< If it is true, periodic boundary condition along x direction will be considered
     bool					PeriodicY; 			///< If it is true, periodic boundary condition along y direction will be considered
@@ -167,6 +168,7 @@ inline Domain::Domain ()
 
     P0		= 0.0;
     PresEq	= 0;
+    KernelType	= 0;
 
     PeriodicX = false;
     PeriodicY = false;
@@ -329,7 +331,6 @@ inline void Domain::AddRandomBox(int tag, Vec3_t const & V, double Lx, double Ly
 		}
     }
     R = r;
-    std::cout << j << std::endl;
 
     std::cout << "\nNo. of added particles = " << Particles.Size()-PrePS << std::endl;
 }
@@ -681,7 +682,7 @@ inline void Domain::CreateInteraction(int a, int b)
     {
 		if (ExInteract [a][b] == -1)
 		{
-			Interactions.Push(new Interaction(Particles[a],Particles[b],Dimension,Alpha,Beta,Cs,MU,XSPH,TI,InitialDist,P0,PresEq,DomSize));
+			Interactions.Push(new Interaction(Particles[a],Particles[b],Dimension,Alpha,Beta,Cs,MU,XSPH,TI,InitialDist,P0,PresEq,KernelType,DomSize));
 			ExInteract [a][b] = Interactions.size() - 1;
 			ExInteract [b][a] = Interactions.size() - 1;
 			PInteractions.Push(Interactions[ ExInteract [a][b] ]);

@@ -28,12 +28,13 @@ class Interaction
 {
 public:
     // Constructor
-    		Interaction	(Particle * Pt1, Particle * Pt2,size_t Dim0, double Alpha0, double Beta0,
-    				double Cs0, double MU0, double XSPHC0, double TIC0, double InitialDist0, double P00, int PresEq0, Vec3_t domsize);
+    		Interaction	(Particle * Pt1, Particle * Pt2,size_t Dim0, double Alpha0, double Beta0, double Cs0, double MU0,
+    				double XSPHC0, double TIC0, double InitialDist0, double P00, size_t PresEq0, size_t KernelType0, Vec3_t domsize);
     // Methods
     void	CalcForce	(double dt, double CF, bool ShepardFilter);	///< Calculates the contact force between particles
     double	Kernel		(double r,double h);				///< Kernel function
     double	GradKernel	(double r,double h);				///< Gradient of the kernel function
+    double LaplaceKernel(double r, double h);
     double	Pressure	(double Density, double Density0);	///< Equation of state for a weakly compressible fluid
     double	SoundSpeed	(double Density, double Density0);	///< Speed of sound in a fluid (dP/drho)
 
@@ -54,14 +55,15 @@ public:
     double		InitialDist;	///< Initial distance of particles for Tensile Instability calculation
 
     double		P0;				///< Background pressure
-    int			PresEq;			///< Selection function for the various equation of state
+    size_t		PresEq;			///< Selection function for the various equation of state
+    size_t		KernelType;		///< Type of the kernel which is going to be used
     Vec3_t		DomainSize;		///< Domain size which also show the periodic Boundary as well
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////// Implementation /////
 
-inline Interaction::Interaction (Particle * Pt1, Particle * Pt2,size_t Dim0, double Alpha0, double Beta0,
-		double Cs0, double MU0, double XSPHC0, double TIC0, double InitialDist0, double P00, int PresEq0, Vec3_t domsize)
+inline Interaction::Interaction (Particle * Pt1, Particle * Pt2,size_t Dim0, double Alpha0, double Beta0, double Cs0, double MU0,
+		double XSPHC0, double TIC0, double InitialDist0, double P00, size_t PresEq0, size_t KernelType0, Vec3_t domsize)
 {
     P1		= Pt1;
     P2		= Pt2;
@@ -80,6 +82,7 @@ inline Interaction::Interaction (Particle * Pt1, Particle * Pt2,size_t Dim0, dou
 
     P0		= P00;
     PresEq	= PresEq0;
+    KernelType = KernelType0;
     DomainSize = domsize;
 }
 
@@ -124,8 +127,9 @@ inline void Interaction::CalcForce(double dt, double CF, bool ShepardFilter)
 
     //Real Viscosity
     Vec3_t VI = 0.0;
-//    if (MU!=0.0) VI = 4*MU/(di*dj*norm(rij))*GradKernel(norm(rij),h)*vij;  //Morris et al 1997
-    if (MU!=0.0) VI = 8*MU/((di+dj)*(di+dj)*(dot(rij,rij)+0.01*h*h))*dot(rij,GradKernel(norm(rij),h)*(rij/norm(rij)))*vij; //Shao et al 2003
+    if (MU!=0.0) VI = 2.0*MU/(di*dj*norm(rij))*GradKernel(norm(rij),h)*vij;  //Morris et al 1997
+//    if (MU!=0.0) VI = 8.0*MU/((di+dj)*(di+dj)*(dot(rij,rij)+0.01*h*h))*dot(rij,GradKernel(norm(rij),h)*(rij/norm(rij)))*vij; //Shao et al 2003
+    if (MU!=0.0) VI = MU/(di*dj)*((Dim+1.0/3.0)*GradKernel(norm(rij),h)/norm(rij)*vij+(dot(vij,rij)/3.0*rij+dot(rij,rij)*vij)/norm(rij)*(-1.0/dot(rij,rij)*GradKernel(norm(rij),h)+1.0/norm(rij)*LaplaceKernel(norm(rij),h)));
 
     // XSPH Monaghan
     if (XSPHC != 0.0)
@@ -167,50 +171,169 @@ inline void Interaction::CalcForce(double dt, double CF, bool ShepardFilter)
 inline double Interaction::Kernel(double r,double h)
 {
 	double C;
-	switch (Dim)
-    {case 1:
-       C = 2.0/(3.0*h);
-       break;
+	double q = r/h;
+    if (Dim<=1 || Dim>3)
+    {
+    	std::cout << "Please correct dimension for kernel and run again, otherwise 3D is used" << std::endl;
+    	Dim = 3;
+    }
+	switch (KernelType)
+    {case 0:
+    	// Qubic Spline
+    	Dim ==2 ? C = 10.0/(7.0*h*h*M_PI) : C = 1.0/(h*h*h*M_PI);
+
+		if ((q>=0.0)&&(q<1)) return C*(1.0-(3.0/2.0)*q*q+(3.0/4.0)*q*q*q);
+		else if (q<=2)       return C*((1.0/4.0)*(2.0-q)*(2.0-q)*(2.0-q));
+		else                 return 0.0;
+
+		break;
+    case 1:
+    	// Quadratic
+    	Dim ==2 ? C = 2.0/(h*h*M_PI) : C = 5.0/(4.0*h*h*h*M_PI);
+
+    	if (q<=2) 			 return C*(3.0/4.0-(3.0/4.0)*q+(3.0/16.0)*q*q);
+		else                 return 0.0;
+
+    	break;
     case 2:
-       C = 10.0/(7.0*h*h*M_PI);
-       break;
+    	// Quintic
+    	Dim ==2 ? C = 7.0/(4.0*h*h*M_PI) : C = 7.0/(8.0*h*h*h*M_PI);
+
+    	if (q<=2) 			 return C*pow((1.0-q/2.0),4)*(2.0*q+1.0);
+		else                 return 0.0;
+
+    	break;
     case 3:
-       C = 1.0/(h*h*h*M_PI);
-       break;
-    default:
-       std::cout << "Please correct dimension for kernel and run again, otherwise 3D is used" << std::endl;
-       C = 1.0/(h*h*h*M_PI);
+    	// Gaussian with compact support
+    	Dim ==2 ? C = 1.0/(h*h*M_PI) : C = 1.0/(h*h*h*pow(M_PI,(3.0/2.0)));
+
+    	if (q<=2) 			 return C*exp(-q*q);
+		else                 return 0.0;
+
+    	break;
+   default:
+		// Qubic Spline
+	    std::cout << "Kernel No is out of range so Cubic Spline is used" << std::endl;
+		Dim ==2 ? C = 10.0/(7.0*h*h*M_PI) : C = 1.0/(h*h*h*M_PI);
+
+		if ((q>=0.0)&&(q<1)) return C*(1.0-(3.0/2.0)*q*q+(3.0/4.0)*q*q*q);
+		else if (q<=2)       return C*((1.0/4.0)*(2.0-q)*(2.0-q)*(2.0-q));
+		else                 return 0.0;
+
        break;
     }
-
-    double q = r/h;
-    if ((q>=0.0)&&(q<1)) return C*(1-(3.0/2.0)*q*q+(3.0/4.0)*q*q*q);
-    else if (q<=2)       return C*((1.0/4.0)*(2-q)*(2-q)*(2-q));
-    else                 return 0.0;
 }
 
 inline double Interaction::GradKernel(double r, double h)
 {
 	double C;
-	switch (Dim)
-    {case 1:
-       C = 2.0/(3.0*h*h);
-       break;
+	double q = r/h;
+    if (Dim<=1 || Dim>3)
+    {
+    	std::cout << "Please correct dimension for kernel and run again, otherwise 3D is used" << std::endl;
+    	Dim = 3;
+    }
+	switch (KernelType)
+    {case 0:
+    	// Qubic Spline
+    	Dim ==2 ? C = 10.0/(7.0*h*h*h*M_PI) : C = 1.0/(h*h*h*h*M_PI);
+
+        if ((q>=0.0)&&(q<1)) return C*(-3.0*q+(9.0/4.0)*q*q);
+        else if (q<=2)       return C*(-1.0*(3.0/4.0)*(2.0-q)*(2.0-q));
+        else                 return 0.0;
+
+		break;
+    case 1:
+    	// Quadratic
+    	Dim ==2 ? C = 2.0/(h*h*h*M_PI) : C = 5.0/(4.0*h*h*h*h*M_PI);
+
+    	if (q<=2) 			 return C*(-3.0/4.0+(3.0/8.0)*q);
+		else                 return 0.0;
+
+    	break;
     case 2:
-       C = 10.0/(7.0*h*h*h*M_PI);
-       break;
+    	// Quintic
+    	Dim ==2 ? C = 7.0/(4.0*h*h*h*M_PI) : C = 7.0/(8.0*h*h*h*h*M_PI);
+
+    	if (q<=2) 			 return 2.0*C*pow((1.0-q/2.0),3)*(1.0-3.0*q);
+		else                 return 0.0;
+
+    	break;
     case 3:
-       C = 1.0/(h*h*h*h*M_PI);
-       break;
-    default:
-       std::cout << "Please correct dimension for kernel and run again, otherwise 3D is used" << std::endl;
-       C = 1.0/(h*h*h*h*M_PI);
+    	// Gaussian with compact support
+    	Dim ==2 ? C = 1.0/(h*h*h*M_PI) : C = 1.0/(h*h*h*h*pow(M_PI,(3.0/2.0)));
+
+    	if (q<=2) 			 return -2.0*q*C*exp(-q*q);
+		else                 return 0.0;
+
+    	break;
+   default:
+		// Qubic Spline
+	    std::cout << "Kernel No is out of range so Cubic Spline is used" << std::endl;
+    	Dim ==2 ? C = 10.0/(7.0*h*h*h*M_PI) : C = 1.0/(h*h*h*h*M_PI);
+
+        if ((q>=0.0)&&(q<1)) return C*(-3.0*q+(9.0/4.0)*q*q);
+        else if (q<=2)       return C*(-1.0*(3.0/4.0)*(2.0-q)*(2.0-q));
+        else                 return 0.0;
+
        break;
     }
-    double q = r/h;
-    if ((q>=0.0)&&(q<1)) return C*(-3.0*q+(9.0/4.0)*q*q);
-    else if (q<=2)       return C*(-1*(3.0/4.0)*(2-q)*(2-q));
-    else                 return 0.0;
+}
+
+inline double Interaction::LaplaceKernel(double r, double h)
+{
+	double C;
+	double q = r/h;
+    if (Dim<=1 || Dim>3)
+    {
+    	std::cout << "Please correct dimension for kernel and run again, otherwise 3D is used" << std::endl;
+    	Dim = 3;
+    }
+	switch (KernelType)
+    {case 0:
+    	// Qubic Spline
+    	Dim ==2 ? C = 10.0/(7.0*h*h*h*h*M_PI) : C = 1.0/(h*h*h*h*h*M_PI);
+
+        if ((q>=0.0)&&(q<1)) return C*(-3.0+(9.0/2.0)*q);
+        else if (q<=2)       return C*((3.0/2.0)*(2.0-q));
+        else                 return 0.0;
+
+		break;
+    case 1:
+    	// Quadratic
+    	Dim ==2 ? C = 2.0/(h*h*h*h*M_PI) : C = 5.0/(4.0*h*h*h*h*h*M_PI);
+
+    	if (q<=2) 			 return C*(-3.0/4.0);
+		else                 return 0.0;
+
+    	break;
+    case 2:
+    	// Quintic
+    	Dim ==2 ? C = 7.0/(4.0*h*h*h*h*M_PI) : C = 7.0/(8.0*h*h*h*h*h*M_PI);
+
+    	if (q<=2) 			 return -3.0*C*pow((1.0-q/2.0),2)*(1.0+3.0*q-3.0*q*q);
+		else                 return 0.0;
+
+    	break;
+    case 3:
+    	// Gaussian with compact support
+    	Dim ==2 ? C = 1.0/(h*h*h*h*M_PI) : C = 1.0/(h*h*h*h*h*pow(M_PI,(3.0/2.0)));
+
+    	if (q<=2) 			 return C*2.0*(2.0*q*q-1.0)*exp(-q*q);
+		else                 return 0.0;
+
+    	break;
+   default:
+		// Qubic Spline
+	    std::cout << "Kernel No is out of range so Cubic Spline is used" << std::endl;
+    	Dim ==2 ? C = 10.0/(7.0*h*h*h*h*M_PI) : C = 1.0/(h*h*h*h*h*M_PI);
+
+        if ((q>=0.0)&&(q<1)) return C*(-3.0+(9.0/2.0)*q);
+        else if (q<=2)       return C*((3.0/2.0)*(2.0-q));
+        else                 return 0.0;
+
+       break;
+    }
 }
 
 inline double Interaction::Pressure(double Density, double Density0)
