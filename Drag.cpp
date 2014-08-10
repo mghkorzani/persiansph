@@ -37,17 +37,16 @@ int main(int argc, char **argv) try
 	dom.Cs			= 3000.0;
 //	dom.Alpha		= 0.05;
 	dom.MU			= 1.002e-3;
-	dom.P0			= 50.0;
+	dom.P0			= 500.0;
 	dom.PresEq		= 0;
-//	dom.Shepard		= false;
-
+	dom.KernelType	= 2;
 
 	dom.TI			= 0.05;
 	dom.InitialDist = 0.01;
 
 	double xa,ya,xb,yb,yc;
 
-	dom.AddRandomBox(3 ,Vec3_t ( -112.5*0.01 , -101*0.01 , 0.0 ), 225.0*0.01 ,202.5*0.01  ,  0 , 0.005 ,9.9821e-4, 0.011);
+	dom.AddRandomBox(3 ,Vec3_t ( -80*0.01 , -101*0.01 , 0.0 ), 225.0*0.01 ,202.5*0.01  ,  0 , 0.005 ,9.9821e-4, 0.011);
 
 	for (size_t a=0; a<dom.Particles.Size(); a++)
 	{
