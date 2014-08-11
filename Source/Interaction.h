@@ -130,8 +130,9 @@ inline void Interaction::CalcForce(double dt, double CF, bool ShepardFilter)
     Vec3_t VI = 0.0;
 //    if (MU!=0.0) VI = 2.0*MU/(di*dj*norm(rij))*GradKernel(norm(rij),h)*vij;  //Morris et al 1997
 //    if (MU!=0.0) VI = 8.0*MU/((di+dj)*(di+dj)*(dot(rij,rij)+0.01*h*h))*dot(rij,GradKernel(norm(rij),h)*(rij/norm(rij)))*vij; //Shao et al 2003
-//    if (MU!=0.0) VI = MU/(di*dj)*((Dim+1.0/3.0)*GradKernel(norm(rij),h)/norm(rij)*vij+(dot(vij,rij)/3.0*rij+dot(rij,rij)*vij)/norm(rij)*(-1.0/dot(rij,rij)*GradKernel(norm(rij),h)+1.0/norm(rij)*LaplaceKernel(norm(rij),h)));
-//    if (MU!=0.0) VI = MU/(di*dj)*LaplaceKernel(norm(rij),h)*vij;  //Real Viscosity
+    if (MU!=0.0) VI = MU/(di*dj)*((Dim+1.0/3.0)*GradKernel(norm(rij),h)/norm(rij)*vij+(dot(vij,rij)/3.0*rij+dot(rij,rij)*vij)/norm(rij)*
+    		(-1.0/dot(rij,rij)*GradKernel(norm(rij),h)+1.0/norm(rij)*SecDerivativeKernel(norm(rij),h))); //Takeda et al 1994 (Real viscosity considering 1/3Mu for compressibility as per Navier Stokes but ignore volumetric viscosity)
+//    if (MU!=0.0) VI = MU/(di*dj)*LaplaceKernel(norm(rij),h)*vij;  //Real Viscosity (considering incompressible fluid)
 
     // XSPH Monaghan
     if (XSPHC != 0.0)

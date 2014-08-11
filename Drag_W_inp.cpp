@@ -21,32 +21,47 @@
 
 using std::cout;
 using std::endl;
+using std::ifstream;
 
 int main(int argc, char **argv) try
 {
-	SPH::Domain		dom;
+    if (argc<2) throw new Fatal("This program must be called with one argument: the name of the data input file without the '.inp' suffix.\nExample:\t %s filekey\n",argv[0]);
+    String filekey  (argv[1]);
+    String filename (filekey+".inp");
+    ifstream infile(filename.CStr());
+    double velocity;
+    double Cs;
+    double Mu;
+    double P;
+    double PressEq;
+    double Kernel;
+    double h;
+    double tim;
+    double timestep;
+
+    SPH::Domain		dom;
 	dom.Dimension	= 2;
 
 	dom.PeriodicX	= true;
 	dom.PeriodicY	= true;
-	dom.ConstVelPeriodic= 44.6;
+	dom.ConstVelPeriodic= velocity;
 
 	dom.RigidBody	= true;
 	dom.RBTag		= 4;
 
-	dom.Cs			= 800.0;
+	dom.Cs			= Cs;
 //	dom.Alpha		= 0.05;
-	dom.MU			= 1.002e-3;
-	dom.P0			= 50.0;
-	dom.PresEq		= 0;
-	dom.KernelType	= 2;
+	dom.MU			= Mu;
+	dom.P0			= P;
+	dom.PresEq		= abs(PressEq);
+	dom.KernelType	= abs(Kernel);
 
 	dom.TI			= 0.05;
 	dom.InitialDist = 0.01;
 
 	double xa,ya,xb,yb,yc;
 
-	dom.AddRandomBox(3 ,Vec3_t ( -56.25*0.01 , -56.1*0.01 , 0.0 ), 135.0*0.01 ,112.5*0.01  ,  0 , 0.005 ,9.9821e-4, 0.012);
+	dom.AddRandomBox(3 ,Vec3_t ( -80*0.01 , -101*0.01 , 0.0 ), 225.0*0.01 ,202.5*0.01  ,  0 , 0.005 ,9.9821e-4, h);
 
 	for (size_t a=0; a<dom.Particles.Size(); a++)
 	{
@@ -65,7 +80,7 @@ int main(int argc, char **argv) try
 
 	while (xa<=0.1275)
 	{
-		dom.AddSingleParticle(3,Vec3_t ( xa ,  ya , 0.0 ), 4.32238e-8 , 9.9821e-4 , 0.012 , false);
+		dom.AddSingleParticle(3,Vec3_t ( xa ,  ya , 0.0 ), 4.32238e-8 , 9.9821e-4 , h , false);
 		xb= xa+0.00001;
 		yb=sqrt (0.01625625-xb*xb);
 		while(sqrt((xb-xa)*(xb-xa)+(yb-ya)*(yb-ya))<=0.009)
@@ -79,7 +94,7 @@ int main(int argc, char **argv) try
 
 		if (yc>0.0)
 		{
-			dom.AddSingleParticle(3,Vec3_t ( xa , -yc , 0.0 ), 4.32238e-8 , 9.9821e-4 , 0.012 , false);
+			dom.AddSingleParticle(3,Vec3_t ( xa , -yc , 0.0 ), 4.32238e-8 , 9.9821e-4 , h , false);
 		}
 	}
 
@@ -88,7 +103,7 @@ int main(int argc, char **argv) try
 
 	while (xa<=0.12)
 	{
-		dom.AddSingleParticle(3,Vec3_t ( xa ,  ya , 0.0 ), 4.32238e-8 , 9.9821e-4 , 0.012 , false);
+		dom.AddSingleParticle(3,Vec3_t ( xa ,  ya , 0.0 ), 4.32238e-8 , 9.9821e-4 , h , false);
 		xb= xa+0.00001;
 		yb=sqrt (0.0144-xb*xb);
 		while(sqrt((xb-xa)*(xb-xa)+(yb-ya)*(yb-ya))<=0.009)
@@ -102,17 +117,17 @@ int main(int argc, char **argv) try
 
 		if (yc>0.0)
 		{
-			dom.AddSingleParticle(3,Vec3_t ( xa , -yc , 0.0 ), 4.32238e-8 , 9.9821e-4 , 0.012 , false);
+			dom.AddSingleParticle(3,Vec3_t ( xa , -yc , 0.0 ), 4.32238e-8 , 9.9821e-4 , h , false);
 		}
 	}
-	dom.AddSingleParticle(3,Vec3_t ( 0.12 , 0.0 , 0.0 ), 4.32238e-8 , 9.9821e-4 , 0.012 , false);
+	dom.AddSingleParticle(3,Vec3_t ( 0.12 , 0.0 , 0.0 ), 4.32238e-8 , 9.9821e-4 , h , false);
 
 	xa=-0.1125;
 	ya=sqrt (0.01265625-xa*xa);
 
 	while (xa<=0.1125)
 	{
-		dom.AddSingleParticle(4,Vec3_t ( xa ,  ya , 0.0 ), 4.32238e-8 , 9.9821e-4 , 0.012 , true);
+		dom.AddSingleParticle(4,Vec3_t ( xa ,  ya , 0.0 ), 4.32238e-8 , 9.9821e-4 , h , true);
 		xb= xa+0.00001;
 		yb=sqrt (0.01265625-xb*xb);
 		while(sqrt((xb-xa)*(xb-xa)+(yb-ya)*(yb-ya))<=0.009)
@@ -126,12 +141,12 @@ int main(int argc, char **argv) try
 
 		if (yc>0.0)
 		{
-			dom.AddSingleParticle(4,Vec3_t ( xa , -yc , 0.0 ), 4.32238e-8 , 9.9821e-4 , 0.012 , true);
+			dom.AddSingleParticle(4,Vec3_t ( xa , -yc , 0.0 ), 4.32238e-8 , 9.9821e-4 , h , true);
 		}
 	}
 
 	xa=-0.1050;
-	ya=sqrt (0.011025-xa*xa);
+	ya=sqrt (0.015025-xa*xa);
 
 	while (xa<=0.1050)
 	{
@@ -149,14 +164,14 @@ int main(int argc, char **argv) try
 
 		if (yc>0.0)
 		{
-			dom.AddSingleParticle(4,Vec3_t ( xa , -yc , 0.0 ), 4.32238e-8 , 9.9821e-4 , 0.012 , true);
-			dom.AddSingleParticle(4,Vec3_t ( xa ,  yc , 0.0 ), 4.32238e-8 , 9.9821e-4 , 0.012 , true);
+			dom.AddSingleParticle(4,Vec3_t ( xa , -yc , 0.0 ), 4.32238e-8 , 9.9821e-4 , h , true);
+			dom.AddSingleParticle(4,Vec3_t ( xa ,  yc , 0.0 ), 4.32238e-8 , 9.9821e-4 , h , true);
 		}
 	}
 
 //	dom.WriteXDMF("maz");
 
-	dom.Solve(/*tf*/0.2,/*dt*/3.5e-6,/*dtOut*/5.0e-5,"test06");
+	dom.Solve(/*tf*/tim,/*dt*/timestep,/*dtOut*/5.0e-5,"test06");
 	return 0;
 }
 MECHSYS_CATCH
