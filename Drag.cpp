@@ -35,11 +35,11 @@ int main(int argc, char **argv) try
 	dom.RBTag		= 4;
 
 	dom.Cs			= 800.0;
-//	dom.Alpha		= 0.05;
 	dom.MU			= 1.002e-3;
 	dom.P0			= 50.0;
 	dom.PresEq		= 0;
 	dom.KernelType	= 2;
+	dom.Nproc		= 2;
 
 	dom.TI			= 0.05;
 	dom.InitialDist = 0.01;
@@ -130,7 +130,7 @@ int main(int argc, char **argv) try
 		}
 	}
 
-	xa=-0.1050;
+	xa=-0.1051;
 	ya=sqrt (0.011025-xa*xa);
 
 	while (xa<=0.1050)
@@ -153,6 +153,57 @@ int main(int argc, char **argv) try
 			dom.AddSingleParticle(4,Vec3_t ( xa ,  yc , 0.0 ), 4.32238e-8 , 9.9821e-4 , 0.012 , true);
 		}
 	}
+	dom.AddSingleParticle(4,Vec3_t ( 0.1050 , 0.0 , 0.0 ), 4.32238e-8 , 9.9821e-4 , 0.012 , true);
+
+	xa=-0.0975;
+	ya=sqrt (0.00950625-xa*xa);
+
+	while (xa<=0.0975)
+	{
+		xb= xa+0.0001;
+		yb=sqrt (0.00950625-xb*xb);
+		while(sqrt((xb-xa)*(xb-xa)+(yb-ya)*(yb-ya))<=0.009)
+		{
+			xb=xb+0.0001;
+			yb=sqrt (0.00950625-xb*xb);
+		}
+		xa=xb;
+		ya=yb;
+
+		yc=sqrt (0.00950625-xa*xa);
+
+		if (yc>0.0)
+		{
+			dom.AddSingleParticle(4,Vec3_t ( xa , -yc , 0.0 ), 4.32238e-8 , 9.9821e-4 , 0.012 , true);
+			dom.AddSingleParticle(4,Vec3_t ( xa ,  yc , 0.0 ), 4.32238e-8 , 9.9821e-4 , 0.012 , true);
+		}
+	}
+	dom.AddSingleParticle(4,Vec3_t ( -0.0975 , 0.0 , 0.0 ), 4.32238e-8 , 9.9821e-4 , 0.012 , true);
+
+	xa=-0.0925;
+	ya=sqrt (0.00855625-xa*xa);
+	while (xa<=0.0925)
+	{
+		xb= xa+0.0001;
+		yb=sqrt (0.00855625-xb*xb);
+		while(sqrt((xb-xa)*(xb-xa)+(yb-ya)*(yb-ya))<=0.009)
+		{
+			xb=xb+0.0001;
+			yb=sqrt (0.00855625-xb*xb);
+		}
+		xa=xb;
+		ya=yb;
+
+		yc=sqrt (0.00855625-xa*xa);
+
+		if (yc>0.0)
+		{
+			dom.AddSingleParticle(4,Vec3_t ( xa , -yc , 0.0 ), 4.32238e-8 , 9.9821e-4 , 0.012 , true);
+			dom.AddSingleParticle(4,Vec3_t ( xa ,  yc , 0.0 ), 4.32238e-8 , 9.9821e-4 , 0.012 , true);
+		}
+	}
+	dom.AddSingleParticle(4,Vec3_t ( -0.0925 , 0.0 , 0.0 ), 4.32238e-8 , 9.9821e-4 , 0.012 , true);
+
 
 //	dom.WriteXDMF("maz");
 

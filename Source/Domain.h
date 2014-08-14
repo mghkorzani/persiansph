@@ -703,7 +703,7 @@ inline void Domain::CreateInteraction(int a, int b)
 inline void Domain::YZCellsSearch(int q1)
 {
 	int q3,q2;
-	if (Nproc!=1)
+	if (Nproc>1)
 	{
 		// Parallel
 		Array<std::pair<size_t,size_t> > LocalPairs;
@@ -999,8 +999,10 @@ inline void Domain::Move (double dt)
 		{
 			if (Particles[i]->ID==RBTag)
 			{
+				omp_set_lock(&maz_lock);
 				RBForce +=Particles[i]->Mass*Particles[i]->a;
 				RBForceVis +=Particles[i]->Mass*Particles[i]->Vis;
+				omp_unset_lock(&maz_lock);
 			}
 		}
 	}
