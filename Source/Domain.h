@@ -23,7 +23,7 @@
 #include <stdio.h>			/// for NULL
 #include <algorithm>		/// for min,max
 
-#include <Interaction.h>
+#include <Particle.h>
 
 // HDF File Output
 #include <hdf5.h>
@@ -82,10 +82,15 @@ public:
     void Save						(char const * FileKey);																				///< Save the domain in a file
     void Load						(char const * FileKey);																				///< Load the domain from a file
 
+    void	CalcForce	(Particle * P1, Particle * P2);	///< Calculates the contact force between particles
+    double	Kernel		(double r,double h);				///< Kernel function
+    double	GradKernel	(double r,double h);				///< Gradient of the kernel function
+    double LaplaceKernel(double r, double h);				///< Laplacian of the kernel function
+    double SecDerivativeKernel(double r, double h);			///< Second derivative of the kernel function
+    double	Pressure	(double Density, double Density0);	///< Equation of state for a weakly compressible fluid
+    double	SoundSpeed	(double Density, double Density0);	///< Speed of sound in a fluid (dP/drho)
     // Data
     Array <Particle*>		Particles;     	 	///< Array of particles
-    Array <Interaction*>	Interactions;  	 	///< Array of interactions
-    Array <Interaction*>	PInteractions; 	 	///< Array of possible interactions
     double					R;					///< Particle Radius in addrandombox
 
     Array <int>				IinSI;				///< Array to save Interaction No for fixed particles
@@ -195,11 +200,368 @@ inline Domain::Domain ()
 
 inline Domain::~Domain ()
 {
-	size_t Max = Interactions.Size();
-	for (size_t i=1; i<=Max ; i++) Interactions.DelItem(Max-i);
-
-	Max = Particles.Size();
+	size_t Max = Particles.Size();
 	for (size_t i=1; i<=Max; i++)  Particles.DelItem(Max-i);
+}
+inline void Domain::CalcForce(Particle * P1, Particle * P2)
+{
+	double h = (P1->h+P2->h)/2;
+	double di = P1->Density;
+    double dj = P2->Density;
+    double mi = P1->Mass;
+    double mj = P2->Mass;
+    double Pi;
+    double Pj;
+
+    Pi = P1->Pressure = Pressure(P1->Density,P1->RefDensity);
+    Pj = P2->Pressure = Pressure(P2->Density,P2->RefDensity);
+
+    Vec3_t vij = P1->v - P2->v;
+    Vec3_t rij = P1->x - P2->x;
+
+    //Correction of rij for Periodic BC
+    if (DomSize(0)>0.0) {if (rij(0)>2*Cellfac*h || rij(0)<-2*Cellfac*h) {(P1->CC[0]>P2->CC[0]) ? rij(0) -= DomSize(0) : rij(0) += DomSize(0);}}
+	if (DomSize(1)>0.0) {if (rij(1)>2*Cellfac*h || rij(1)<-2*Cellfac*h) {(P1->CC[1]>P2->CC[1]) ? rij(1) -= DomSize(1) : rij(1) += DomSize(1);}}
+	if (DomSize(2)>0.0) {if (rij(2)>2*Cellfac*h || rij(2)<-2*Cellfac*h) {(P1->CC[2]>P2->CC[2]) ? rij(2) -= DomSize(2) : rij(2) += DomSize(2);}}
+
+    //Artificial Viscosity
+    double PIij = 0.0;
+    if (Alpha!=0.0 || Beta!=0.0)
+    {
+    	double MUij = h*dot(vij,rij)/(dot(rij,rij)+0.01*h*h);                                                ///<(2.75) Li, Liu Book
+    	double Cij = 0.5*(SoundSpeed(di,P1->RefDensity)+SoundSpeed(dj,P1->RefDensity));
+    	if (dot(vij,rij)<0) PIij = (-Alpha*Cij*MUij+Beta*MUij*MUij)/(0.5*(di+dj));                          ///<(2.74) Li, Liu Book
+    	else                PIij = 0.0;
+    }
+
+    //Tensile Instability
+    double TIij = 0.0, TIji = 0.0;
+    if ((TI > 0.0) && (Pi < 0.0) && (Pj < 0.0))
+    {
+        TIij = TIji= TI*(-Pi/(di*di)-Pj/(dj*dj))*pow((Kernel(norm(rij),h)/Kernel(InitialDist,h)),4);
+        if (!P1->IsFree) TIij = 0.0;
+        if (!P2->IsFree) TIji = 0.0;
+    }
+
+    //Real Viscosity
+    Vec3_t VI = 0.0;
+    if (!NoSlip || (P1->IsFree*P1->IsFree))
+    {
+	    if (MU!=0.0) VI = 2.0*MU/(di*dj*norm(rij))*GradKernel(norm(rij),h)*vij;  //Morris et al 1997
+	//    if (MU!=0.0) VI = 8.0*MU/((di+dj)*(di+dj)*(dot(rij,rij)+0.01*h*h))*dot(rij,GradKernel(norm(rij),h)*(rij/norm(rij)))*vij; //Shao et al 2003
+//		if (MU!=0.0) VI = MU/(di*dj)*((Dim+1.0/3.0)*GradKernel(norm(rij),h)/norm(rij)*vij+(dot(vij,rij)/3.0*rij+dot(rij,rij)*vij)/norm(rij)*
+//				(-1.0/dot(rij,rij)*GradKernel(norm(rij),h)+1.0/norm(rij)*SecDerivativeKernel(norm(rij),h))); //Takeda et al 1994 (Real viscosity considering 1/3Mu for compressibility as per Navier Stokes but ignore volumetric viscosity)
+	//    if (MU!=0.0) VI = MU/(di*dj)*LaplaceKernel(norm(rij),h)*vij;  //Real Viscosity (considering incompressible fluid)
+    }
+    else
+    {
+    	Vec3_t vab;
+    	P1->IsFree ? vab= P1->v-std::max(-0.5,-1.0*fabs(dot(P2->x,P1->NoSlip1)+P1->NoSlip2(0))/ P1->NoSlip2(2))*P1->v: vab= std::max(-0.5,-1.0*fabs(dot(P1->x,P2->NoSlip1)+P2->NoSlip2(0))/P2->NoSlip2(2))*P2->v-P2->v;
+//    	std::cout<<vij<<" "<<vab<<std::endl;
+    	if (MU!=0.0) VI = 2.0*MU/(di*dj*norm(rij))*GradKernel(norm(rij),h)*vab;  //Morris et al 1997
+//        if (MU!=0.0) VI = MU/(di*dj)*((Dim+1.0/3.0)*GradKernel(norm(rij),h)/norm(rij)*vab+(dot(vab,rij)/3.0*rij+dot(rij,rij)*vab)/norm(rij)*
+//        		(-1.0/dot(rij,rij)*GradKernel(norm(rij),h)+1.0/norm(rij)*SecDerivativeKernel(norm(rij),h))); //Takeda et al 1994 (Real viscosity considering 1/3Mu for compressibility as per Navier Stokes but ignore volumetric viscosity)
+    }
+
+    // XSPH Monaghan
+    if (XSPH != 0.0)
+    {
+        omp_set_lock(&P1->my_lock);
+        P1->VXSPH		+= XSPH*mj/(0.5*(di+dj))*Kernel(norm(rij),h)*-vij;
+        omp_unset_lock(&P1->my_lock);
+
+        omp_set_lock(&P2->my_lock);
+		P2->VXSPH		+= XSPH*mi/(0.5*(di+dj))*Kernel(norm(rij),h)*vij;
+		omp_unset_lock(&P2->my_lock);
+    }
+
+
+    omp_set_lock(&P1->my_lock);
+    P1->a += -mj*(Pi/(di*di)+Pj/(dj*dj)+PIij+TIij)*GradKernel(norm(rij),h)*(rij/norm(rij))+ mj*VI;
+    P1->Vis += mj*VI;
+    if (P1->ct==30 && Shepard)
+    {
+    	P1->SumDen += mj*Kernel(norm(rij),h);
+    	P1->ZWab +=mj/dj*Kernel(norm(rij),h);
+    }
+    P1->dDensity += (di*mj/dj)*dot((vij+P1->VXSPH-P2->VXSPH),(rij/norm(rij)))*GradKernel(norm(rij),h);
+    omp_unset_lock(&P1->my_lock);
+
+
+    omp_set_lock(&P2->my_lock);
+    P2->a -= -mi*(Pi/(di*di)+Pj/(dj*dj)+PIij+TIji)*GradKernel(norm(rij),h)*(rij/norm(rij))+ mi*VI;
+    P2->Vis -= mi*VI;
+    if (P2->ct==30 && Shepard)
+    {
+    	P2->SumDen += mi*Kernel(norm(rij),h);
+    	P2->ZWab +=mi/di*Kernel(norm(rij),h);
+    }
+    P2->dDensity += (dj*mi/di)*dot((-vij+P2->VXSPH-P1->VXSPH),(-rij/norm(rij)))*GradKernel(norm(rij),h);
+    omp_unset_lock(&P2->my_lock);
+}
+
+inline double Domain::Kernel(double r,double h)
+{
+	double C;
+	double q = r/h;
+    if (Dimension<=1 || Dimension>3)
+    {
+    	std::cout << "Please correct dimension for kernel and run again, otherwise 3D is used" << std::endl;
+    	Dimension = 3;
+    }
+	switch (KernelType)
+    {case 0:
+    	// Qubic Spline
+    	Dimension ==2 ? C = 10.0/(7.0*h*h*M_PI) : C = 1.0/(h*h*h*M_PI);
+
+		if ((q>=0.0)&&(q<1)) return C*(1.0-(3.0/2.0)*q*q+(3.0/4.0)*q*q*q);
+		else if (q<=2)       return C*((1.0/4.0)*(2.0-q)*(2.0-q)*(2.0-q));
+		else                 return 0.0;
+
+		break;
+    case 1:
+    	// Quadratic
+    	Dimension ==2 ? C = 2.0/(h*h*M_PI) : C = 5.0/(4.0*h*h*h*M_PI);
+
+    	if (q<=2) 			 return C*(3.0/4.0-(3.0/4.0)*q+(3.0/16.0)*q*q);
+		else                 return 0.0;
+
+    	break;
+    case 2:
+    	// Quintic
+    	Dimension ==2 ? C = 7.0/(4.0*h*h*M_PI) : C = 7.0/(8.0*h*h*h*M_PI);
+
+    	if (q<=2) 			 return C*pow((1.0-q/2.0),4)*(2.0*q+1.0);
+		else                 return 0.0;
+
+    	break;
+    case 3:
+    	// Gaussian with compact support
+    	Dimension ==2 ? C = 1.0/(h*h*M_PI) : C = 1.0/(h*h*h*pow(M_PI,(3.0/2.0)));
+
+    	if (q<=2) 			 return C*exp(-q*q);
+		else                 return 0.0;
+
+    	break;
+   default:
+		// Qubic Spline
+	    std::cout << "Kernel No is out of range so Cubic Spline is used" << std::endl;
+		Dimension ==2 ? C = 10.0/(7.0*h*h*M_PI) : C = 1.0/(h*h*h*M_PI);
+
+		if ((q>=0.0)&&(q<1)) return C*(1.0-(3.0/2.0)*q*q+(3.0/4.0)*q*q*q);
+		else if (q<=2)       return C*((1.0/4.0)*(2.0-q)*(2.0-q)*(2.0-q));
+		else                 return 0.0;
+
+       break;
+    }
+}
+
+inline double Domain::GradKernel(double r, double h)
+{
+	double C;
+	double q = r/h;
+    if (Dimension<=1 || Dimension>3)
+    {
+    	std::cout << "Please correct dimension for kernel and run again, otherwise 3D is used" << std::endl;
+    	Dimension = 3;
+    }
+	switch (KernelType)
+    {case 0:
+    	// Qubic Spline
+    	Dimension ==2 ? C = 10.0/(7.0*h*h*h*M_PI) : C = 1.0/(h*h*h*h*M_PI);
+
+        if ((q>=0.0)&&(q<1)) return C*(-3.0*q+(9.0/4.0)*q*q);
+        else if (q<=2)       return C*((-3.0/4.0)*(2.0-q)*(2.0-q));
+        else                 return 0.0;
+
+		break;
+    case 1:
+    	// Quadratic
+    	Dimension ==2 ? C = 2.0/(h*h*h*M_PI) : C = 5.0/(4.0*h*h*h*h*M_PI);
+
+    	if (q<=2) 			 return C*(-3.0/4.0+(3.0/8.0)*q);
+		else                 return 0.0;
+
+    	break;
+    case 2:
+    	// Quintic
+    	Dimension ==2 ? C = 7.0/(4.0*h*h*h*M_PI) : C = 7.0/(8.0*h*h*h*h*M_PI);
+
+    	if (q<=2) 			 return C*-5.0*q*pow((1.0-q/2.0),3);
+		else                 return 0.0;
+
+    	break;
+    case 3:
+    	// Gaussian with compact support
+    	Dimension ==2 ? C = 1.0/(h*h*h*M_PI) : C = 1.0/(h*h*h*h*pow(M_PI,(3.0/2.0)));
+
+    	if (q<=2) 			 return -2.0*q*C*exp(-q*q);
+		else                 return 0.0;
+
+    	break;
+   default:
+		// Qubic Spline
+	    std::cout << "Kernel No is out of range so Cubic Spline is used" << std::endl;
+    	Dimension ==2 ? C = 10.0/(7.0*h*h*h*M_PI) : C = 1.0/(h*h*h*h*M_PI);
+
+        if ((q>=0.0)&&(q<1)) return C*(-3.0*q+(9.0/4.0)*q*q);
+        else if (q<=2)       return C*(-1.0*(3.0/4.0)*(2.0-q)*(2.0-q));
+        else                 return 0.0;
+
+       break;
+    }
+}
+
+inline double Domain::LaplaceKernel(double r, double h)
+{
+	double C;
+	double q = r/h;
+    if (Dimension<=1 || Dimension>3)
+    {
+    	std::cout << "Please correct dimension for kernel and run again, otherwise 3D is used" << std::endl;
+    	Dimension = 3;
+    }
+	switch (KernelType)
+    {case 0:
+    	// Qubic Spline
+    	Dimension ==2 ? C = 10.0/(7.0*h*h*h*h*M_PI) : C = 1.0/(h*h*h*h*h*M_PI);
+
+        if ((q>=0.0)&&(q<1)) return C*(-3.0+(9.0/2.0)*q)+(Dimension-1)/q*C*(-3.0*q+(9.0/4.0)*q*q);
+        else if (q<=2)       return C*((3.0/2.0)*(2.0-q))+(Dimension-1)/q*C*((-3.0/4.0)*(2.0-q)*(2.0-q));
+        else                 return 0.0;
+
+		break;
+    case 1:
+    	// Quadratic
+    	Dimension ==2 ? C = 2.0/(h*h*h*h*M_PI) : C = 5.0/(4.0*h*h*h*h*h*M_PI);
+
+    	if (q<=2) 			 return C*(-3.0/4.0)+(Dimension-1)/q*C*(-3.0/4.0+(3.0/8.0)*q);
+		else                 return 0.0;
+
+    	break;
+    case 2:
+    	// Quintic
+    	Dimension ==2 ? C = 7.0/(4.0*h*h*h*h*M_PI) : C = 7.0/(8.0*h*h*h*h*h*M_PI);
+
+    	if (q<=2) 			 return -3.0*C*pow((1.0-q/2.0),2)*(1.0+3.0*q-3.0*q*q)+(Dimension-1)/q*C*-5.0*q*pow((1.0-q/2.0),3);
+		else                 return 0.0;
+
+    	break;
+    case 3:
+    	// Gaussian with compact support
+    	Dimension ==2 ? C = 1.0/(h*h*h*h*M_PI) : C = 1.0/(h*h*h*h*h*pow(M_PI,(3.0/2.0)));
+
+    	if (q<=2) 			 return C*2.0*(2.0*q*q-1.0)*exp(-q*q)+(Dimension-1)/q*-2.0*q*C*exp(-q*q);
+		else                 return 0.0;
+
+    	break;
+   default:
+		// Qubic Spline
+	    std::cout << "Kernel No is out of range so Cubic Spline is used" << std::endl;
+    	Dimension ==2 ? C = 10.0/(7.0*h*h*h*h*M_PI) : C = 1.0/(h*h*h*h*h*M_PI);
+
+        if ((q>=0.0)&&(q<1)) return C*(-3.0+(9.0/2.0)*q)+(Dimension-1)/q*C*(-3.0*q+(9.0/4.0)*q*q);
+        else if (q<=2)       return C*((3.0/2.0)*(2.0-q))+(Dimension-1)/q*C*((-3.0/4.0)*(2.0-q)*(2.0-q));
+        else                 return 0.0;
+
+       break;
+    }
+}
+
+inline double Domain::SecDerivativeKernel(double r, double h)
+{
+	double C;
+	double q = r/h;
+    if (Dimension<=1 || Dimension>3)
+    {
+    	std::cout << "Please correct dimension for kernel and run again, otherwise 3D is used" << std::endl;
+    	Dimension = 3;
+    }
+	switch (KernelType)
+    {case 0:
+    	// Qubic Spline
+    	Dimension ==2 ? C = 10.0/(7.0*h*h*h*h*M_PI) : C = 1.0/(h*h*h*h*h*M_PI);
+
+        if ((q>=0.0)&&(q<1)) return C*(-3.0+(9.0/2.0)*q);
+        else if (q<=2)       return C*((3.0/2.0)*(2.0-q));
+        else                 return 0.0;
+
+		break;
+    case 1:
+    	// Quadratic
+    	Dimension ==2 ? C = 2.0/(h*h*h*h*M_PI) : C = 5.0/(4.0*h*h*h*h*h*M_PI);
+
+    	if (q<=2) 			 return C*(-3.0/4.0);
+		else                 return 0.0;
+
+    	break;
+    case 2:
+    	// Quintic
+    	Dimension ==2 ? C = 7.0/(4.0*h*h*h*h*M_PI) : C = 7.0/(8.0*h*h*h*h*h*M_PI);
+
+    	if (q<=2) 			 return -3.0*C*pow((1.0-q/2.0),2)*(1.0+3.0*q-3.0*q*q);
+		else                 return 0.0;
+
+    	break;
+    case 3:
+    	// Gaussian with compact support
+    	Dimension ==2 ? C = 1.0/(h*h*h*h*M_PI) : C = 1.0/(h*h*h*h*h*pow(M_PI,(3.0/2.0)));
+
+    	if (q<=2) 			 return C*2.0*(2.0*q*q-1.0)*exp(-q*q);
+		else                 return 0.0;
+
+    	break;
+   default:
+		// Qubic Spline
+	    std::cout << "Kernel No is out of range so Cubic Spline is used" << std::endl;
+    	Dimension ==2 ? C = 10.0/(7.0*h*h*h*h*M_PI) : C = 1.0/(h*h*h*h*h*M_PI);
+
+        if ((q>=0.0)&&(q<1)) return C*(-3.0+(9.0/2.0)*q);
+        else if (q<=2)       return C*((3.0/2.0)*(2.0-q));
+        else                 return 0.0;
+
+       break;
+    }
+}
+
+inline double Domain::Pressure(double Density, double Density0)
+{
+	switch (PresEq)
+    {
+	case 0:
+		return P0+(Cs*Cs)*(Density-Density0);
+		break;
+	case 1:
+		return P0+(Density0*Cs*Cs/7)*(pow(Density/Density0,7)-1);
+		break;
+	case 2:
+		return (Cs*Cs)*Density;
+		break;
+	default:
+		std::cout << "Please correct Pressure Equation No, otherwise Eq. (0) is used" << std::endl;
+		return P0+(Cs*Cs)*(Density-Density0);
+		break;
+    }
+}
+
+inline double Domain::SoundSpeed(double Density, double Density0)
+{
+	switch (PresEq)
+    {
+	case 0:
+		return Cs;
+		break;
+	case 1:
+		return sqrt((Cs*Cs)*pow(Density/Density0,6));
+		break;
+	case 2:
+		return Cs;
+		break;
+	default:
+		std::cout << "Please correct Pressure Equation No, otherwise Eq. (0) is used" << std::endl;
+		return Cs;
+		break;
+    }
 }
 
 // Methods
@@ -376,15 +738,6 @@ inline void Domain::CheckParticleLeave ()
 		}
 
 		Particles.DelItems(DelParticles);
-
-		#pragma omp parallel for
-		for (size_t i=0; i<Interactions.Size(); i++)
-		{
-		delete [] Interactions[i];
-		}
-
-		PInteractions.Resize(0);
-	    Interactions.Resize(0);
 
 		CellReset();
 		#pragma omp parallel for
@@ -662,44 +1015,44 @@ inline void Domain::CellReset ()
 
 inline void Domain::ListandInteractionUpdate()
 {
-	for (size_t i=0; i<Particles.Size(); i++)
-    {
-	if (Particles[i]->CellUpdate(CellSize,BLPF))
-		{
+//	for (size_t i=0; i<Particles.Size(); i++)
+//    {
+//	if (Particles[i]->CellUpdate(CellSize,BLPF))
+//		{
 		CellReset();
 	    for (size_t a=0; a<Particles.Size(); a++)
 	    	{
 	        Particles[a]->LL = -1;
 	    	}
 	    ListGenerate();
-	    UpdateInteractions();
-	    break;
-		}
-    }
+//	    UpdateInteractions();
+//	    break;
+//		}
+//    }
 }
 
 inline void Domain::CreateInteraction(int a, int b)
 {
-	if (Particles[a]->IsFree || Particles[b]->IsFree)
-    {
-		if (ExInteract [a][b] == -1)
-		{
-			Interactions.Push(new Interaction(Particles[a],Particles[b],Dimension,Alpha,Beta,Cs,MU,XSPH,TI,InitialDist,P0,PresEq,KernelType,DomSize));
-			ExInteract [a][b] = Interactions.size() - 1;
-			ExInteract [b][a] = Interactions.size() - 1;
-			PInteractions.Push(Interactions[ ExInteract [a][b] ]);
-		}
-		else
-		{
-			PInteractions.Push(Interactions[ ExInteract [a][b] ]);
-		}
-
-		// No Slip BC
-		if (!Particles[a]->IsFree || !Particles[b]->IsFree)
-		{
-			IinSI.Push(ExInteract [a][b]);
-		}
-	}
+//	if (Particles[a]->IsFree || Particles[b]->IsFree)
+//    {
+//		if (ExInteract [a][b] == -1)
+//		{
+//			Interactions.Push(new Interaction(Particles[a],Particles[b],Dimension,Alpha,Beta,Cs,MU,XSPH,TI,InitialDist,P0,PresEq,KernelType,DomSize));
+//			ExInteract [a][b] = Interactions.size() - 1;
+//			ExInteract [b][a] = Interactions.size() - 1;
+//			PInteractions.Push(Interactions[ ExInteract [a][b] ]);
+//		}
+//		else
+//		{
+//			PInteractions.Push(Interactions[ ExInteract [a][b] ]);
+//		}
+//
+//		// No Slip BC
+//		if (!Particles[a]->IsFree || !Particles[b]->IsFree)
+//		{
+//			IinSI.Push(ExInteract [a][b]);
+//		}
+//	}
 }
 
 inline void Domain::YZCellsSearch(int q1)
@@ -779,14 +1132,20 @@ inline void Domain::YZCellsSearch(int q1)
 					}
 				}
 			}
-			omp_set_lock(&maz_lock);
-				 for (size_t i=0; i<LocalPairs.Size();i++)
-				{
-					CreateInteraction(LocalPairs[i].first,LocalPairs[i].second);
-				}
-			omp_unset_lock(&maz_lock);
-			LocalPairs.Clear();
 		}
+			for (size_t i=0; i<LocalPairs.Size();i++)
+			{
+				if (Particles[LocalPairs[i].first]->IsFree || Particles[LocalPairs[i].second]->IsFree)
+				 {
+					CalcForce(Particles[LocalPairs[i].first],Particles[LocalPairs[i].second]);
+					// No Slip BC
+//					if (!Particles[LocalPairs[i].first]->IsFree || !Particles[LocalPairs[i].second]->IsFree)
+//					{
+//						IinSI.Push(ExInteract [LocalPairs[i].first][LocalPairs[i].second]);
+//					}
+				}
+			}
+		LocalPairs.Clear();
 	}
 	else
 	{
@@ -876,9 +1235,6 @@ inline void Domain::InitiateInteractions()
     	}
 
 	// Delete old interactions
-	size_t Max = Interactions.Size();
-	for (size_t i=1; i<=Max ; i++) Interactions.DelItem(Max-i);
-    PInteractions.Resize(0);
     IinSI.Resize(0);
     int q1;
 
@@ -896,18 +1252,17 @@ inline void Domain::InitiateInteractions()
 
 inline void Domain::UpdateInteractions()
 {
-	PInteractions.Resize(0);
     IinSI.Resize(0);
     int q1;
 
     if (PeriodicX)
     {
-		#pragma omp parallel for schedule (static) num_threads(Nproc)
+		#pragma omp parallel for schedule (dynamic) num_threads(Nproc)
 		for (q1=1;q1<(CellNo[0]-1); q1++)	YZCellsSearch(q1);
 	}
     else
     {
-		#pragma omp parallel for schedule (static) num_threads(Nproc)
+		#pragma omp parallel for schedule (dynamic) num_threads(Nproc)
     	for (q1=0;q1<CellNo[0]; q1++)	YZCellsSearch(q1);
     }
 }
@@ -978,58 +1333,60 @@ inline void Domain::ComputeAcceleration (double dt)
 //		}
 //	}
 //	NoSlip=false;
-	if (NoSlip)
-	{
-		Vec3_t temp1=0.0;
-//		#pragma omp parallel for
-		for (size_t i=0; i<IinSI.Size(); i++)
-		{
-			if (Interactions[IinSI[i] ]->P1->IsFree && Interactions[IinSI[i] ]->P1->NoSlip2(1)!=1.0)
-			{
-				#pragma omp parallel for
-				for (size_t j=0; j<Particles.Size(); j++)
-				{
-					if (!Particles[j]->IsFree)
-					{
-						if (norm(Interactions[IinSI[i] ]->P1->x-Particles[j]->x) < Interactions[IinSI[i] ]->P1->NoSlip2(2))
-						{
-							omp_set_lock(&Interactions[IinSI[i] ]->P1->my_lock);
-							Interactions[IinSI[i] ]->P1->NoSlip1 = Interactions[IinSI[i] ]->P1->x-Particles[j]->x;
-							Interactions[IinSI[i] ]->P1->NoSlip2(2) = norm(Interactions[IinSI[i] ]->P1->x-Particles[j]->x);
-							omp_unset_lock(&Interactions[IinSI[i] ]->P1->my_lock);
-						}
-					}
-				}
-				Interactions[IinSI[i] ]->P1->NoSlip2(1)=1.0;
-				Interactions[IinSI[i] ]->P1->NoSlip1=Interactions[IinSI[i] ]->P1->NoSlip1/Interactions[IinSI[i] ]->P1->NoSlip2(2);
-				Interactions[IinSI[i] ]->P1->NoSlip2(0)=-1.0*dot(Interactions[IinSI[i] ]->P1->NoSlip1,Interactions[IinSI[i] ]->P2->x);
-			}
+//	if (NoSlip)
+//	{
+//		Vec3_t temp1=0.0;
+////		#pragma omp parallel for
+//		for (size_t i=0; i<IinSI.Size(); i++)
+//		{
+//			if (Interactions[IinSI[i] ]->P1->IsFree && Interactions[IinSI[i] ]->P1->NoSlip2(1)!=1.0)
+//			{
+//				#pragma omp parallel for
+//				for (size_t j=0; j<Particles.Size(); j++)
+//				{
+//					if (!Particles[j]->IsFree)
+//					{
+//						if (norm(Interactions[IinSI[i] ]->P1->x-Particles[j]->x) < Interactions[IinSI[i] ]->P1->NoSlip2(2))
+//						{
+//							omp_set_lock(&Interactions[IinSI[i] ]->P1->my_lock);
+//							Interactions[IinSI[i] ]->P1->NoSlip1 = Interactions[IinSI[i] ]->P1->x-Particles[j]->x;
+//							Interactions[IinSI[i] ]->P1->NoSlip2(2) = norm(Interactions[IinSI[i] ]->P1->x-Particles[j]->x);
+//							omp_unset_lock(&Interactions[IinSI[i] ]->P1->my_lock);
+//						}
+//					}
+//				}
+//				Interactions[IinSI[i] ]->P1->NoSlip2(1)=1.0;
+//				Interactions[IinSI[i] ]->P1->NoSlip1=Interactions[IinSI[i] ]->P1->NoSlip1/Interactions[IinSI[i] ]->P1->NoSlip2(2);
+//				Interactions[IinSI[i] ]->P1->NoSlip2(0)=-1.0*dot(Interactions[IinSI[i] ]->P1->NoSlip1,Interactions[IinSI[i] ]->P2->x);
+//			}
+//
+//			if (Interactions[IinSI[i] ]->P2->IsFree && Interactions[IinSI[i] ]->P2->NoSlip2(1)!=1.0)
+//			{
+//				#pragma omp parallel for
+//				for (size_t j=0; j<Particles.Size(); j++)
+//				{
+//					if (!Particles[j]->IsFree)
+//					{
+//						if (norm(Interactions[IinSI[i] ]->P2->x-Particles[j]->x)<Interactions[IinSI[i] ]->P2->NoSlip2(2))
+//						{
+//							omp_set_lock(&Interactions[IinSI[i] ]->P2->my_lock);
+//							Interactions[IinSI[i] ]->P2->NoSlip1 = Interactions[IinSI[i] ]->P2->x-Particles[j]->x;
+//							Interactions[IinSI[i] ]->P2->NoSlip2(2) = norm(Interactions[IinSI[i] ]->P2->x-Particles[j]->x);
+//							omp_unset_lock(&Interactions[IinSI[i] ]->P2->my_lock);
+//						}
+//					}
+//				}
+//				Interactions[IinSI[i] ]->P2->NoSlip2(1)=1.0;
+//				Interactions[IinSI[i] ]->P2->NoSlip1=Interactions[IinSI[i] ]->P2->NoSlip1/Interactions[IinSI[i] ]->P2->NoSlip2(2);
+//				Interactions[IinSI[i] ]->P2->NoSlip2(0)=-1.0*dot(Interactions[IinSI[i] ]->P2->NoSlip1,Interactions[IinSI[i] ]->P1->x);
+//			}
+//		}
+//	}
 
-			if (Interactions[IinSI[i] ]->P2->IsFree && Interactions[IinSI[i] ]->P2->NoSlip2(1)!=1.0)
-			{
-				#pragma omp parallel for
-				for (size_t j=0; j<Particles.Size(); j++)
-				{
-					if (!Particles[j]->IsFree)
-					{
-						if (norm(Interactions[IinSI[i] ]->P2->x-Particles[j]->x)<Interactions[IinSI[i] ]->P2->NoSlip2(2))
-						{
-							omp_set_lock(&Interactions[IinSI[i] ]->P2->my_lock);
-							Interactions[IinSI[i] ]->P2->NoSlip1 = Interactions[IinSI[i] ]->P2->x-Particles[j]->x;
-							Interactions[IinSI[i] ]->P2->NoSlip2(2) = norm(Interactions[IinSI[i] ]->P2->x-Particles[j]->x);
-							omp_unset_lock(&Interactions[IinSI[i] ]->P2->my_lock);
-						}
-					}
-				}
-				Interactions[IinSI[i] ]->P2->NoSlip2(1)=1.0;
-				Interactions[IinSI[i] ]->P2->NoSlip1=Interactions[IinSI[i] ]->P2->NoSlip1/Interactions[IinSI[i] ]->P2->NoSlip2(2);
-				Interactions[IinSI[i] ]->P2->NoSlip2(0)=-1.0*dot(Interactions[IinSI[i] ]->P2->NoSlip1,Interactions[IinSI[i] ]->P1->x);
-			}
-		}
-	}
+//	#pragma omp parallel for
+//	for (size_t i=0; i<PInteractions.Size(); i++) PInteractions[i]->CalcForce(dt,Cellfac,Shepard,NoSlip);
 
-	#pragma omp parallel for
-	for (size_t i=0; i<PInteractions.Size(); i++) PInteractions[i]->CalcForce(dt,Cellfac,Shepard,NoSlip);
+	UpdateInteractions();
 
 	//Min time step calculation
 	double temp=0.25*sqrt(Particles[1]->h/norm(Particles[1]->a));
@@ -1160,7 +1517,7 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
 
     CellInitiate();
     ListGenerate();
-    InitiateInteractions();
+//    InitiateInteractions();
 
     // Initialization of constant velocity
 //	if (PeriodicX && ConstVelPeriodic>0.0)
@@ -1172,7 +1529,6 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
     while (Time<tf)
     {
 		StartAcceleration(Gravity);
-		if (Time>=0.15 ) ConstVelPeriodic = -23.53*Time+43.5295;
     	ConstVel();
     	ComputeAcceleration(dt);
 //    	ConstVelPart2();

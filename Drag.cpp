@@ -27,7 +27,7 @@ int main(int argc, char **argv) try
 	SPH::Domain		dom;
 	dom.Dimension	= 2;
 
-	dom.NoSlip		= true;
+	dom.NoSlip		= false;
 	dom.PeriodicX	= true;
 	dom.PeriodicY	= true;
 	dom.ConstVelPeriodic= 89.2;
@@ -40,14 +40,14 @@ int main(int argc, char **argv) try
 	dom.P0			= 200.0;
 	dom.PresEq		= 0;
 	dom.KernelType	= 2;
-	dom.Nproc		= 2;
+	dom.Nproc		= 24;
 
 	dom.TI			= 0.05;
 	dom.InitialDist = 0.01;
 
 	double xb,yb,xa,ya,yc;
 
-	dom.AddRandomBox(3 ,Vec3_t ( -50*0.01 , -50*0.01 , 0.0 ), 100.0*0.01 ,100*0.01  ,  0 , 0.005 ,9.9821e-4, 0.012);
+	dom.AddRandomBox(3 ,Vec3_t ( -150*0.01 , -150*0.01 , 0.0 ), 300.0*0.01 ,300*0.01  ,  0 , 0.005 ,9.9821e-4, 0.012);
 
 	for (size_t a=0; a<dom.Particles.Size(); a++)
 	{
