@@ -31,7 +31,7 @@ public:
     		Interaction	(Particle * Pt1, Particle * Pt2,size_t Dim0, double Alpha0, double Beta0, double Cs0, double MU0,
     				double XSPHC0, double TIC0, double InitialDist0, double P00, size_t PresEq0, size_t KernelType0, Vec3_t domsize);
     // Methods
-    void	CalcForce	(double dt, double CF, bool ShepardFilter);	///< Calculates the contact force between particles
+    void	CalcForce	(double dt, double CF, bool ShepardFilter, bool NoSlip);	///< Calculates the contact force between particles
     double	Kernel		(double r,double h);				///< Kernel function
     double	GradKernel	(double r,double h);				///< Gradient of the kernel function
     double LaplaceKernel(double r, double h);				///< Laplacian of the kernel function
@@ -87,7 +87,7 @@ inline Interaction::Interaction (Particle * Pt1, Particle * Pt2,size_t Dim0, dou
     DomainSize = domsize;
 }
 
-inline void Interaction::CalcForce(double dt, double CF, bool ShepardFilter)
+inline void Interaction::CalcForce(double dt, double CF, bool ShepardFilter, bool NoSlip)
 {
 	double di = P1->Density;
     double dj = P2->Density;
@@ -128,11 +128,23 @@ inline void Interaction::CalcForce(double dt, double CF, bool ShepardFilter)
 
     //Real Viscosity
     Vec3_t VI = 0.0;
-//    if (MU!=0.0) VI = 2.0*MU/(di*dj*norm(rij))*GradKernel(norm(rij),h)*vij;  //Morris et al 1997
-//    if (MU!=0.0) VI = 8.0*MU/((di+dj)*(di+dj)*(dot(rij,rij)+0.01*h*h))*dot(rij,GradKernel(norm(rij),h)*(rij/norm(rij)))*vij; //Shao et al 2003
-    if (MU!=0.0) VI = MU/(di*dj)*((Dim+1.0/3.0)*GradKernel(norm(rij),h)/norm(rij)*vij+(dot(vij,rij)/3.0*rij+dot(rij,rij)*vij)/norm(rij)*
-    		(-1.0/dot(rij,rij)*GradKernel(norm(rij),h)+1.0/norm(rij)*SecDerivativeKernel(norm(rij),h))); //Takeda et al 1994 (Real viscosity considering 1/3Mu for compressibility as per Navier Stokes but ignore volumetric viscosity)
-//    if (MU!=0.0) VI = MU/(di*dj)*LaplaceKernel(norm(rij),h)*vij;  //Real Viscosity (considering incompressible fluid)
+    if (!NoSlip || (P1->IsFree*P1->IsFree))
+    {
+	    if (MU!=0.0) VI = 2.0*MU/(di*dj*norm(rij))*GradKernel(norm(rij),h)*vij;  //Morris et al 1997
+	//    if (MU!=0.0) VI = 8.0*MU/((di+dj)*(di+dj)*(dot(rij,rij)+0.01*h*h))*dot(rij,GradKernel(norm(rij),h)*(rij/norm(rij)))*vij; //Shao et al 2003
+//		if (MU!=0.0) VI = MU/(di*dj)*((Dim+1.0/3.0)*GradKernel(norm(rij),h)/norm(rij)*vij+(dot(vij,rij)/3.0*rij+dot(rij,rij)*vij)/norm(rij)*
+//				(-1.0/dot(rij,rij)*GradKernel(norm(rij),h)+1.0/norm(rij)*SecDerivativeKernel(norm(rij),h))); //Takeda et al 1994 (Real viscosity considering 1/3Mu for compressibility as per Navier Stokes but ignore volumetric viscosity)
+	//    if (MU!=0.0) VI = MU/(di*dj)*LaplaceKernel(norm(rij),h)*vij;  //Real Viscosity (considering incompressible fluid)
+    }
+    else
+    {
+    	Vec3_t vab;
+    	P1->IsFree ? vab= P1->v-std::max(-0.5,-1.0*fabs(dot(P2->x,P1->NoSlip1)+P1->NoSlip2(0))/ P1->NoSlip2(2))*P1->v: vab= std::max(-0.5,-1.0*fabs(dot(P1->x,P2->NoSlip1)+P2->NoSlip2(0))/P2->NoSlip2(2))*P2->v-P2->v;
+//    	std::cout<<vij<<" "<<vab<<std::endl;
+    	if (MU!=0.0) VI = 2.0*MU/(di*dj*norm(rij))*GradKernel(norm(rij),h)*vab;  //Morris et al 1997
+//        if (MU!=0.0) VI = MU/(di*dj)*((Dim+1.0/3.0)*GradKernel(norm(rij),h)/norm(rij)*vab+(dot(vab,rij)/3.0*rij+dot(rij,rij)*vab)/norm(rij)*
+//        		(-1.0/dot(rij,rij)*GradKernel(norm(rij),h)+1.0/norm(rij)*SecDerivativeKernel(norm(rij),h))); //Takeda et al 1994 (Real viscosity considering 1/3Mu for compressibility as per Navier Stokes but ignore volumetric viscosity)
+    }
 
     // XSPH Monaghan
     if (XSPHC != 0.0)

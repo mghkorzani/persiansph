@@ -128,6 +128,7 @@ public:
     double					ConstVelPeriodic;	///< Define a constant velocity in the left and the right side of the domain in x direction in periodic condition
 
     bool					PressureBoundary;	///< If it is true, it will get max pressure for solid boundary from neighbors but if false, mean value.
+    bool					NoSlip;				///< If it is true, it will get max pressure for solid boundary from neighbors but if false, mean value.
 
     double 					XSPH;				///< Velocity correction factor
     double 					TI;					///< Tensile instability factor
@@ -170,6 +171,7 @@ inline Domain::Domain ()
     PresEq	= 0;
     KernelType	= 0;
 
+    NoSlip	= false;
     PeriodicX = false;
     PeriodicY = false;
     PeriodicZ = false;
@@ -692,7 +694,7 @@ inline void Domain::CreateInteraction(int a, int b)
 			PInteractions.Push(Interactions[ ExInteract [a][b] ]);
 		}
 
-		// Pressure boundary
+		// No Slip BC
 		if (!Particles[a]->IsFree || !Particles[b]->IsFree)
 		{
 			IinSI.Push(ExInteract [a][b]);
@@ -921,6 +923,8 @@ inline void Domain::StartAcceleration (Vec3_t const & a)
         Particles[i]->ZWab = 0.0;
         Particles[i]->SumDen = 0.0;
         Particles[i]->Vis = 0.0;
+        Particles[i]->NoSlip1 = 0.0;
+        Particles[i]->NoSlip2 = 0.0,0.0,1000000.0;
         if (isnan(Particles[i]->dDensity) || isnan(Particles[i]->Density) || isnan(norm(Particles[i]->v)) || isnan(norm(Particles[i]->x)) || isnan(norm(Particles[i]->a)))
         {
             std::cout<<"NaN Particle No = "<<i<<std::endl;
@@ -973,9 +977,59 @@ inline void Domain::ComputeAcceleration (double dt)
 //			}
 //		}
 //	}
+//	NoSlip=false;
+	if (NoSlip)
+	{
+		Vec3_t temp1=0.0;
+//		#pragma omp parallel for
+		for (size_t i=0; i<IinSI.Size(); i++)
+		{
+			if (Interactions[IinSI[i] ]->P1->IsFree && Interactions[IinSI[i] ]->P1->NoSlip2(1)!=1.0)
+			{
+				#pragma omp parallel for
+				for (size_t j=0; j<Particles.Size(); j++)
+				{
+					if (!Particles[j]->IsFree)
+					{
+						if (norm(Interactions[IinSI[i] ]->P1->x-Particles[j]->x) < Interactions[IinSI[i] ]->P1->NoSlip2(2))
+						{
+							omp_set_lock(&Interactions[IinSI[i] ]->P1->my_lock);
+							Interactions[IinSI[i] ]->P1->NoSlip1 = Interactions[IinSI[i] ]->P1->x-Particles[j]->x;
+							Interactions[IinSI[i] ]->P1->NoSlip2(2) = norm(Interactions[IinSI[i] ]->P1->x-Particles[j]->x);
+							omp_unset_lock(&Interactions[IinSI[i] ]->P1->my_lock);
+						}
+					}
+				}
+				Interactions[IinSI[i] ]->P1->NoSlip2(1)=1.0;
+				Interactions[IinSI[i] ]->P1->NoSlip1=Interactions[IinSI[i] ]->P1->NoSlip1/Interactions[IinSI[i] ]->P1->NoSlip2(2);
+				Interactions[IinSI[i] ]->P1->NoSlip2(0)=-1.0*dot(Interactions[IinSI[i] ]->P1->NoSlip1,Interactions[IinSI[i] ]->P2->x);
+			}
+
+			if (Interactions[IinSI[i] ]->P2->IsFree && Interactions[IinSI[i] ]->P2->NoSlip2(1)!=1.0)
+			{
+				#pragma omp parallel for
+				for (size_t j=0; j<Particles.Size(); j++)
+				{
+					if (!Particles[j]->IsFree)
+					{
+						if (norm(Interactions[IinSI[i] ]->P2->x-Particles[j]->x)<Interactions[IinSI[i] ]->P2->NoSlip2(2))
+						{
+							omp_set_lock(&Interactions[IinSI[i] ]->P2->my_lock);
+							Interactions[IinSI[i] ]->P2->NoSlip1 = Interactions[IinSI[i] ]->P2->x-Particles[j]->x;
+							Interactions[IinSI[i] ]->P2->NoSlip2(2) = norm(Interactions[IinSI[i] ]->P2->x-Particles[j]->x);
+							omp_unset_lock(&Interactions[IinSI[i] ]->P2->my_lock);
+						}
+					}
+				}
+				Interactions[IinSI[i] ]->P2->NoSlip2(1)=1.0;
+				Interactions[IinSI[i] ]->P2->NoSlip1=Interactions[IinSI[i] ]->P2->NoSlip1/Interactions[IinSI[i] ]->P2->NoSlip2(2);
+				Interactions[IinSI[i] ]->P2->NoSlip2(0)=-1.0*dot(Interactions[IinSI[i] ]->P2->NoSlip1,Interactions[IinSI[i] ]->P1->x);
+			}
+		}
+	}
 
 	#pragma omp parallel for
-	for (size_t i=0; i<PInteractions.Size(); i++) PInteractions[i]->CalcForce(dt,Cellfac,Shepard);
+	for (size_t i=0; i<PInteractions.Size(); i++) PInteractions[i]->CalcForce(dt,Cellfac,Shepard,NoSlip);
 
 	//Min time step calculation
 	double temp=0.25*sqrt(Particles[1]->h/norm(Particles[1]->a));
@@ -1118,6 +1172,7 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
     while (Time<tf)
     {
 		StartAcceleration(Gravity);
+		if (Time>=0.15 ) ConstVelPeriodic = -23.53*Time+43.5295;
     	ConstVel();
     	ComputeAcceleration(dt);
 //    	ConstVelPart2();
