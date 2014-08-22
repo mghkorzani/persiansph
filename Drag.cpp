@@ -39,6 +39,7 @@ int main(int argc, char **argv) try
 	dom.MU			= 1.002e-3;
 	dom.P0			= 200.0;
 	dom.PresEq		= 0;
+	dom.VisEq		= 0;
 	dom.KernelType	= 2;
 	dom.Nproc		= 24;
 
@@ -47,7 +48,7 @@ int main(int argc, char **argv) try
 
 	double xb,yb,xa,ya,yc;
 
-	dom.AddRandomBox(3 ,Vec3_t ( -150*0.01 , -150*0.01 , 0.0 ), 300.0*0.01 ,300*0.01  ,  0 , 0.005 ,9.9821e-4, 0.012);
+	dom.AddRandomBox(3 ,Vec3_t ( -50*0.01 , -50*0.01 , 0.0 ), 100.0*0.01 ,100*0.01  ,  0 , 0.005 ,9.9821e-4, 0.012);
 
 	for (size_t a=0; a<dom.Particles.Size(); a++)
 	{

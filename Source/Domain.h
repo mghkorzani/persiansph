@@ -49,7 +49,7 @@ public:
     // Destructor
     ~Domain ();
 
-    // Methods
+    // Domain Part
     void AddSingleParticle			(int tag, Vec3_t const & x, double Mass, double Density, double h, bool Fixed);						///< Add one particle
     void AddBoxLength				(int tag, Vec3_t const &V, double Lx, double Ly, double Lz, size_t nx, size_t ny, size_t nz,
     									double Mass, double Density, double h, bool Fixed);												///< Add a cube of particles with a defined dimensions
@@ -71,32 +71,32 @@ public:
     void CellInitiate				();																									///< Find the size of the domain as a cube, make cells and HOCs
     void ListGenerate				();																									///< Generate linked-list
 
-    void CreateInteraction			(int a, int b);																						///< Create interaction between two particles and put it in PInteractions
-    void YZCellsSearch				(int q1);																							///< Create pairs of particles in XZ plan of cells
+    void YZCellsComputeAcceleration	(int q1);																							///< Create pairs of particles in XZ plan of cells
 
-    void CellReset					();																									///< Reset HOCs to initial value of -1
-    void ListandInteractionUpdate	();																									///< Checks if linked-list needs to be updated
-    void UpdateInteractions			();																									///< Update PInteraction (possible interaction) list
+    void CellReset					();																									///< Reset HOCs and particles' LL to initial value of -1
 
     void WriteXDMF					(char const * FileKey);																				///< Save a XDMF file for the visualization
     void Save						(char const * FileKey);																				///< Save the domain in a file
     void Load						(char const * FileKey);																				///< Load the domain from a file
 
-    void	CalcForce	(Particle * P1, Particle * P2);	///< Calculates the contact force between particles
+    //Interaction Part
+    void	CalcForce	(Particle * P1, Particle * P2);		///< Calculates the contact force between particles
     double	Kernel		(double r,double h);				///< Kernel function
     double	GradKernel	(double r,double h);				///< Gradient of the kernel function
     double LaplaceKernel(double r, double h);				///< Laplacian of the kernel function
     double SecDerivativeKernel(double r, double h);			///< Second derivative of the kernel function
     double	Pressure	(double Density, double Density0);	///< Equation of state for a weakly compressible fluid
     double	SoundSpeed	(double Density, double Density0);	///< Speed of sound in a fluid (dP/drho)
+
     // Data
     Array <Particle*>		Particles;     	 	///< Array of particles
     double					R;					///< Particle Radius in addrandombox
 
-    Array <int>				IinSI;				///< Array to save Interaction No for fixed particles
+    Array <std::pair<size_t,size_t> > PairsWFixed;	///< Array to save pairs of particles which one of them is fixed
 
     double					Time;          	 	///< The simulation time at each step
-    double					AutoSaveInt;		///< Automatic save interval
+    double					AutoSaveInt;		///< Automatic save interval time step
+    double					deltat;				///< Time Step
 
     int 					Dimension;    	  	///< Dimension of the problem
 
@@ -116,7 +116,6 @@ public:
     Vec3_t                  DomSize;			///< Each component of the vector is the domain size in that direction if periodic boundary condition is defined in that direction as well
 
     int					*** HOC;				///< Array of "Head of Chain" for each cell
-    int					 ** ExInteract;			///< Array to save existing interaction No. of "Interactions" to use in "PInteractions"
 
     bool					RigidBody; 			///< If it is true, A rigid body with RTag will be considered
     int						RBTag;				///< Tag of particles for rigid body
@@ -124,7 +123,10 @@ public:
     Vec3_t					RBForceVis;			///< Rigid body force viscosity
 
     double 					P0;					///< background pressure for equation of state
-    size_t					PresEq;				///< Selecting variable to choose a equation of state
+    size_t					PresEq;				///< Selecting variable to choose an equation of state
+
+    size_t					VisEq;				///< Selecting variable to choose an equation for viscosity
+
     size_t					KernelType;			///< Selecting variable to choose a kernel
 
     bool					PeriodicX; 			///< If it is true, periodic boundary condition along x direction will be considered
@@ -132,20 +134,17 @@ public:
     bool					PeriodicZ; 			///< If it is true, periodic boundary condition along z direction will be considered
     double					ConstVelPeriodic;	///< Define a constant velocity in the left and the right side of the domain in x direction in periodic condition
 
-    bool					PressureBoundary;	///< If it is true, it will get max pressure for solid boundary from neighbors but if false, mean value.
-    bool					NoSlip;				///< If it is true, it will get max pressure for solid boundary from neighbors but if false, mean value.
-
+    bool					NoSlip;				///< To simulate No Slip Boundary
     double 					XSPH;				///< Velocity correction factor
     double 					TI;					///< Tensile instability factor
     double 					InitialDist;		///< Initial distance of particles for calculation of tensile instability
+    bool					Shepard;			///< It is a first order correction for the density which is called Shepard Filter
 
-    double					AvgVelocity;		///< Average velocity of the whole domain
+    double					AvgVelocity;		///< Average velocity of the last two column for x periodic constant velocity
 
     size_t					Nproc;				///< No of threads which are going to use in parallel calculation
     omp_lock_t 				maz_lock;			///< Open MP lock to lock Interactions array
 
-    double					deltat;				///< Time Step
-    bool					Shepard;
 
 };
 /////////////////////////////////////////////////////////////////////////////////////////// Implementation /////
@@ -175,14 +174,13 @@ inline Domain::Domain ()
     P0		= 0.0;
     PresEq	= 0;
     KernelType	= 0;
+    VisEq	= 0;
 
     NoSlip	= false;
     PeriodicX = false;
     PeriodicY = false;
     PeriodicZ = false;
     ConstVelPeriodic = 0.0;
-
-    PressureBoundary = false;
 
     XSPH	= 0.0;
     TI		= 0.0;
@@ -203,6 +201,7 @@ inline Domain::~Domain ()
 	size_t Max = Particles.Size();
 	for (size_t i=1; i<=Max; i++)  Particles.DelItem(Max-i);
 }
+
 inline void Domain::CalcForce(Particle * P1, Particle * P2)
 {
 	double h = (P1->h+P2->h)/2;
@@ -219,7 +218,7 @@ inline void Domain::CalcForce(Particle * P1, Particle * P2)
     Vec3_t vij = P1->v - P2->v;
     Vec3_t rij = P1->x - P2->x;
 
-    //Correction of rij for Periodic BC
+    // Correction of rij for Periodic BC
     if (DomSize(0)>0.0) {if (rij(0)>2*Cellfac*h || rij(0)<-2*Cellfac*h) {(P1->CC[0]>P2->CC[0]) ? rij(0) -= DomSize(0) : rij(0) += DomSize(0);}}
 	if (DomSize(1)>0.0) {if (rij(1)>2*Cellfac*h || rij(1)<-2*Cellfac*h) {(P1->CC[1]>P2->CC[1]) ? rij(1) -= DomSize(1) : rij(1) += DomSize(1);}}
 	if (DomSize(2)>0.0) {if (rij(2)>2*Cellfac*h || rij(2)<-2*Cellfac*h) {(P1->CC[2]>P2->CC[2]) ? rij(2) -= DomSize(2) : rij(2) += DomSize(2);}}
@@ -247,20 +246,21 @@ inline void Domain::CalcForce(Particle * P1, Particle * P2)
     Vec3_t VI = 0.0;
     if (!NoSlip || (P1->IsFree*P1->IsFree))
     {
-	    if (MU!=0.0) VI = 2.0*MU/(di*dj*norm(rij))*GradKernel(norm(rij),h)*vij;  //Morris et al 1997
-	//    if (MU!=0.0) VI = 8.0*MU/((di+dj)*(di+dj)*(dot(rij,rij)+0.01*h*h))*dot(rij,GradKernel(norm(rij),h)*(rij/norm(rij)))*vij; //Shao et al 2003
-//		if (MU!=0.0) VI = MU/(di*dj)*((Dim+1.0/3.0)*GradKernel(norm(rij),h)/norm(rij)*vij+(dot(vij,rij)/3.0*rij+dot(rij,rij)*vij)/norm(rij)*
-//				(-1.0/dot(rij,rij)*GradKernel(norm(rij),h)+1.0/norm(rij)*SecDerivativeKernel(norm(rij),h))); //Takeda et al 1994 (Real viscosity considering 1/3Mu for compressibility as per Navier Stokes but ignore volumetric viscosity)
-	//    if (MU!=0.0) VI = MU/(di*dj)*LaplaceKernel(norm(rij),h)*vij;  //Real Viscosity (considering incompressible fluid)
+    	if (MU!=0.0 && VisEq==0) VI = 2.0*MU/(di*dj*norm(rij))*GradKernel(norm(rij),h)*vij;  //Morris et al 1997
+    	if (MU!=0.0 && VisEq==1) VI = 8.0*MU/((di+dj)*(di+dj)*(dot(rij,rij)+0.01*h*h))*dot(rij,GradKernel(norm(rij),h)*(rij/norm(rij)))*vij; //Shao et al 2003
+    	if (MU!=0.0 && VisEq==2) VI = MU/(di*dj)*LaplaceKernel(norm(rij),h)*vij;  //Real Viscosity (considering incompressible fluid)
+    	if (MU!=0.0 && VisEq==3) VI = MU/(di*dj)*((Dimension+1.0/3.0)*GradKernel(norm(rij),h)/norm(rij)*vij+(dot(vij,rij)/3.0*rij+dot(rij,rij)*vij)/norm(rij)*
+    			(-1.0/dot(rij,rij)*GradKernel(norm(rij),h)+1.0/norm(rij)*SecDerivativeKernel(norm(rij),h))); //Takeda et al 1994 (Real viscosity considering 1/3Mu for compressibility as per Navier Stokes but ignore volumetric viscosity)
     }
     else
     {
     	Vec3_t vab;
-    	P1->IsFree ? vab= P1->v-std::max(-0.5,-1.0*fabs(dot(P2->x,P1->NoSlip1)+P1->NoSlip2(0))/ P1->NoSlip2(2))*P1->v: vab= std::max(-0.5,-1.0*fabs(dot(P1->x,P2->NoSlip1)+P2->NoSlip2(0))/P2->NoSlip2(2))*P2->v-P2->v;
-//    	std::cout<<vij<<" "<<vab<<std::endl;
-    	if (MU!=0.0) VI = 2.0*MU/(di*dj*norm(rij))*GradKernel(norm(rij),h)*vab;  //Morris et al 1997
-//        if (MU!=0.0) VI = MU/(di*dj)*((Dim+1.0/3.0)*GradKernel(norm(rij),h)/norm(rij)*vab+(dot(vab,rij)/3.0*rij+dot(rij,rij)*vab)/norm(rij)*
-//        		(-1.0/dot(rij,rij)*GradKernel(norm(rij),h)+1.0/norm(rij)*SecDerivativeKernel(norm(rij),h))); //Takeda et al 1994 (Real viscosity considering 1/3Mu for compressibility as per Navier Stokes but ignore volumetric viscosity)
+    	P1->IsFree ? vab= P1->v-std::max(-0.5,-1.0*fabs(dot(P2->x,P1->NoSlip1)+P1->NoSlip2(0))/ P1->NoSlip2(2))*P1->v: vab= std::max(-0.5,-1.0*fabs(dot(P1->x,P2->NoSlip1)+P2->NoSlip2(0))/P2->NoSlip2(2))*P2->v-P2->v; //Corrected velocity for fixed particle as per Morris et al 1997
+    	if (MU!=0.0 && VisEq==0) VI = 2.0*MU/(di*dj*norm(rij))*GradKernel(norm(rij),h)*vab;  //Morris et al 1997
+    	if (MU!=0.0 && VisEq==1) VI = 8.0*MU/((di+dj)*(di+dj)*(dot(rij,rij)+0.01*h*h))*dot(rij,GradKernel(norm(rij),h)*(rij/norm(rij)))*vab; //Shao et al 2003
+    	if (MU!=0.0 && VisEq==2) VI = MU/(di*dj)*LaplaceKernel(norm(rij),h)*vab;  //Real Viscosity (considering incompressible fluid)
+    	if (MU!=0.0 && VisEq==3) VI = MU/(di*dj)*((Dimension+1.0/3.0)*GradKernel(norm(rij),h)/norm(rij)*vab+(dot(vab,rij)/3.0*rij+dot(rij,rij)*vab)/norm(rij)*
+    			(-1.0/dot(rij,rij)*GradKernel(norm(rij),h)+1.0/norm(rij)*SecDerivativeKernel(norm(rij),h))); //Takeda et al 1994 (Real viscosity considering 1/3Mu for compressibility as per Navier Stokes but ignore volumetric viscosity)
     }
 
     // XSPH Monaghan
@@ -703,9 +703,15 @@ inline void Domain::DelParticles (int const & Tags)
 {
     Array<int> idxs; // indices to be deleted
 
+	#pragma omp parallel for
     for (size_t i=0; i<Particles.Size(); ++i)
     {
-        if (Particles[i]->ID==Tags) idxs.Push(i);
+        if (Particles[i]->ID==Tags)
+		{
+			omp_set_lock(&maz_lock);
+        	idxs.Push(i);
+			omp_unset_lock(&maz_lock);
+		}
     }
     if (idxs.Size()<1) throw new Fatal("Domain::DelParticles: Could not find any particle to be deleted");
     Particles.DelItems (idxs);
@@ -717,36 +723,28 @@ inline void Domain::CheckParticleLeave ()
 {
 	Array <int> DelParticles;
 
+	#pragma omp parallel for
 	for (size_t i=0; i<Particles.Size(); i++)
     {
-		if (!PeriodicX && !PeriodicY && !PeriodicZ){
+		if (!PeriodicX && !PeriodicY && !PeriodicZ)
 			if ((Particles[i]->x(0) >= TRPR(0)) || (Particles[i]->x(1) >= TRPR(1)) || (Particles[i]->x(2) >= TRPR(2)) ||
-					(Particles[i]->x(0) <= BLPF(0)) || (Particles[i]->x(1) <= BLPF(1)) || (Particles[i]->x(2) <= BLPF(2))) DelParticles.Push(i);}
-//		else{
-//			if ((Particles[i]->x(1) >= TRPR(1)) || (Particles[i]->x(2) >= TRPR(2)) ||
-//					(Particles[i]->x(1) <= BLPF(1)) || (Particles[i]->x(2) <= BLPF(2))) DelParticles.Push(i);}
+					(Particles[i]->x(0) <= BLPF(0)) || (Particles[i]->x(1) <= BLPF(1)) || (Particles[i]->x(2) <= BLPF(2)))
+			{
+				omp_set_lock(&maz_lock);
+				DelParticles.Push(i);
+				omp_unset_lock(&maz_lock);
+			}
     }
 
 	if (DelParticles.Size()>0)
 	{
-		std::cout<< DelParticles.Size()<< " Particles are leaving the Domain"<<std::endl;
-
-		for(size_t i =0; i<Particles.Size(); i++)
-		for(size_t j =0; j<Particles.Size(); j++)
-		{
-			ExInteract[i][j] = -1;
-		}
+		std::cout<< DelParticles.Size()<< " particles are leaving the Domain"<<std::endl;
 
 		Particles.DelItems(DelParticles);
 
 		CellReset();
-		#pragma omp parallel for
-	    for (size_t a=0; a<Particles.Size(); a++)
-	    	{
-	        Particles[a]->LL = -1;
-	    	}
+
 	    ListGenerate();
-	    UpdateInteractions();
 	}
 }
 
@@ -757,7 +755,6 @@ inline void Domain::CellInitiate ()
 	TRPR = Particles[0]->x;
 	double rho = 0.0;
 
-	#pragma omp parallel for
 	for (size_t i=0; i<Particles.Size(); i++)
     {
 		if (Particles[i]->x(0) > TRPR(0)) TRPR(0) = Particles[i]->x(0);
@@ -829,7 +826,8 @@ inline void Domain::CellInitiate ()
 		break;
 	}
 
-    if (PeriodicX) CellNo[0] += 2;
+	// Periodic BC modifications
+	if (PeriodicX) CellNo[0] += 2;
     if (PeriodicY) CellNo[1] += 2;
     if (PeriodicZ) CellNo[2] += 2;
 
@@ -837,15 +835,19 @@ inline void Domain::CellInitiate ()
     if (PeriodicY) DomSize[1] = (TRPR(1)-BLPF(1));
     if (PeriodicZ) DomSize[2] = (TRPR(2)-BLPF(2));
 
+    // Check the time step
     double t1,t2;
     t1 = 0.25*hmax/(Cs+ConstVelPeriodic);
     t2 = 0.125*hmax*hmax*rho/MU;
 
-    std::cout << "Max time step should be ";
-    std::cout << "Min value of {"<< t1 <<" , "<< t2 <<" }" << std::endl;
-    if (deltat > std::min(t1,t2)) std::cout << "Please decrease the time step"<< std::endl;
-    std::cout << std::endl;
+    std::cout << "Max time step should be Min value of { "<< t1 <<" , "<< t2 <<" }" << std::endl;
+    if (deltat > std::min(t1,t2))
+    {
+    	std::cout << "Please decrease the time step"<< std::endl;
+    	abort();
+    }
 
+    std::cout << std::endl;
     std::cout << "Min domain Point = " << BLPF << std::endl;
     std::cout << "Max domain Point = " << TRPR << std::endl;
     std::cout << std::endl;
@@ -894,13 +896,6 @@ inline void Domain::ListGenerate ()
             {
                     if ((BLPF(0) - Particles[a]->x(0)) <= hmax) i=0;
                             else std::cout<<"Leaving i<0"<<std::endl;
-                    std::cout<<"No = "<<a<<std::endl;
-                    std::cout<<"X = "<<Particles[a]->x<<std::endl;
-                    std::cout<<"V = "<<Particles[a]->v<<std::endl;
-                    std::cout<<"a = "<<Particles[a]->a<<std::endl;
-                    std::cout<<"P = "<<Particles[a]->Pressure<<std::endl;
-                    std::cout<<"Rho = "<<Particles[a]->Density<<std::endl;
-
             }
             if (j<0)
             {
@@ -1011,260 +1006,100 @@ inline void Domain::CellReset ()
     {
     	HOC[i][j][k] = -1;
     }
+
+    #pragma omp parallel for
+    for (size_t a=0; a<Particles.Size(); a++)
+    {
+    	Particles[a]->LL = -1;
+    }
 }
 
-inline void Domain::ListandInteractionUpdate()
-{
-//	for (size_t i=0; i<Particles.Size(); i++)
-//    {
-//	if (Particles[i]->CellUpdate(CellSize,BLPF))
-//		{
-		CellReset();
-	    for (size_t a=0; a<Particles.Size(); a++)
-	    	{
-	        Particles[a]->LL = -1;
-	    	}
-	    ListGenerate();
-//	    UpdateInteractions();
-//	    break;
-//		}
-//    }
-}
-
-inline void Domain::CreateInteraction(int a, int b)
-{
-//	if (Particles[a]->IsFree || Particles[b]->IsFree)
-//    {
-//		if (ExInteract [a][b] == -1)
-//		{
-//			Interactions.Push(new Interaction(Particles[a],Particles[b],Dimension,Alpha,Beta,Cs,MU,XSPH,TI,InitialDist,P0,PresEq,KernelType,DomSize));
-//			ExInteract [a][b] = Interactions.size() - 1;
-//			ExInteract [b][a] = Interactions.size() - 1;
-//			PInteractions.Push(Interactions[ ExInteract [a][b] ]);
-//		}
-//		else
-//		{
-//			PInteractions.Push(Interactions[ ExInteract [a][b] ]);
-//		}
-//
-//		// No Slip BC
-//		if (!Particles[a]->IsFree || !Particles[b]->IsFree)
-//		{
-//			IinSI.Push(ExInteract [a][b]);
-//		}
-//	}
-}
-
-inline void Domain::YZCellsSearch(int q1)
+inline void Domain::YZCellsComputeAcceleration(int q1)
 {
 	int q3,q2;
-	if (Nproc>1)
+	Array<std::pair<size_t,size_t> > LocalPairs;
+
+	for (PeriodicZ ? q3=1 : q3=0;PeriodicZ ? (q3<(CellNo[2]-1)) : (q3<CellNo[2]); q3++)
+	for (PeriodicY ? q2=1 : q2=0;PeriodicY ? (q2<(CellNo[1]-1)) : (q2<CellNo[1]); q2++)
 	{
-		// Parallel
-		Array<std::pair<size_t,size_t> > LocalPairs;
-
-		for (PeriodicZ ? q3=1 : q3=0;PeriodicZ ? (q3<(CellNo[2]-1)) : (q3<CellNo[2]); q3++)
+		if (HOC[q1][q2][q3]==-1) continue;
+		else
 		{
-			for (PeriodicY ? q2=1 : q2=0;PeriodicY ? (q2<(CellNo[1]-1)) : (q2<CellNo[1]); q2++)
+			int temp1, temp2;
+			temp1 = HOC[q1][q2][q3];
+
+			while (temp1 != -1)
 			{
-				if (HOC[q1][q2][q3]==-1) continue;
-				else
+				// The current cell  => self cell interactions
+				temp2 = Particles[temp1]->LL;
+				while (temp2 != -1)
 				{
-					int temp1, temp2;
-					temp1 = HOC[q1][q2][q3];
+					LocalPairs.Push(std::make_pair(temp1, temp2));
+					temp2 = Particles[temp2]->LL;
+				}
 
-					while (temp1 != -1)
+				// (q1 + 1, q2 , q3)
+				if (q1+1< CellNo[0])
+				{
+					temp2 = HOC[q1+1][q2][q3];
+					while (temp2 != -1)
 					{
-						// The current cell  => self cell interactions
-						temp2 = Particles[temp1]->LL;
-						while (temp2 != -1)
-						{
-							LocalPairs.Push(std::make_pair(temp1, temp2));
-							temp2 = Particles[temp2]->LL;
-						}
+						LocalPairs.Push(std::make_pair(temp1, temp2));
+						temp2 = Particles[temp2]->LL;
+					}
+				}
 
-						// (q1 + 1, q2 , q3)
-						if (q1+1< CellNo[0])
+				// (q1 + a, q2 + 1, q3) & a[-1,1]
+				if (q2+1< CellNo[1])
+				{
+					for (int i = q1-1; i <= q1+1; i++)
+					{
+						if (i<CellNo[0] && i>=0)
 						{
-							temp2 = HOC[q1+1][q2][q3];
+							temp2 = HOC[i][q2+1][q3];
 							while (temp2 != -1)
 							{
 								LocalPairs.Push(std::make_pair(temp1, temp2));
 								temp2 = Particles[temp2]->LL;
 							}
 						}
-
-						// (q1 + a, q2 + 1, q3) & a[-1,1]
-						if (q2+1< CellNo[1])
-						{
-							for (int i = q1-1; i <= q1+1; i++)
-							{
-								if (i<CellNo[0] && i>=0)
-								{
-									temp2 = HOC[i][q2+1][q3];
-									while (temp2 != -1)
-									{
-										LocalPairs.Push(std::make_pair(temp1, temp2));
-										temp2 = Particles[temp2]->LL;
-									}
-								}
-							}
-						}
-
-						// (q1 + a, q2 + b, q3 + 1) & a,b[-1,1] => all 9 cells above the current cell
-						if (q3+1< CellNo[2])
-						{
-							for (int j=q2-1; j<=q2+1; j++)
-							for (int i=q1-1; i<=q1+1; i++)
-							{
-								if (i<CellNo[0] && i>=0 && j<CellNo[1] && j>=0)
-								{
-									temp2 = HOC[i][j][q3+1];
-									while (temp2 != -1)
-									{
-										LocalPairs.Push(std::make_pair(temp1, temp2));
-										temp2 = Particles[temp2]->LL;
-									}
-								}
-							}
-						}
-						temp1 = Particles[temp1]->LL;
 					}
 				}
-			}
-		}
-			for (size_t i=0; i<LocalPairs.Size();i++)
-			{
-				if (Particles[LocalPairs[i].first]->IsFree || Particles[LocalPairs[i].second]->IsFree)
-				 {
-					CalcForce(Particles[LocalPairs[i].first],Particles[LocalPairs[i].second]);
-					// No Slip BC
-//					if (!Particles[LocalPairs[i].first]->IsFree || !Particles[LocalPairs[i].second]->IsFree)
-//					{
-//						IinSI.Push(ExInteract [LocalPairs[i].first][LocalPairs[i].second]);
-//					}
-				}
-			}
-		LocalPairs.Clear();
-	}
-	else
-	{
-		// Serial
-		for (PeriodicZ ? q3=1 : q3=0;PeriodicZ ? (q3<(CellNo[2]-1)) : (q3<CellNo[2]); q3++)
-		for (PeriodicY ? q2=1 : q2=0;PeriodicY ? (q2<(CellNo[1]-1)) : (q2<CellNo[1]); q2++)
-		{
-			if (HOC[q1][q2][q3]==-1) continue;
-			else
-			{
-				int temp1, temp2;
-				temp1 = HOC[q1][q2][q3];
 
-				while (temp1 != -1)
+				// (q1 + a, q2 + b, q3 + 1) & a,b[-1,1] => all 9 cells above the current cell
+				if (q3+1< CellNo[2])
 				{
-					// The current cell  => self cell interactions
-					temp2 = Particles[temp1]->LL;
-					while (temp2 != -1)
+					for (int j=q2-1; j<=q2+1; j++)
+					for (int i=q1-1; i<=q1+1; i++)
 					{
-						CreateInteraction(temp1, temp2);
-						temp2 = Particles[temp2]->LL;
-					}
-
-					// (q1 + 1, q2 , q3)
-					if (q1+1< CellNo[0])
-					{
-						temp2 = HOC[q1+1][q2][q3];
-						while (temp2 != -1)
+						if (i<CellNo[0] && i>=0 && j<CellNo[1] && j>=0)
 						{
-							CreateInteraction(temp1, temp2);
-							temp2 = Particles[temp2]->LL;
-						}
-					}
-
-					// (q1 + a, q2 + 1, q3) & a[-1,1]
-					if (q2+1< CellNo[1])
-					{
-						for (int i = q1-1; i <= q1+1; i++)
-						{
-							if (i<CellNo[0] && i>=0)
+							temp2 = HOC[i][j][q3+1];
+							while (temp2 != -1)
 							{
-								temp2 = HOC[i][q2+1][q3];
-								while (temp2 != -1)
-								{
-									CreateInteraction(temp1, temp2);
-									temp2 = Particles[temp2]->LL;
-								}
+								LocalPairs.Push(std::make_pair(temp1, temp2));
+								temp2 = Particles[temp2]->LL;
 							}
 						}
 					}
-
-					// (q1 + a, q2 + b, q3 + 1) & a,b[-1,1] => all 9 cells above the current cell
-					if (q3+1< CellNo[2])
-					{
-						for (int j=q2-1; j<=q2+1; j++)
-						for (int i=q1-1; i<=q1+1; i++)
-						{
-							if (i<CellNo[0] && i>=0 && j<CellNo[1] && j>=0)
-							{
-								temp2 = HOC[i][j][q3+1];
-								while (temp2 != -1)
-								{
-									CreateInteraction(temp1, temp2);
-									temp2 = Particles[temp2]->LL;
-								}
-							}
-						}
-					}
-					temp1 = Particles[temp1]->LL;
 				}
+				temp1 = Particles[temp1]->LL;
 			}
 		}
 	}
-}
 
-inline void Domain::InitiateInteractions()
-{
-	// Initiate ExInteract
-	ExInteract = new int*[Particles.Size()];
-    for(size_t i =0; i<Particles.Size(); i++)
-    	{
-    	ExInteract[i] = new int[Particles.Size()];
-    	for(size_t j =0; j<Particles.Size(); j++)
-    		{
-    		ExInteract[i][j] = -1;
-    		}
-    	}
+	for (size_t i=0; i<LocalPairs.Size();i++)
+	{
+		if (Particles[LocalPairs[i].first]->IsFree || Particles[LocalPairs[i].second]->IsFree)
+		{
+			CalcForce(Particles[LocalPairs[i].first],Particles[LocalPairs[i].second]);
 
-	// Delete old interactions
-    IinSI.Resize(0);
-    int q1;
-
-    if (PeriodicX)
-    {
-		#pragma omp parallel for schedule (static) num_threads(Nproc)
-		for (q1=1;q1<(CellNo[0]-1); q1++)	YZCellsSearch(q1);
+			// No Slip BC
+			if (NoSlip)
+				if (!Particles[LocalPairs[i].first]->IsFree || !Particles[LocalPairs[i].second]->IsFree) PairsWFixed.Push(LocalPairs[i]);
+		}
 	}
-    else
-    {
-		#pragma omp parallel for schedule (static) num_threads(Nproc)
-    	for (q1=0;q1<CellNo[0]; q1++)	YZCellsSearch(q1);
-    }
-}
-
-inline void Domain::UpdateInteractions()
-{
-    IinSI.Resize(0);
-    int q1;
-
-    if (PeriodicX)
-    {
-		#pragma omp parallel for schedule (dynamic) num_threads(Nproc)
-		for (q1=1;q1<(CellNo[0]-1); q1++)	YZCellsSearch(q1);
-	}
-    else
-    {
-		#pragma omp parallel for schedule (dynamic) num_threads(Nproc)
-    	for (q1=0;q1<CellNo[0]; q1++)	YZCellsSearch(q1);
-    }
+LocalPairs.Clear();
 }
 
 inline void Domain::StartAcceleration (Vec3_t const & a)
@@ -1272,128 +1107,96 @@ inline void Domain::StartAcceleration (Vec3_t const & a)
 	#pragma omp parallel for
 	for (size_t i=0; i<Particles.Size(); i++)
     {
-        Particles[i]->a = a;
-        Particles[i]->dDensity = 0.0;
-        Particles[i]->VXSPH = 0.0;
-        Particles[i]->ZWab = 0.0;
-        Particles[i]->SumDen = 0.0;
-        Particles[i]->Vis = 0.0;
-        Particles[i]->NoSlip1 = 0.0;
-        Particles[i]->NoSlip2 = 0.0,0.0,1000000.0;
+        Particles[i]->a			= a;
+        Particles[i]->dDensity	= 0.0;
+        Particles[i]->VXSPH		= 0.0;
+        Particles[i]->ZWab		= 0.0;
+        Particles[i]->SumDen	= 0.0;
+        Particles[i]->Vis		= 0.0;
+        Particles[i]->NoSlip1	= 0.0;
+        Particles[i]->NoSlip2	= 0.0,0.0,1000000.0;
+
         if (isnan(Particles[i]->dDensity) || isnan(Particles[i]->Density) || isnan(norm(Particles[i]->v)) || isnan(norm(Particles[i]->x)) || isnan(norm(Particles[i]->a)))
         {
             std::cout<<"NaN Particle No = "<<i<<std::endl;
         }
-
     }
 }
 
 inline void Domain::ComputeAcceleration (double dt)
 {
+	if (NoSlip)
+	{
+		Vec3_t temp1=0.0;
 
-//	if (PressureBoundary)
-//	{
-//		// Get max value of pressure from neighbor for solid body particles
-//		#pragma omp parallel for
-//		for (size_t i=0; i<Particles.Size(); i++) if (!Particles[i]->IsFree) Particles[i]->Pressure=0.0;
-//
-//		#pragma omp parallel for
-//		for (size_t i=0; i<IinSI.Size(); i++)
-//		{
-//			if (Interactions[IinSI [i]]->P1->IsFree && !Interactions[IinSI [i]]->P2->IsFree)
-//			{
-//				if (Interactions[IinSI [i]]->P2->Pressure < Interactions[IinSI [i]]->P1->Pressure) Interactions[IinSI [i]]->P2->Pressure = Interactions[IinSI [i]]->P1->Pressure;
-//			}
-//			else
-//			{
-//				if (Interactions[IinSI [i]]->P1->Pressure < Interactions[IinSI [i]]->P2->Pressure) Interactions[IinSI [i]]->P1->Pressure = Interactions[IinSI [i]]->P2->Pressure;
-//
-//			}
-//		}
-//	}
-//	else
-//	{
-//		// Get max value of pressure from neighbor for solid body particles
-//		#pragma omp parallel for
-//		for (size_t i=0; i<Particles.Size(); i++) if (!Particles[i]->IsFree) Particles[i]->Pressure=0.0;
-//
-//		#pragma omp parallel for
-//		for (size_t i=0; i<IinSI.Size(); i++)
-//		{
-//			if (Interactions[IinSI [i]]->P1->IsFree && !Interactions[IinSI [i]]->P2->IsFree)
-//			{
-//				if (Interactions[IinSI [i]]->P2->Pressure == 0.0) Interactions[IinSI [i]]->P2->Pressure = Interactions[IinSI [i]]->P1->Pressure;
-//				else Interactions[IinSI [i]]->P2->Pressure = (Interactions[IinSI [i]]->P2->Pressure + Interactions[IinSI [i]]->P1->Pressure)/2;
-//			}
-//			else
-//			{
-//				if (Interactions[IinSI [i]]->P1->Pressure == 0.0) Interactions[IinSI [i]]->P1->Pressure = Interactions[IinSI [i]]->P2->Pressure;
-//				else Interactions[IinSI [i]]->P1->Pressure = (Interactions[IinSI [i]]->P1->Pressure + Interactions[IinSI [i]]->P2->Pressure)/2;
-//			}
-//		}
-//	}
-//	NoSlip=false;
-//	if (NoSlip)
-//	{
-//		Vec3_t temp1=0.0;
-////		#pragma omp parallel for
-//		for (size_t i=0; i<IinSI.Size(); i++)
-//		{
-//			if (Interactions[IinSI[i] ]->P1->IsFree && Interactions[IinSI[i] ]->P1->NoSlip2(1)!=1.0)
-//			{
-//				#pragma omp parallel for
-//				for (size_t j=0; j<Particles.Size(); j++)
-//				{
-//					if (!Particles[j]->IsFree)
-//					{
-//						if (norm(Interactions[IinSI[i] ]->P1->x-Particles[j]->x) < Interactions[IinSI[i] ]->P1->NoSlip2(2))
-//						{
-//							omp_set_lock(&Interactions[IinSI[i] ]->P1->my_lock);
-//							Interactions[IinSI[i] ]->P1->NoSlip1 = Interactions[IinSI[i] ]->P1->x-Particles[j]->x;
-//							Interactions[IinSI[i] ]->P1->NoSlip2(2) = norm(Interactions[IinSI[i] ]->P1->x-Particles[j]->x);
-//							omp_unset_lock(&Interactions[IinSI[i] ]->P1->my_lock);
-//						}
-//					}
-//				}
-//				Interactions[IinSI[i] ]->P1->NoSlip2(1)=1.0;
-//				Interactions[IinSI[i] ]->P1->NoSlip1=Interactions[IinSI[i] ]->P1->NoSlip1/Interactions[IinSI[i] ]->P1->NoSlip2(2);
-//				Interactions[IinSI[i] ]->P1->NoSlip2(0)=-1.0*dot(Interactions[IinSI[i] ]->P1->NoSlip1,Interactions[IinSI[i] ]->P2->x);
-//			}
-//
-//			if (Interactions[IinSI[i] ]->P2->IsFree && Interactions[IinSI[i] ]->P2->NoSlip2(1)!=1.0)
-//			{
-//				#pragma omp parallel for
-//				for (size_t j=0; j<Particles.Size(); j++)
-//				{
-//					if (!Particles[j]->IsFree)
-//					{
-//						if (norm(Interactions[IinSI[i] ]->P2->x-Particles[j]->x)<Interactions[IinSI[i] ]->P2->NoSlip2(2))
-//						{
-//							omp_set_lock(&Interactions[IinSI[i] ]->P2->my_lock);
-//							Interactions[IinSI[i] ]->P2->NoSlip1 = Interactions[IinSI[i] ]->P2->x-Particles[j]->x;
-//							Interactions[IinSI[i] ]->P2->NoSlip2(2) = norm(Interactions[IinSI[i] ]->P2->x-Particles[j]->x);
-//							omp_unset_lock(&Interactions[IinSI[i] ]->P2->my_lock);
-//						}
-//					}
-//				}
-//				Interactions[IinSI[i] ]->P2->NoSlip2(1)=1.0;
-//				Interactions[IinSI[i] ]->P2->NoSlip1=Interactions[IinSI[i] ]->P2->NoSlip1/Interactions[IinSI[i] ]->P2->NoSlip2(2);
-//				Interactions[IinSI[i] ]->P2->NoSlip2(0)=-1.0*dot(Interactions[IinSI[i] ]->P2->NoSlip1,Interactions[IinSI[i] ]->P1->x);
-//			}
-//		}
-//	}
+		for (size_t i=0; i<PairsWFixed.Size(); i++)
+		{
+			if (Particles[PairsWFixed[i].first]->IsFree && Particles[PairsWFixed[i].first]->NoSlip2(1)!=1.0)
+			{
+				#pragma omp parallel for
+				for (size_t j=0; j<Particles.Size(); j++)
+				{
+					if (!Particles[j]->IsFree)
+					{
+						if (norm(Particles[PairsWFixed[i].first]->x - Particles[j]->x) < Particles[PairsWFixed[i].first]->NoSlip2(2))
+						{
+							omp_set_lock(&Particles[PairsWFixed[i].first]->my_lock);
+							Particles[PairsWFixed[i].first]->NoSlip1    = Particles[PairsWFixed[i].first]->x - Particles[j]->x;
+							Particles[PairsWFixed[i].first]->NoSlip2(2) = norm(Particles[PairsWFixed[i].first]->x - Particles[j]->x);
+							temp1 = Particles[j]->x;
+							omp_unset_lock(&Particles[PairsWFixed[i].first]->my_lock);
+						}
+					}
+				}
+				Particles[PairsWFixed[i].first]->NoSlip2(1) = 1.0;
+				Particles[PairsWFixed[i].first]->NoSlip1    = Particles[PairsWFixed[i].first]->NoSlip1 / Particles[PairsWFixed[i].first]->NoSlip2(2);
+				Particles[PairsWFixed[i].first]->NoSlip2(0) = -1.0*dot(Particles[PairsWFixed[i].first]->NoSlip1 , temp1);
+			}
 
-//	#pragma omp parallel for
-//	for (size_t i=0; i<PInteractions.Size(); i++) PInteractions[i]->CalcForce(dt,Cellfac,Shepard,NoSlip);
+			if (Particles[PairsWFixed[i].second]->IsFree && Particles[PairsWFixed[i].second]->NoSlip2(1)!=1.0)
+			{
+				#pragma omp parallel for
+				for (size_t j=0; j<Particles.Size(); j++)
+				{
+					if (!Particles[j]->IsFree)
+					{
+						if (norm(Particles[PairsWFixed[i].second]->x - Particles[j]->x) < Particles[PairsWFixed[i].second]->NoSlip2(2))
+						{
+							omp_set_lock(&Particles[PairsWFixed[i].second]->my_lock);
+							Particles[PairsWFixed[i].second]->NoSlip1    = Particles[PairsWFixed[i].second]->x - Particles[j]->x;
+							Particles[PairsWFixed[i].second]->NoSlip2(2) = norm(Particles[PairsWFixed[i].second]->x - Particles[j]->x);
+							temp1 = Particles[j]->x;
+							omp_unset_lock(&Particles[PairsWFixed[i].second]->my_lock);
+						}
+					}
+				}
+				Particles[PairsWFixed[i].second]->NoSlip2(1) = 1.0;
+				Particles[PairsWFixed[i].second]->NoSlip1    = Particles[PairsWFixed[i].second]->NoSlip1/Particles[PairsWFixed[i].second]->NoSlip2(2);
+				Particles[PairsWFixed[i].second]->NoSlip2(0) = -1.0*dot(Particles[PairsWFixed[i].second]->NoSlip1 , temp1);
+			}
+		}
+	}
 
-	UpdateInteractions();
+	//Compute everything
+	PairsWFixed.Resize(0);
+    int q1;
+
+    if (PeriodicX)
+    {
+		#pragma omp parallel for schedule (dynamic) num_threads(Nproc)
+		for (q1=1;q1<(CellNo[0]-1); q1++)	YZCellsComputeAcceleration(q1);
+	}
+    else
+    {
+		#pragma omp parallel for schedule (dynamic) num_threads(Nproc)
+    	for (q1=0;q1<CellNo[0]; q1++)	YZCellsComputeAcceleration(q1);
+    }
 
 	//Min time step calculation
 	double temp=0.25*sqrt(Particles[1]->h/norm(Particles[1]->a));
 	#pragma omp parallel for
 	for (size_t i=0; i<Particles.Size(); i++) if ((0.25*sqrt(Particles[i]->h/norm(Particles[i]->a))) < temp) temp = (0.25*sqrt(Particles[i]->h/norm(Particles[i]->a)));
     if (deltat > temp) std::cout << "Please decrease the time step to"<< temp << std::endl;
-
 }
 
 inline void Domain::Move (double dt)
@@ -1411,8 +1214,8 @@ inline void Domain::Move (double dt)
 			if (Particles[i]->ID==RBTag)
 			{
 				omp_set_lock(&maz_lock);
-				RBForce +=Particles[i]->Mass*Particles[i]->a;
-				RBForceVis +=Particles[i]->Mass*Particles[i]->Vis;
+				RBForce    +=Particles[i]->Mass * Particles[i]->a;
+				RBForceVis +=Particles[i]->Mass * Particles[i]->Vis;
 				omp_unset_lock(&maz_lock);
 			}
 		}
@@ -1517,14 +1320,6 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
 
     CellInitiate();
     ListGenerate();
-//    InitiateInteractions();
-
-    // Initialization of constant velocity
-//	if (PeriodicX && ConstVelPeriodic>0.0)
-//	{
-//		#pragma omp parallel for
-//		for (size_t i=0; i<Particles.Size(); i++) if (Particles[i]->IsFree) Particles[i]->v = Vec3_t (ConstVelPeriodic,0.0,0.0);
-//	}
 
     while (Time<tf)
     {
@@ -1568,8 +1363,10 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
        }
 
        Time += dt;
+
        CheckParticleLeave();
-       ListandInteractionUpdate();
+       CellReset();
+       ListGenerate();
     }
 }
 
