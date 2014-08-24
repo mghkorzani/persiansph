@@ -164,7 +164,7 @@ inline Domain::Domain ()
     Gravity	= 0.0,0.0,0.0;
     Cs		= 0.0;
 
-    Cellfac = 2.0;
+    if (KernelType==4)Cellfac = 3.0; else Cellfac = 2.0;
 
     RigidBody = false;
     RBTag	= 0;
@@ -254,12 +254,17 @@ inline void Domain::CalcForce(Particle * P1, Particle * P2)
     }
     else
     {
+    	//Corrected velocity for fixed particle as per Morris et al 1997
     	Vec3_t vab;
-    	P1->IsFree ? vab= P1->v-std::max(-0.5,-1.0*fabs(dot(P2->x,P1->NoSlip1)+P1->NoSlip2(0))/ P1->NoSlip2(2))*P1->v: vab= std::max(-0.5,-1.0*fabs(dot(P1->x,P2->NoSlip1)+P2->NoSlip2(0))/P2->NoSlip2(2))*P2->v-P2->v; //Corrected velocity for fixed particle as per Morris et al 1997
+    	if (P1->IsFree)
+   			vab = P1->v - std::max( -0.5 , -1.0 * fabs(dot( P2->x , P1->NoSlip1 ) + P1->NoSlip2(0) ) / std::max( sqrt(3.0) / 4 * InitialDist , P1->NoSlip2(2) ) ) * P1->v;
+   		else
+    		vab = std::max( -0.5 , -1.0 * fabs(dot( P1->x , P2->NoSlip1 ) + P2->NoSlip2(0) ) / std::max( sqrt(3.0) / 4 * InitialDist , P2->NoSlip2(2) ) ) * P2->v - P2->v;
+
     	if (MU!=0.0 && VisEq==0) VI = 2.0*MU/(di*dj*norm(rij))*GradKernel(norm(rij),h)*vab;  //Morris et al 1997
     	if (MU!=0.0 && VisEq==1) VI = 8.0*MU/((di+dj)*(di+dj)*(dot(rij,rij)+0.01*h*h))*dot(rij,GradKernel(norm(rij),h)*(rij/norm(rij)))*vab; //Shao et al 2003
     	if (MU!=0.0 && VisEq==2) VI = MU/(di*dj)*LaplaceKernel(norm(rij),h)*vab;  //Real Viscosity (considering incompressible fluid)
-    	if (MU!=0.0 && VisEq==3) VI = MU/(di*dj)*((Dimension+1.0/3.0)*GradKernel(norm(rij),h)/norm(rij)*vab+(dot(vab,rij)/3.0*rij+dot(rij,rij)*vab)/norm(rij)*
+    	if (MU!=0.0 && VisEq==3) VI = MU/(di*dj)*((Dimension*vab+1.0/3.0*vij)*GradKernel(norm(rij),h)/norm(rij)+(dot(vij,rij)/3.0*rij+dot(rij,rij)*vab)/norm(rij)*
     			(-1.0/dot(rij,rij)*GradKernel(norm(rij),h)+1.0/norm(rij)*SecDerivativeKernel(norm(rij),h))); //Takeda et al 1994 (Real viscosity considering 1/3Mu for compressibility as per Navier Stokes but ignore volumetric viscosity)
     }
 
@@ -343,6 +348,16 @@ inline double Domain::Kernel(double r,double h)
 		else                 return 0.0;
 
     	break;
+	case 4:
+		// Quintic Spline
+		Dimension ==2 ? C = 7.0/(478.0*h*h*M_PI) : C = 1.0/(120.0*h*h*h*M_PI);
+
+		if ((q>=0.0)&&(q<1)) return C*(pow((3-q),5)-6.0*pow((2-q),5)+15.0*pow((1-q),5));
+		else if (q<=2)       return C*(pow((3-q),5)-6.0*pow((2-q),5));
+		else if (q<=3)       return C*(pow((3-q),5));
+		else                 return 0.0;
+
+		break;
    default:
 		// Qubic Spline
 	    std::cout << "Kernel No is out of range so Cubic Spline is used" << std::endl;
@@ -399,6 +414,16 @@ inline double Domain::GradKernel(double r, double h)
 		else                 return 0.0;
 
     	break;
+	case 4:
+		// Quintic Spline
+		Dimension ==2 ? C = 7.0/(478.0*h*h*h*M_PI) : C = 1.0/(120.0*h*h*h*h*M_PI);
+
+		if ((q>=0.0)&&(q<1)) return C*(-5.0*pow((3-q),4)+30.0*pow((2-q),4)-75.0*pow((1-q),4));
+		else if (q<=2)       return C*(-5.0*pow((3-q),4)+30.0*pow((2-q),4));
+		else if (q<=3)       return C*(-5.0*pow((3-q),4));
+		else                 return 0.0;
+
+		break;
    default:
 		// Qubic Spline
 	    std::cout << "Kernel No is out of range so Cubic Spline is used" << std::endl;
@@ -426,8 +451,8 @@ inline double Domain::LaplaceKernel(double r, double h)
     	// Qubic Spline
     	Dimension ==2 ? C = 10.0/(7.0*h*h*h*h*M_PI) : C = 1.0/(h*h*h*h*h*M_PI);
 
-        if ((q>=0.0)&&(q<1)) return C*(-3.0+(9.0/2.0)*q)+(Dimension-1)/q*C*(-3.0*q+(9.0/4.0)*q*q);
-        else if (q<=2)       return C*((3.0/2.0)*(2.0-q))+(Dimension-1)/q*C*((-3.0/4.0)*(2.0-q)*(2.0-q));
+        if ((q>=0.0)&&(q<1)) return C*(-3.0+(9.0/2.0)*q)+(Dimension-1.0)/q*C*(-3.0*q+(9.0/4.0)*q*q);
+        else if (q<=2)       return C*((3.0/2.0)*(2.0-q))+(Dimension-1.0)/q*C*((-3.0/4.0)*(2.0-q)*(2.0-q));
         else                 return 0.0;
 
 		break;
@@ -435,7 +460,7 @@ inline double Domain::LaplaceKernel(double r, double h)
     	// Quadratic
     	Dimension ==2 ? C = 2.0/(h*h*h*h*M_PI) : C = 5.0/(4.0*h*h*h*h*h*M_PI);
 
-    	if (q<=2) 			 return C*(-3.0/4.0)+(Dimension-1)/q*C*(-3.0/4.0+(3.0/8.0)*q);
+    	if (q<=2) 			 return C*(-3.0/4.0)+(Dimension-1.0)/q*C*(-3.0/4.0+(3.0/8.0)*q);
 		else                 return 0.0;
 
     	break;
@@ -443,7 +468,7 @@ inline double Domain::LaplaceKernel(double r, double h)
     	// Quintic
     	Dimension ==2 ? C = 7.0/(4.0*h*h*h*h*M_PI) : C = 7.0/(8.0*h*h*h*h*h*M_PI);
 
-    	if (q<=2) 			 return -3.0*C*pow((1.0-q/2.0),2)*(1.0+3.0*q-3.0*q*q)+(Dimension-1)/q*C*-5.0*q*pow((1.0-q/2.0),3);
+    	if (q<=2) 			 return -3.0*C*pow((1.0-q/2.0),2)*(1.0+3.0*q-3.0*q*q)+(Dimension-1.0)/q*C*-5.0*q*pow((1.0-q/2.0),3);
 		else                 return 0.0;
 
     	break;
@@ -451,17 +476,27 @@ inline double Domain::LaplaceKernel(double r, double h)
     	// Gaussian with compact support
     	Dimension ==2 ? C = 1.0/(h*h*h*h*M_PI) : C = 1.0/(h*h*h*h*h*pow(M_PI,(3.0/2.0)));
 
-    	if (q<=2) 			 return C*2.0*(2.0*q*q-1.0)*exp(-q*q)+(Dimension-1)/q*-2.0*q*C*exp(-q*q);
+    	if (q<=2) 			 return C*2.0*(2.0*q*q-1.0)*exp(-q*q)+(Dimension-1.0)/q*-2.0*q*C*exp(-q*q);
 		else                 return 0.0;
 
     	break;
+	case 4:
+		// Quintic Spline
+		Dimension ==2 ? C = 7.0/(478.0*h*h*h*h*M_PI) : C = 1.0/(120.0*h*h*h*h*h*M_PI);
+
+		if ((q>=0.0)&&(q<1)) return C*(20.0*pow((3-q),3)-120.0*pow((2-q),3)+300.0*pow((1-q),3))+(Dimension-1.0)/q*C*(-5.0*pow((3-q),4)+30.0*pow((2-q),4)-75.0*pow((1-q),4));
+		else if (q<=2)       return C*(20.0*pow((3-q),3)-120.0*pow((2-q),3))+(Dimension-1.0)/q*C*(-5.0*pow((3-q),4)+30.0*pow((2-q),4));
+		else if (q<=3)       return C*(20.0*pow((3-q),3))+(Dimension-1.0)/q*C*(-5.0*pow((3-q),4));
+		else                 return 0.0;
+
+		break;
    default:
 		// Qubic Spline
 	    std::cout << "Kernel No is out of range so Cubic Spline is used" << std::endl;
     	Dimension ==2 ? C = 10.0/(7.0*h*h*h*h*M_PI) : C = 1.0/(h*h*h*h*h*M_PI);
 
-        if ((q>=0.0)&&(q<1)) return C*(-3.0+(9.0/2.0)*q)+(Dimension-1)/q*C*(-3.0*q+(9.0/4.0)*q*q);
-        else if (q<=2)       return C*((3.0/2.0)*(2.0-q))+(Dimension-1)/q*C*((-3.0/4.0)*(2.0-q)*(2.0-q));
+        if ((q>=0.0)&&(q<1)) return C*(-3.0+(9.0/2.0)*q)+(Dimension-1.0)/q*C*(-3.0*q+(9.0/4.0)*q*q);
+        else if (q<=2)       return C*((3.0/2.0)*(2.0-q))+(Dimension-1.0)/q*C*((-3.0/4.0)*(2.0-q)*(2.0-q));
         else                 return 0.0;
 
        break;
@@ -511,6 +546,16 @@ inline double Domain::SecDerivativeKernel(double r, double h)
 		else                 return 0.0;
 
     	break;
+	case 4:
+		// Quintic Spline
+		Dimension ==2 ? C = 7.0/(478.0*h*h*h*h*M_PI) : C = 1.0/(120.0*h*h*h*h*h*M_PI);
+
+		if ((q>=0.0)&&(q<1)) return C*(20.0*pow((3-q),3)-120.0*pow((2-q),3)+300.0*pow((1-q),3));
+		else if (q<=2)       return C*(20.0*pow((3-q),3)-120.0*pow((2-q),3));
+		else if (q<=3)       return C*(20.0*pow((3-q),3));
+		else                 return 0.0;
+
+		break;
    default:
 		// Qubic Spline
 	    std::cout << "Kernel No is out of range so Cubic Spline is used" << std::endl;
@@ -634,7 +679,6 @@ inline void Domain::AddRandomBox(int tag, Vec3_t const & V, double Lx, double Ly
 		}
 
         Vec3_t temp, Max=V;
-        #pragma omp parallel for
 		for (size_t i=PrePS; i<Particles.Size(); i++)
 		{
 			if (Particles[i]->x(0) > Max(0)) Max(0) = Particles[i]->x(0);
@@ -645,7 +689,7 @@ inline void Domain::AddRandomBox(int tag, Vec3_t const & V, double Lx, double Ly
 		temp = Max-V;
 		double Mass = temp(0)*temp(1)*temp(2)*Density/(Particles.Size()-PrePS);
 
-		#pragma omp parallel for
+		#pragma omp parallel for num_threads(Nproc)
 		for (size_t i=PrePS; i<Particles.Size(); i++)
 		{
 			Particles[i]->Mass = Mass;
@@ -703,7 +747,7 @@ inline void Domain::DelParticles (int const & Tags)
 {
     Array<int> idxs; // indices to be deleted
 
-	#pragma omp parallel for
+	#pragma omp parallel for num_threads(Nproc)
     for (size_t i=0; i<Particles.Size(); ++i)
     {
         if (Particles[i]->ID==Tags)
@@ -723,7 +767,7 @@ inline void Domain::CheckParticleLeave ()
 {
 	Array <int> DelParticles;
 
-	#pragma omp parallel for
+	#pragma omp parallel for num_threads(Nproc)
 	for (size_t i=0; i<Particles.Size(); i++)
     {
 		if (!PeriodicX && !PeriodicY && !PeriodicZ)
@@ -1007,7 +1051,7 @@ inline void Domain::CellReset ()
     	HOC[i][j][k] = -1;
     }
 
-    #pragma omp parallel for
+    #pragma omp parallel for num_threads(Nproc)
     for (size_t a=0; a<Particles.Size(); a++)
     {
     	Particles[a]->LL = -1;
@@ -1096,7 +1140,12 @@ inline void Domain::YZCellsComputeAcceleration(int q1)
 
 			// No Slip BC
 			if (NoSlip)
-				if (!Particles[LocalPairs[i].first]->IsFree || !Particles[LocalPairs[i].second]->IsFree) PairsWFixed.Push(LocalPairs[i]);
+				if (!Particles[LocalPairs[i].first]->IsFree || !Particles[LocalPairs[i].second]->IsFree)
+				{
+					omp_set_lock(&maz_lock);
+					PairsWFixed.Push(LocalPairs[i]);
+					omp_unset_lock(&maz_lock);
+				}
 		}
 	}
 LocalPairs.Clear();
@@ -1104,7 +1153,7 @@ LocalPairs.Clear();
 
 inline void Domain::StartAcceleration (Vec3_t const & a)
 {
-	#pragma omp parallel for
+	#pragma omp parallel for num_threads(Nproc)
 	for (size_t i=0; i<Particles.Size(); i++)
     {
         Particles[i]->a			= a;
@@ -1133,7 +1182,7 @@ inline void Domain::ComputeAcceleration (double dt)
 		{
 			if (Particles[PairsWFixed[i].first]->IsFree && Particles[PairsWFixed[i].first]->NoSlip2(1)!=1.0)
 			{
-				#pragma omp parallel for
+				#pragma omp parallel for num_threads(Nproc)
 				for (size_t j=0; j<Particles.Size(); j++)
 				{
 					if (!Particles[j]->IsFree)
@@ -1155,7 +1204,7 @@ inline void Domain::ComputeAcceleration (double dt)
 
 			if (Particles[PairsWFixed[i].second]->IsFree && Particles[PairsWFixed[i].second]->NoSlip2(1)!=1.0)
 			{
-				#pragma omp parallel for
+				#pragma omp parallel for num_threads(Nproc)
 				for (size_t j=0; j<Particles.Size(); j++)
 				{
 					if (!Particles[j]->IsFree)
@@ -1194,21 +1243,21 @@ inline void Domain::ComputeAcceleration (double dt)
 
 	//Min time step calculation
 	double temp=0.25*sqrt(Particles[1]->h/norm(Particles[1]->a));
-	#pragma omp parallel for
+	#pragma omp parallel for num_threads(Nproc)
 	for (size_t i=0; i<Particles.Size(); i++) if ((0.25*sqrt(Particles[i]->h/norm(Particles[i]->a))) < temp) temp = (0.25*sqrt(Particles[i]->h/norm(Particles[i]->a)));
     if (deltat > temp) std::cout << "Please decrease the time step to"<< temp << std::endl;
 }
 
 inline void Domain::Move (double dt)
 {
-	#pragma omp parallel for
+	#pragma omp parallel for num_threads(Nproc)
 	for (size_t i=0; i<Particles.Size(); i++) Particles[i]->Move(dt,DomSize,TRPR,BLPF,Shepard);
 
 	if (RigidBody)
 	{
 		RBForce = 0.0;
 		RBForceVis = 0.0;
-		#pragma omp parallel for
+		#pragma omp parallel for num_threads(Nproc)
 		for (size_t i=0; i<Particles.Size(); i++)
 		{
 			if (Particles[i]->ID==RBTag)
