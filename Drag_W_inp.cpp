@@ -38,30 +38,43 @@ int main(int argc, char **argv) try
     double h;
     double tim;
     double timestep;
+    infile >> velocity;             infile.ignore(200,'\n');
+    infile >> Cs;             infile.ignore(200,'\n');
+    infile >> Mu;             infile.ignore(200,'\n');
+    infile >> P;             infile.ignore(200,'\n');
+    infile >> PressEq;             infile.ignore(200,'\n');
+    infile >> Kernel;             infile.ignore(200,'\n');
+    infile >> h;             infile.ignore(200,'\n');
+    infile >> tim;             infile.ignore(200,'\n');
+    infile >> timestep;             infile.ignore(200,'\n');
 
     SPH::Domain		dom;
 	dom.Dimension	= 2;
 
+	dom.NoSlip		= true;
 	dom.PeriodicX	= true;
 	dom.PeriodicY	= true;
-	dom.ConstVelPeriodic= velocity;
+	dom.ConstVelPeriodic= velocity*4.461319;
 
 	dom.RigidBody	= true;
 	dom.RBTag		= 4;
 
-	dom.Cs			= Cs;
-//	dom.Alpha		= 0.05;
+	dom.Cs			= 4.461319*velocity*20.0;
 	dom.MU			= Mu;
-	dom.P0			= P;
+
+	if (velocity==100.0) dom.P0	= 3900;
+	if (velocity==80.0) dom.P0	= 2500;
 	dom.PresEq		= abs(PressEq);
+	dom.VisEq		= 0;
 	dom.KernelType	= abs(Kernel);
+	dom.Nproc		= 12;
 
 	dom.TI			= 0.05;
 	dom.InitialDist = 0.01;
 
-	double xa,ya,xb,yb,yc;
+	double xb,yb;
 
-	dom.AddRandomBox(3 ,Vec3_t ( -80*0.01 , -101*0.01 , 0.0 ), 225.0*0.01 ,202.5*0.01  ,  0 , 0.005 ,9.9821e-4, h);
+	dom.AddRandomBox(3 ,Vec3_t ( -125*0.01 , -125*0.01 , 0.0 ), 250.0*0.01 ,250*0.01  ,  0 , 0.005 ,9.9821e-4, 0.012);
 
 	for (size_t a=0; a<dom.Particles.Size(); a++)
 	{
@@ -75,103 +88,74 @@ int main(int argc, char **argv) try
 	}
 	dom.DelParticles(4);
 
-	xa=-0.1275;
-	ya=sqrt (0.01625625-xa*xa);
+	double dx,R;
+	size_t no;
+	dx = 0.01;
 
-	while (xa<=0.1275)
+	R = 0.12982;
+	no = ceil(2*M_PI*R/dx);
+	for (size_t i=0; i<no; i++)
 	{
-		dom.AddSingleParticle(3,Vec3_t ( xa ,  ya , 0.0 ), 4.32238e-8 , 9.9821e-4 , h , false);
-		xb= xa+0.00001;
-		yb=sqrt (0.01625625-xb*xb);
-		while(sqrt((xb-xa)*(xb-xa)+(yb-ya)*(yb-ya))<=0.009)
-		{
-			xb=xb+0.00001;
-			yb=sqrt (0.01625625-xb*xb);
-		}
-		xa=xb;
-		ya=yb;
-		yc=sqrt (0.01625625-xa*xa);
-
-		if (yc>0.0)
-		{
-			dom.AddSingleParticle(3,Vec3_t ( xa , -yc , 0.0 ), 4.32238e-8 , 9.9821e-4 , h , false);
-		}
+		xb = R*cos(2*M_PI/no*i);
+		yb = R*sin(2*M_PI/no*i);
+		dom.AddSingleParticle(3,Vec3_t ( xb ,  yb , 0.0 ), 4.32238e-8 , 9.9821e-4 , 0.012 , false);
 	}
 
-	xa=-0.12;
-	ya=sqrt (0.0144-xa*xa);
-
-	while (xa<=0.12)
+	R = 0.12116;
+	no = ceil(2*M_PI*R/dx);
+	for (size_t i=0; i<no; i++)
 	{
-		dom.AddSingleParticle(3,Vec3_t ( xa ,  ya , 0.0 ), 4.32238e-8 , 9.9821e-4 , h , false);
-		xb= xa+0.00001;
-		yb=sqrt (0.0144-xb*xb);
-		while(sqrt((xb-xa)*(xb-xa)+(yb-ya)*(yb-ya))<=0.009)
-		{
-			xb=xb+0.00001;
-			yb=sqrt (0.0144-xb*xb);
-		}
-		xa=xb;
-		ya=yb;
-		yc=sqrt (0.0144-xa*xa);
-
-		if (yc>0.0)
-		{
-			dom.AddSingleParticle(3,Vec3_t ( xa , -yc , 0.0 ), 4.32238e-8 , 9.9821e-4 , h , false);
-		}
-	}
-	dom.AddSingleParticle(3,Vec3_t ( 0.12 , 0.0 , 0.0 ), 4.32238e-8 , 9.9821e-4 , h , false);
-
-	xa=-0.1125;
-	ya=sqrt (0.01265625-xa*xa);
-
-	while (xa<=0.1125)
-	{
-		dom.AddSingleParticle(4,Vec3_t ( xa ,  ya , 0.0 ), 4.32238e-8 , 9.9821e-4 , h , true);
-		xb= xa+0.00001;
-		yb=sqrt (0.01265625-xb*xb);
-		while(sqrt((xb-xa)*(xb-xa)+(yb-ya)*(yb-ya))<=0.009)
-		{
-			xb=xb+0.00001;
-			yb=sqrt (0.01265625-xb*xb);
-		}
-		xa=xb;
-		ya=yb;
-		yc=sqrt (0.01265625-xa*xa);
-
-		if (yc>0.0)
-		{
-			dom.AddSingleParticle(4,Vec3_t ( xa , -yc , 0.0 ), 4.32238e-8 , 9.9821e-4 , h , true);
-		}
+		xb = R*cos(2*M_PI/no*i);
+		yb = R*sin(2*M_PI/no*i);
+		dom.AddSingleParticle(3,Vec3_t ( xb ,  yb , 0.0 ), 4.32238e-8 , 9.9821e-4 , 0.012 , false);
 	}
 
-	xa=-0.1050;
-	ya=sqrt (0.015025-xa*xa);
-
-	while (xa<=0.1050)
+	R = 0.1125;
+	no = ceil(2*M_PI*R/dx);
+	for (size_t i=0; i<no; i++)
 	{
-		xb= xa+0.0001;
-		yb=sqrt (0.011025-xb*xb);
-		while(sqrt((xb-xa)*(xb-xa)+(yb-ya)*(yb-ya))<=0.009)
-		{
-			xb=xb+0.0001;
-			yb=sqrt (0.011025-xb*xb);
-		}
-		xa=xb;
-		ya=yb;
-
-		yc=sqrt (0.011025-xa*xa);
-
-		if (yc>0.0)
-		{
-			dom.AddSingleParticle(4,Vec3_t ( xa , -yc , 0.0 ), 4.32238e-8 , 9.9821e-4 , h , true);
-			dom.AddSingleParticle(4,Vec3_t ( xa ,  yc , 0.0 ), 4.32238e-8 , 9.9821e-4 , h , true);
-		}
+		xb = R*cos(2*M_PI/no*i);
+		yb = R*sin(2*M_PI/no*i);
+		dom.AddSingleParticle(4,Vec3_t ( xb ,  yb , 0.0 ), 4.32238e-8 , 9.9821e-4 , 0.012 , true);
 	}
 
-//	dom.WriteXDMF("maz");
+	R = 0.10384;
+//	no = ceil(2*M_PI*R/dx);
+	for (size_t i=0; i<no; i++)
+	{
+		xb = R*cos(2*M_PI/no*i+M_PI/no);
+		yb = R*sin(2*M_PI/no*i+M_PI/no);
+		dom.AddSingleParticle(4,Vec3_t ( xb ,  yb , 0.0 ), 4.32238e-8 , 9.9821e-4 , 0.012 , true);
+	}
 
-	dom.Solve(/*tf*/tim,/*dt*/timestep,/*dtOut*/5.0e-5,"test06");
+	R = 0.09518;
+//	no = ceil(2*M_PI*R/dx);
+	for (size_t i=0; i<no; i++)
+	{
+		xb = R*cos(2*M_PI/no*i);
+		yb = R*sin(2*M_PI/no*i);
+		dom.AddSingleParticle(4,Vec3_t ( xb ,  yb , 0.0 ), 4.32238e-8 , 9.9821e-4 , 0.012 , true);
+	}
+
+	R = 0.08652;
+//	no = ceil(2*M_PI*R/dx);
+	for (size_t i=0; i<no; i++)
+	{
+		xb = R*cos(2*M_PI/no*i+M_PI/no);
+		yb = R*sin(2*M_PI/no*i+M_PI/no);
+		dom.AddSingleParticle(4,Vec3_t ( xb ,  yb , 0.0 ), 4.32238e-8 , 9.9821e-4 , 0.012 , true);
+	}
+
+	R = 0.07786;
+//	no = ceil(2*M_PI*R/dx);
+	for (size_t i=0; i<no; i++)
+	{
+		xb = R*cos(2*M_PI/no*i);
+		yb = R*sin(2*M_PI/no*i);
+		dom.AddSingleParticle(4,Vec3_t ( xb ,  yb , 0.0 ), 4.32238e-8 , 9.9821e-4 , 0.012 , true);
+	}
+
+	dom.Solve(/*tf*/tim,/*dt*/(0.2*h/(dom.Cs+dom.ConstVelPeriodic)),/*dtOut*/5.0e-5,"test06");
 	return 0;
 }
 MECHSYS_CATCH
