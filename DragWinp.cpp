@@ -21,10 +21,22 @@
 
 using std::cout;
 using std::endl;
+using std::ifstream;
 
 int main(int argc, char **argv) try
 {
-	SPH::Domain		dom;
+    if (argc<2) throw new Fatal("This program must be called with one argument: the name of the data input file without the '.inp' suffix.\nExample:\t %s filekey\n",argv[0]);
+    String filekey  (argv[1]);
+    String filename (filekey+".inp");
+    ifstream infile(filename.CStr());
+    double Ref;
+    double Csf;
+    double P0f;
+    infile >> Ref;		infile.ignore(200,'\n');
+    infile >> Csf;		infile.ignore(200,'\n');
+    infile >> P0f;		infile.ignore(200,'\n');
+
+    SPH::Domain		dom;
 	dom.Dimension	= 2;
 
 	dom.NoSlip		= true;
@@ -36,7 +48,7 @@ int main(int argc, char **argv) try
 
 	dom.MU			= 1.002e-3;
 	dom.PresEq		= 0;
-	dom.VisEq		= 0;
+	dom.VisEq		= P0f;
 	dom.KernelType	= 2;
 	dom.Nproc		= 6;
 
@@ -51,12 +63,16 @@ int main(int argc, char **argv) try
 	dx = 0.002;
 	Rc = 0.02;
 	mass = (sqrt(3.0)*dx*dx/4.0)*rho;
-	Re = 60.0;
+	Re = Ref;
 
 	dom.ConstVelPeriodic= Re*dom.MU/(rho*2.0*Rc);
-	dom.Cs				= dom.ConstVelPeriodic*10.0;
-	dom.P0			= dom.Cs*dom.Cs*rho;
+	dom.Cs				= dom.ConstVelPeriodic*Csf;
+	dom.P0				= dom.Cs*dom.Cs*rho;
 	dom.InitialDist = dx;
+
+	std::cout<<"Cs = "<<dom.Cs<<std::endl;
+	std::cout<<"V  = "<<dom.Cs/Csf<<std::endl;
+	std::cout<<"P0 = "<<dom.P0<<std::endl;
 
 	dom.AddRandomBox(3 ,Vec3_t ( -100.0*0.002 , -100.0*0.002 , 0.0 ), 200.0*0.002 ,200.0*0.002  ,  0 , 0.001 ,rho, h);
 
@@ -135,7 +151,10 @@ int main(int argc, char **argv) try
 		dom.AddSingleParticle(4,Vec3_t ( xb ,  yb , 0.0 ), mass , rho , h , true);
 	}
 
-	dom.Solve(/*tf*/15000.0,/*dt*/(0.1*h/(dom.Cs+dom.ConstVelPeriodic)),/*dtOut*/(2.0*h/(dom.Cs+dom.ConstVelPeriodic)),"test06");
+	double maz;
+	maz=(0.1*h/(dom.Cs+dom.ConstVelPeriodic));
+
+	dom.Solve(/*tf*/10000.0,/*dt*/maz,/*dtOut*/(2.0*h/(dom.Cs+dom.ConstVelPeriodic)),"test06");
 	return 0;
 }
 MECHSYS_CATCH

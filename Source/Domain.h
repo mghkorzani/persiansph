@@ -319,54 +319,47 @@ inline double Domain::Kernel(double r,double h)
     	// Qubic Spline
     	Dimension ==2 ? C = 10.0/(7.0*h*h*M_PI) : C = 1.0/(h*h*h*M_PI);
 
-		if ((q>=0.0)&&(q<1)) return C*(1.0-(3.0/2.0)*q*q+(3.0/4.0)*q*q*q);
-		else if (q<=2)       return C*((1.0/4.0)*(2.0-q)*(2.0-q)*(2.0-q));
-		else                 return 0.0;
+		if ((q>=0.0)&&(q<1.0))	return C*(1.0-(3.0/2.0)*q*q+(3.0/4.0)*q*q*q);
+		else if (q<2.0)			return C*((1.0/4.0)*(2.0-q)*(2.0-q)*(2.0-q));
+		else					return 0.0;
 
 		break;
     case 1:
     	// Quadratic
     	Dimension ==2 ? C = 2.0/(h*h*M_PI) : C = 5.0/(4.0*h*h*h*M_PI);
 
-    	if (q<=2) 			 return C*(3.0/4.0-(3.0/4.0)*q+(3.0/16.0)*q*q);
-		else                 return 0.0;
+    	if (q<2.0)				return C*(3.0/4.0-(3.0/4.0)*q+(3.0/16.0)*q*q);
+		else					return 0.0;
 
     	break;
     case 2:
     	// Quintic
     	Dimension ==2 ? C = 7.0/(4.0*h*h*M_PI) : C = 7.0/(8.0*h*h*h*M_PI);
 
-    	if (q<=2) 			 return C*pow((1.0-q/2.0),4)*(2.0*q+1.0);
-		else                 return 0.0;
+    	if (q<2.0)				return C*pow((1.0-q/2.0),4)*(2.0*q+1.0);
+		else					return 0.0;
 
     	break;
     case 3:
     	// Gaussian with compact support
     	Dimension ==2 ? C = 1.0/(h*h*M_PI) : C = 1.0/(h*h*h*pow(M_PI,(3.0/2.0)));
 
-    	if (q<=2) 			 return C*exp(-q*q);
-		else                 return 0.0;
+    	if (q<=2.0)				return C*exp(-q*q);
+		else					return 0.0;
 
     	break;
 	case 4:
 		// Quintic Spline
 		Dimension ==2 ? C = 7.0/(478.0*h*h*M_PI) : C = 1.0/(120.0*h*h*h*M_PI);
 
-		if ((q>=0.0)&&(q<1)) return C*(pow((3-q),5)-6.0*pow((2-q),5)+15.0*pow((1-q),5));
-		else if (q<=2)       return C*(pow((3-q),5)-6.0*pow((2-q),5));
-		else if (q<=3)       return C*(pow((3-q),5));
-		else                 return 0.0;
+		if ((q>=0.0)&&(q<1.0))	return C*(pow((3.0-q),5.0)-6.0*pow((2.0-q),5.0)+15.0*pow((1.0-q),5.0));
+		else if (q<2.0)			return C*(pow((3.0-q),5.0)-6.0*pow((2.0-q),5.0));
+		else if (q<3.0)			return C*(pow((3.0-q),5.0));
+		else					return 0.0;
 
 		break;
    default:
-		// Qubic Spline
-	    std::cout << "Kernel No is out of range so Cubic Spline is used" << std::endl;
-		Dimension ==2 ? C = 10.0/(7.0*h*h*M_PI) : C = 1.0/(h*h*h*M_PI);
-
-		if ((q>=0.0)&&(q<1)) return C*(1.0-(3.0/2.0)*q*q+(3.0/4.0)*q*q*q);
-		else if (q<=2)       return C*((1.0/4.0)*(2.0-q)*(2.0-q)*(2.0-q));
-		else                 return 0.0;
-
+	   abort();
        break;
     }
 }
@@ -385,55 +378,48 @@ inline double Domain::GradKernel(double r, double h)
     	// Qubic Spline
     	Dimension ==2 ? C = 10.0/(7.0*h*h*h*M_PI) : C = 1.0/(h*h*h*h*M_PI);
 
-        if ((q>=0.0)&&(q<1)) return C*(-3.0*q+(9.0/4.0)*q*q);
-        else if (q<=2)       return C*((-3.0/4.0)*(2.0-q)*(2.0-q));
-        else                 return 0.0;
+        if ((q>=0.0)&&(q<1.0))	return C*(-3.0*q+(9.0/4.0)*q*q);
+        else if (q<2.0)			return C*((-3.0/4.0)*(2.0-q)*(2.0-q));
+        else					return 0.0;
 
 		break;
     case 1:
     	// Quadratic
     	Dimension ==2 ? C = 2.0/(h*h*h*M_PI) : C = 5.0/(4.0*h*h*h*h*M_PI);
 
-    	if (q<=2) 			 return C*(-3.0/4.0+(3.0/8.0)*q);
-		else                 return 0.0;
+    	if (q<2.0)				return C*(-3.0/4.0+(3.0/8.0)*q);
+		else					return 0.0;
 
     	break;
     case 2:
     	// Quintic
     	Dimension ==2 ? C = 7.0/(4.0*h*h*h*M_PI) : C = 7.0/(8.0*h*h*h*h*M_PI);
 
-    	if (q<=2) 			 return C*-5.0*q*pow((1.0-q/2.0),3);
-		else                 return 0.0;
+    	if (q<2.0)				return C*-5.0*q*pow((1.0-q/2.0),3.0);
+		else					return 0.0;
 
     	break;
     case 3:
     	// Gaussian with compact support
     	Dimension ==2 ? C = 1.0/(h*h*h*M_PI) : C = 1.0/(h*h*h*h*pow(M_PI,(3.0/2.0)));
 
-    	if (q<=2) 			 return -2.0*q*C*exp(-q*q);
-		else                 return 0.0;
+    	if (q<=2.0)				return C*-2.0*q*exp(-q*q);
+		else					return 0.0;
 
     	break;
 	case 4:
 		// Quintic Spline
 		Dimension ==2 ? C = 7.0/(478.0*h*h*h*M_PI) : C = 1.0/(120.0*h*h*h*h*M_PI);
 
-		if ((q>=0.0)&&(q<1)) return C*(-5.0*pow((3-q),4)+30.0*pow((2-q),4)-75.0*pow((1-q),4));
-		else if (q<=2)       return C*(-5.0*pow((3-q),4)+30.0*pow((2-q),4));
-		else if (q<=3)       return C*(-5.0*pow((3-q),4));
-		else                 return 0.0;
+		if ((q>=0.0)&&(q<1.0))	return C*(-5.0*pow((3.0-q),4.0)+30.0*pow((2.0-q),4.0)-75.0*pow((1.0-q),4.0));
+		else if (q<2.0)			return C*(-5.0*pow((3.0-q),4.0)+30.0*pow((2.0-q),4.0));
+		else if (q<3.0)			return C*(-5.0*pow((3.0-q),4.0));
+		else					return 0.0;
 
 		break;
    default:
-		// Qubic Spline
-	    std::cout << "Kernel No is out of range so Cubic Spline is used" << std::endl;
-    	Dimension ==2 ? C = 10.0/(7.0*h*h*h*M_PI) : C = 1.0/(h*h*h*h*M_PI);
-
-        if ((q>=0.0)&&(q<1)) return C*(-3.0*q+(9.0/4.0)*q*q);
-        else if (q<=2)       return C*(-1.0*(3.0/4.0)*(2.0-q)*(2.0-q));
-        else                 return 0.0;
-
-       break;
+	   abort();
+	   break;
     }
 }
 
@@ -451,55 +437,49 @@ inline double Domain::LaplaceKernel(double r, double h)
     	// Qubic Spline
     	Dimension ==2 ? C = 10.0/(7.0*h*h*h*h*M_PI) : C = 1.0/(h*h*h*h*h*M_PI);
 
-        if ((q>=0.0)&&(q<1)) return C*(-3.0+(9.0/2.0)*q)+(Dimension-1.0)/q*C*(-3.0*q+(9.0/4.0)*q*q);
-        else if (q<=2)       return C*((3.0/2.0)*(2.0-q))+(Dimension-1.0)/q*C*((-3.0/4.0)*(2.0-q)*(2.0-q));
-        else                 return 0.0;
+        if ((q>=0.0)&&(q<1.0))	return C*(-3.0+(9.0/2.0)*q)  + C*(Dimension-1.0)/q * (-3.0*q+(9.0/4.0)*q*q);
+        else if (q<2.0)			return C*((3.0/2.0)*(2.0-q)) + C*(Dimension-1.0)/q * ((-3.0/4.0)*(2.0-q)*(2.0-q));
+        else					return 0.0;
 
 		break;
     case 1:
     	// Quadratic
     	Dimension ==2 ? C = 2.0/(h*h*h*h*M_PI) : C = 5.0/(4.0*h*h*h*h*h*M_PI);
 
-    	if (q<=2) 			 return C*(-3.0/4.0)+(Dimension-1.0)/q*C*(-3.0/4.0+(3.0/8.0)*q);
-		else                 return 0.0;
+    	if (q<2.0)				return C*(-3.0/8.0) + C*(Dimension-1.0)/q * (-3.0/4.0+(3.0/8.0)*q);
+		else					return 0.0;
 
     	break;
     case 2:
     	// Quintic
     	Dimension ==2 ? C = 7.0/(4.0*h*h*h*h*M_PI) : C = 7.0/(8.0*h*h*h*h*h*M_PI);
 
-    	if (q<=2) 			 return -3.0*C*pow((1.0-q/2.0),2)*(1.0+3.0*q-3.0*q*q)+(Dimension-1.0)/q*C*-5.0*q*pow((1.0-q/2.0),3);
-		else                 return 0.0;
+    	if (q<2.0)				return C*pow((1.0-q/2.0),2)*(10.0*q-5.0) + C*(Dimension-1.0)/q * -5.0*q*pow((1.0-q/2.0),3.0);
+		else					return 0.0;
 
     	break;
     case 3:
     	// Gaussian with compact support
     	Dimension ==2 ? C = 1.0/(h*h*h*h*M_PI) : C = 1.0/(h*h*h*h*h*pow(M_PI,(3.0/2.0)));
 
-    	if (q<=2) 			 return C*2.0*(2.0*q*q-1.0)*exp(-q*q)+(Dimension-1.0)/q*-2.0*q*C*exp(-q*q);
-		else                 return 0.0;
+    	if (q<=2.0)				return C*2.0*(2.0*q*q-1.0)*exp(-q*q) + C*(Dimension-1.0)/q * -2.0*q*exp(-q*q);
+		else					return 0.0;
 
     	break;
 	case 4:
 		// Quintic Spline
 		Dimension ==2 ? C = 7.0/(478.0*h*h*h*h*M_PI) : C = 1.0/(120.0*h*h*h*h*h*M_PI);
 
-		if ((q>=0.0)&&(q<1)) return C*(20.0*pow((3-q),3)-120.0*pow((2-q),3)+300.0*pow((1-q),3))+(Dimension-1.0)/q*C*(-5.0*pow((3-q),4)+30.0*pow((2-q),4)-75.0*pow((1-q),4));
-		else if (q<=2)       return C*(20.0*pow((3-q),3)-120.0*pow((2-q),3))+(Dimension-1.0)/q*C*(-5.0*pow((3-q),4)+30.0*pow((2-q),4));
-		else if (q<=3)       return C*(20.0*pow((3-q),3))+(Dimension-1.0)/q*C*(-5.0*pow((3-q),4));
-		else                 return 0.0;
+		if ((q>=0.0)&&(q<1.0))	return C*(20.0*pow((3.0-q),3.0)-120.0*pow((2-q),3.0)+300.0*pow((1-q),3.0)) + C*(Dimension-1.0)/q * (-5.0*pow((3.0-q),4.0)+30.0*pow((2.0-q),4.0)-75.0*pow((1.0-q),4.0));
+		else if (q<2.0)			return C*(20.0*pow((3.0-q),3.0)-120.0*pow((2-q),3.0))                      + C*(Dimension-1.0)/q * (-5.0*pow((3.0-q),4.0)+30.0*pow((2.0-q),4.0));
+		else if (q<3.0)			return C*(20.0*pow((3.0-q),3.0))                                           + C*(Dimension-1.0)/q * (-5.0*pow((3.0-q),4.0));
+		else					return 0.0;
 
 		break;
    default:
-		// Qubic Spline
-	    std::cout << "Kernel No is out of range so Cubic Spline is used" << std::endl;
-    	Dimension ==2 ? C = 10.0/(7.0*h*h*h*h*M_PI) : C = 1.0/(h*h*h*h*h*M_PI);
-
-        if ((q>=0.0)&&(q<1)) return C*(-3.0+(9.0/2.0)*q)+(Dimension-1.0)/q*C*(-3.0*q+(9.0/4.0)*q*q);
-        else if (q<=2)       return C*((3.0/2.0)*(2.0-q))+(Dimension-1.0)/q*C*((-3.0/4.0)*(2.0-q)*(2.0-q));
-        else                 return 0.0;
-
-       break;
+	   std::cout << "Kernel No is out of range so Cubic Spline is used" << std::endl;
+	   abort();
+	   break;
     }
 }
 
@@ -517,55 +497,49 @@ inline double Domain::SecDerivativeKernel(double r, double h)
     	// Qubic Spline
     	Dimension ==2 ? C = 10.0/(7.0*h*h*h*h*M_PI) : C = 1.0/(h*h*h*h*h*M_PI);
 
-        if ((q>=0.0)&&(q<1)) return C*(-3.0+(9.0/2.0)*q);
-        else if (q<=2)       return C*((3.0/2.0)*(2.0-q));
-        else                 return 0.0;
+        if ((q>=0.0)&&(q<1.0))	return C*(-3.0+(9.0/2.0)*q);
+        else if (q<2.0)			return C*((3.0/2.0)*(2.0-q));
+        else					return 0.0;
 
 		break;
     case 1:
     	// Quadratic
     	Dimension ==2 ? C = 2.0/(h*h*h*h*M_PI) : C = 5.0/(4.0*h*h*h*h*h*M_PI);
 
-    	if (q<=2) 			 return C*(-3.0/4.0);
-		else                 return 0.0;
+    	if (q<2.0)				return C*(-3.0/8.0);
+		else					return 0.0;
 
     	break;
     case 2:
     	// Quintic
     	Dimension ==2 ? C = 7.0/(4.0*h*h*h*h*M_PI) : C = 7.0/(8.0*h*h*h*h*h*M_PI);
 
-    	if (q<=2) 			 return -3.0*C*pow((1.0-q/2.0),2)*(1.0+3.0*q-3.0*q*q);
-		else                 return 0.0;
+    	if (q<2.0)				return C*pow((1.0-q/2.0),2)*(10.0*q-5.0);
+    	else					return 0.0;
 
     	break;
     case 3:
     	// Gaussian with compact support
     	Dimension ==2 ? C = 1.0/(h*h*h*h*M_PI) : C = 1.0/(h*h*h*h*h*pow(M_PI,(3.0/2.0)));
 
-    	if (q<=2) 			 return C*2.0*(2.0*q*q-1.0)*exp(-q*q);
-		else                 return 0.0;
+    	if (q<=2.0)				return C*2.0*(2.0*q*q-1.0)*exp(-q*q);
+		else					return 0.0;
 
     	break;
 	case 4:
 		// Quintic Spline
 		Dimension ==2 ? C = 7.0/(478.0*h*h*h*h*M_PI) : C = 1.0/(120.0*h*h*h*h*h*M_PI);
 
-		if ((q>=0.0)&&(q<1)) return C*(20.0*pow((3-q),3)-120.0*pow((2-q),3)+300.0*pow((1-q),3));
-		else if (q<=2)       return C*(20.0*pow((3-q),3)-120.0*pow((2-q),3));
-		else if (q<=3)       return C*(20.0*pow((3-q),3));
-		else                 return 0.0;
+		if ((q>=0.0)&&(q<1.0))	return C*(20.0*pow((3.0-q),3.0)-120.0*pow((2.0-q),3.0)+300.0*pow((1.0-q),3.0));
+		else if (q<2.0)			return C*(20.0*pow((3.0-q),3.0)-120.0*pow((2.0-q),3.0));
+		else if (q<3.0)			return C*(20.0*pow((3.0-q),3.0));
+		else					return 0.0;
 
 		break;
    default:
-		// Qubic Spline
-	    std::cout << "Kernel No is out of range so Cubic Spline is used" << std::endl;
-    	Dimension ==2 ? C = 10.0/(7.0*h*h*h*h*M_PI) : C = 1.0/(h*h*h*h*h*M_PI);
-
-        if ((q>=0.0)&&(q<1)) return C*(-3.0+(9.0/2.0)*q);
-        else if (q<=2)       return C*((3.0/2.0)*(2.0-q));
-        else                 return 0.0;
-
-       break;
+	   	std::cout << "Kernel No is out of range so Cubic Spline is used" << std::endl;
+	    abort();
+	    break;
     }
 }
 
@@ -1412,6 +1386,8 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
        }
 
        Time += dt;
+
+       if (idx_out>5500) abort();
 
        CheckParticleLeave();
        CellReset();
