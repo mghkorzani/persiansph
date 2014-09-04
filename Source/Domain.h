@@ -48,20 +48,21 @@ public:
 
     // Domain Part
     void AddSingleParticle			(int tag, Vec3_t const & x, double Mass, double Density, double h, bool Fixed);						///< Add one particle
+    void AddRandomBox				(int tag, Vec3_t const &V, double Lx, double Ly, double Lz,double r, double Density, double h);		///< Add a cube of random positioned particles with a defined dimensions
     void AddBoxLength				(int tag, Vec3_t const &V, double Lx, double Ly, double Lz, size_t nx, size_t ny, size_t nz,
     									double Mass, double Density, double h, bool Fixed);												///< Add a cube of particles with a defined dimensions
-    void AddRandomBox				(int tag, Vec3_t const &V, double Lx, double Ly, double Lz,double r, double Density, double h);		///< Add a cube of random positioned particles with a defined dimensions
 
     void DelParticles				(int const & Tags);																					///< Delete particles by tag
-    void CheckParticleLeave			();																									///< Check if any particle are leaving the domain or not
+    void CheckParticleLeave			();																									///< Check if any particles leave the domain, they will be deleted
 
     void StartAcceleration			(Vec3_t const & a = Vec3_t(0.0,0.0,0.0));															///< Add a fixed acceleration such as the Gravity
+    void ConstVel					();																									///< Give a defined velocity to the first 2 column of cells in X direction
     void ComputeAcceleration		();																									///< Compute the acceleration due to the other particles
-    void YZCellsComputeAcceleration	(int q1);																							///< Create pairs of particles in XZ plan of cells
+    void YZCellsComputeAcceleration	(int q1);																							///< Create pairs of particles in XZ plan of cells and calculate the force
+    void CalcForce					(Particle * P1, Particle * P2);																		///< Calculates the contact force between particles
     void Move						(double dt);																						///< Move particles
 
-    void ConstVel					();																									///< Give a defined velocity to the first and last 4 column of cells in X direction
-    void AvgParticleVelocity		();																									///< Calculate the average velocity of whole domain (free particles)
+    void AvgParticleVelocity		();																									///< Calculate the average velocity of the last 2 column of cells in X direction
     void Solve						(double tf, double dt, double dtOut, char const * TheFileKey);										///< The solving function
 
     void CellInitiate				();																									///< Find the size of the domain as a cube, make cells and HOCs
@@ -73,7 +74,6 @@ public:
     void Load						(char const * FileKey);																				///< Load the domain from a file
 
     //Interaction Part
-    void	CalcForce	(Particle * P1, Particle * P2);		///< Calculates the contact force between particles
 
     // Data
     Array <Particle*>		Particles;     	 	///< Array of particles
@@ -92,7 +92,9 @@ public:
     double					MU;					///< Dynamic Viscosity
 
     Vec3_t					Gravity;       	 	///< Gravity acceleration
-    double					Cs;					///< Spead of sound
+    double					Cs;					///< Speed of sound
+    double 					P0;					///< background pressure for equation of state
+    double					ConstVelPeriodic;	///< Define a constant velocity in the left and the right side of the domain in x direction in periodic condition
 
     Vec3_t                  TRPR;				///< Top right-hand point at rear of the domain as a cube
     Vec3_t                  BLPF;           	///< Bottom left-hand point at front of the domain as a cube
@@ -109,17 +111,13 @@ public:
     Vec3_t					RBForce;			///< Rigid body force
     Vec3_t					RBForceVis;			///< Rigid body force viscosity
 
-    double 					P0;					///< background pressure for equation of state
     size_t					PresEq;				///< Selecting variable to choose an equation of state
-
     size_t					VisEq;				///< Selecting variable to choose an equation for viscosity
-
     size_t					KernelType;			///< Selecting variable to choose a kernel
 
     bool					PeriodicX; 			///< If it is true, periodic boundary condition along x direction will be considered
     bool					PeriodicY; 			///< If it is true, periodic boundary condition along y direction will be considered
     bool					PeriodicZ; 			///< If it is true, periodic boundary condition along z direction will be considered
-    double					ConstVelPeriodic;	///< Define a constant velocity in the left and the right side of the domain in x direction in periodic condition
 
     bool					NoSlip;				///< To simulate No Slip Boundary
     double 					XSPH;				///< Velocity correction factor
@@ -130,7 +128,7 @@ public:
     double					AvgVelocity;		///< Average velocity of the last two column for x periodic constant velocity
 
     size_t					Nproc;				///< No of threads which are going to use in parallel calculation
-    omp_lock_t 				maz_lock;			///< Open MP lock to lock Interactions array
+    omp_lock_t 				dom_lock;			///< Open MP lock to lock Interactions array
 
 
 };
@@ -176,7 +174,7 @@ inline Domain::Domain ()
     AvgVelocity = 0.0;
     hmax	= 0.0;
 
-    omp_init_lock (&maz_lock);
+    omp_init_lock (&dom_lock);
     Nproc	= 1;
 
     deltat	= 0.0;
@@ -210,8 +208,9 @@ inline void Domain::CalcForce(Particle * P1, Particle * P2)
 	if (DomSize(1)>0.0) {if (xij(1)>2*Cellfac*h || xij(1)<-2*Cellfac*h) {(P1->CC[1]>P2->CC[1]) ? xij(1) -= DomSize(1) : xij(1) += DomSize(1);}}
 	if (DomSize(2)>0.0) {if (xij(2)>2*Cellfac*h || xij(2)<-2*Cellfac*h) {(P1->CC[2]>P2->CC[2]) ? xij(2) -= DomSize(2) : xij(2) += DomSize(2);}}
 
-    double rij = norm(xij);
-    double GK  = GradKernel(Dimension, KernelType, rij, h) / rij;
+    double rij	= norm(xij);
+    double GK	= GradKernel(Dimension, KernelType, rij, h) / rij;
+    double K	= Kernel(Dimension, KernelType, rij, h);
 
     //Artificial Viscosity
     double PIij = 0.0;
@@ -227,7 +226,7 @@ inline void Domain::CalcForce(Particle * P1, Particle * P2)
     double TIij = 0.0, TIji = 0.0;
     if ((TI > 0.0) && (Pi < 0.0) && (Pj < 0.0))
     {
-        TIij = TIji= TI*(-Pi/(di*di)-Pj/(dj*dj))*pow((Kernel(Dimension, KernelType, rij, h)/Kernel(Dimension, KernelType, InitialDist, h)),4);
+        TIij = TIji= TI*(-Pi/(di*di)-Pj/(dj*dj))*pow((K/Kernel(Dimension, KernelType, InitialDist, h)),4);
         if (!P1->IsFree) TIij = 0.0;
         if (!P2->IsFree) TIji = 0.0;
     }
@@ -262,11 +261,11 @@ inline void Domain::CalcForce(Particle * P1, Particle * P2)
     if (XSPH != 0.0)
     {
         omp_set_lock(&P1->my_lock);
-        P1->VXSPH		+= XSPH*mj/(0.5*(di+dj))*Kernel(Dimension, KernelType, rij, h)*-vij;
+        P1->VXSPH		+= XSPH*mj/(0.5*(di+dj))*K*-vij;
         omp_unset_lock(&P1->my_lock);
 
         omp_set_lock(&P2->my_lock);
-		P2->VXSPH		+= XSPH*mi/(0.5*(di+dj))*Kernel(Dimension, KernelType, rij, h)*vij;
+		P2->VXSPH		+= XSPH*mi/(0.5*(di+dj))*K*vij;
 		omp_unset_lock(&P2->my_lock);
     }
 
@@ -276,8 +275,8 @@ inline void Domain::CalcForce(Particle * P1, Particle * P2)
     P1->Vis +=  mj * VI;
     if (P1->ct==30 && Shepard)
     {
-    	P1->SumDen += mj*    Kernel(Dimension, KernelType, rij, h);
-    	P1->ZWab   += mj/dj* Kernel(Dimension, KernelType, rij, h);
+    	P1->SumDen += mj*    K;
+    	P1->ZWab   += mj/dj* K;
     }
     P1->dDensity += di * (mj/dj) * dot( (vij + (P1->VXSPH-P2->VXSPH)) , GK*xij );
     omp_unset_lock(&P1->my_lock);
@@ -288,8 +287,8 @@ inline void Domain::CalcForce(Particle * P1, Particle * P2)
     P2->Vis -=  mi * VI;
     if (P2->ct==30 && Shepard)
     {
-    	P2->SumDen += mi*    Kernel(Dimension, KernelType, rij, h);
-    	P2->ZWab   += mi/di* Kernel(Dimension, KernelType, rij, h);
+    	P2->SumDen += mi*    K;
+    	P2->ZWab   += mi/di* K;
     }
     P2->dDensity += dj * (mi/di) * dot( (-vij - (P1->VXSPH-P2->VXSPH)) , -GK*xij );
     omp_unset_lock(&P2->my_lock);
@@ -438,15 +437,15 @@ inline void Domain::DelParticles (int const & Tags)
     {
         if (Particles[i]->ID==Tags)
 		{
-			omp_set_lock(&maz_lock);
+			omp_set_lock(&dom_lock);
         	idxs.Push(i);
-			omp_unset_lock(&maz_lock);
+			omp_unset_lock(&dom_lock);
 		}
     }
-    if (idxs.Size()<1) throw new Fatal("Domain::DelParticles: Could not find any particle to be deleted");
+    if (idxs.Size()<1) throw new Fatal("Domain::DelParticles: Could not find any particles to delete");
     Particles.DelItems (idxs);
 
-    std::cout << "\n" << "Particles with Tag No. " << Tags << " has been deleted" << std::endl;
+    std::cout << "\n" << "Particle(s) with Tag No. " << Tags << " has been deleted" << std::endl;
 }
 
 inline void Domain::CheckParticleLeave ()
@@ -456,19 +455,18 @@ inline void Domain::CheckParticleLeave ()
 	#pragma omp parallel for schedule(static) num_threads(Nproc)
 	for (size_t i=0; i<Particles.Size(); i++)
     {
-		if (!PeriodicX && !PeriodicY && !PeriodicZ)
-			if ((Particles[i]->x(0) >= TRPR(0)) || (Particles[i]->x(1) >= TRPR(1)) || (Particles[i]->x(2) >= TRPR(2)) ||
-					(Particles[i]->x(0) <= BLPF(0)) || (Particles[i]->x(1) <= BLPF(1)) || (Particles[i]->x(2) <= BLPF(2)))
-			{
-				omp_set_lock(&maz_lock);
-				DelParticles.Push(i);
-				omp_unset_lock(&maz_lock);
-			}
+		if ((Particles[i]->x(0) > TRPR(0)) || (Particles[i]->x(1) > TRPR(1)) || (Particles[i]->x(2) > TRPR(2)) ||
+				(Particles[i]->x(0) < BLPF(0)) || (Particles[i]->x(1) < BLPF(1)) || (Particles[i]->x(2) < BLPF(2)))
+		{
+			omp_set_lock(&dom_lock);
+			DelParticles.Push(i);
+			omp_unset_lock(&dom_lock);
+		}
     }
 
 	if (DelParticles.Size()>0)
 	{
-		std::cout<< DelParticles.Size()<< " particle(s) are leaving the Domain"<<std::endl;
+		std::cout<< DelParticles.Size()<< " particle(s) left the Domain"<<std::endl;
 		Particles.DelItems(DelParticles);
 	}
 }
@@ -478,6 +476,7 @@ inline void Domain::CellInitiate ()
 	// Calculate Domain Size
 	BLPF = Particles[0]->x;
 	TRPR = Particles[0]->x;
+	hmax = Particles[0]->h;
 	double rho = 0.0;
 
 	for (size_t i=0; i<Particles.Size(); i++)
@@ -516,6 +515,7 @@ inline void Domain::CellInitiate ()
 
 		CellSize  = Vec3_t ((TRPR(0)-BLPF(0))/CellNo[0],(TRPR(1)-BLPF(1))/CellNo[1],0.0);
 		break;
+
 	case 3:
 		if (double (ceil(((TRPR(0)-BLPF(0))/(Cellfac*hmax)))-((TRPR(0)-BLPF(0))/(Cellfac*hmax)))<(hmax/10.0))
 			CellNo[0] = int(ceil((TRPR(0)-BLPF(0))/(Cellfac*hmax)));
@@ -534,6 +534,7 @@ inline void Domain::CellInitiate ()
 
 		CellSize  = Vec3_t ((TRPR(0)-BLPF(0))/CellNo[0],(TRPR(1)-BLPF(1))/CellNo[1],(TRPR(2)-BLPF(2))/CellNo[2]);
 		break;
+
 	default:
     	std::cout << "Please correct the dimension (2=>2D or 3=>3D) and run again" << std::endl;
 		abort();
@@ -553,7 +554,6 @@ inline void Domain::CellInitiate ()
     double t1,t2;
     t1 = 0.25*hmax/(Cs+ConstVelPeriodic);
     t2 = 0.125*hmax*hmax*rho/MU;
-
     std::cout << "Max time step should be Min value of { "<< t1 <<" , "<< t2 <<" }" << std::endl;
     if (deltat > std::min(t1,t2))
     {
@@ -623,6 +623,7 @@ inline void Domain::ListGenerate ()
 			Particles[a]->CC[2] = 0;
 		}
 		break;
+
 	case 3:
 		for (size_t a=0; a<Particles.Size(); a++)
 		{
@@ -668,6 +669,11 @@ inline void Domain::ListGenerate ()
 			Particles[a]->CC[1] = j;
 			Particles[a]->CC[2] = k;
 		}
+		break;
+
+	default:
+    	std::cout << "Please correct the dimension (2=>2D or 3=>3D) and run again" << std::endl;
+		abort();
 		break;
 	}
 
@@ -800,9 +806,9 @@ inline void Domain::YZCellsComputeAcceleration(int q1)
 			if (NoSlip)
 				if (!Particles[LocalPairs[i].first]->IsFree || !Particles[LocalPairs[i].second]->IsFree)
 				{
-					omp_set_lock(&maz_lock);
+					omp_set_lock(&dom_lock);
 					PairsWFixed.Push(LocalPairs[i]);
-					omp_unset_lock(&maz_lock);
+					omp_unset_lock(&dom_lock);
 				}
 		}
 	}
@@ -919,10 +925,10 @@ inline void Domain::Move (double dt)
 		{
 			if (Particles[i]->ID==RBTag)
 			{
-				omp_set_lock(&maz_lock);
+				omp_set_lock(&dom_lock);
 				RBForce    +=Particles[i]->Mass * Particles[i]->a;
 				RBForceVis +=Particles[i]->Mass * Particles[i]->Vis;
-				omp_unset_lock(&maz_lock);
+				omp_unset_lock(&dom_lock);
 			}
 		}
 	}
