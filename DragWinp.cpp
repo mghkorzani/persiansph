@@ -76,7 +76,7 @@ int main(int argc, char **argv) try
 	std::cout<<"P0 = "<<dom.P0<<std::endl;
 
 	double maz;
-	maz=(0.1*h/(dom.Cs+dom.ConstVelPeriodic));
+	maz=(0.2*h/(dom.Cs+dom.ConstVelPeriodic));
 
 	dom.AddRandomBox(3 ,Vec3_t ( -100.0*0.002 , -100.0*0.002 , 0.0 ), 200.0*0.002 ,200.0*0.002  ,  0 , 0.001 ,rho, h);
 
