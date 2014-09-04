@@ -39,7 +39,7 @@ int main(int argc, char **argv) try
     SPH::Domain		dom;
 	dom.Dimension	= 2;
 
-	dom.NoSlip		= true;
+	dom.NoSlip		= false;
 	dom.PeriodicX	= true;
 	dom.PeriodicY	= true;
 
@@ -48,18 +48,18 @@ int main(int argc, char **argv) try
 
 	dom.MU			= 1.002e-3;
 	dom.PresEq		= 0;
-	dom.VisEq		= P0f;
-	dom.KernelType	= 2;
-	dom.Nproc		= 6;
+	dom.VisEq		= 0;
+	dom.KernelType	= 4;
+	dom.Nproc		= 3;
 
-	dom.TI			= 0.05;
+//	dom.TI			= 0.05;
 
 	double xb,yb,h,rho,mass;
 	double dx,R,Rc,Re;
 	size_t no;
 
 	rho = 998.21;
-	h = 0.002*1.2;
+	h = 0.002*P0f;
 	dx = 0.002;
 	Rc = 0.02;
 	mass = (sqrt(3.0)*dx*dx/4.0)*rho;
@@ -67,12 +67,16 @@ int main(int argc, char **argv) try
 
 	dom.ConstVelPeriodic= Re*dom.MU/(rho*2.0*Rc);
 	dom.Cs				= dom.ConstVelPeriodic*Csf;
-	dom.P0				= dom.Cs*dom.Cs*rho;
-	dom.InitialDist = dx;
+	dom.P0				= dom.Cs*dom.Cs*rho*0.5;
+	dom.InitialDist 	= dx;
 
-	std::cout<<"Cs = "<<dom.Cs<<std::endl;
+	std::cout<<"Re = "<<Re<<std::endl;
 	std::cout<<"V  = "<<dom.Cs/Csf<<std::endl;
+	std::cout<<"Cs = "<<dom.Cs<<std::endl;
 	std::cout<<"P0 = "<<dom.P0<<std::endl;
+
+	double maz;
+	maz=(0.1*h/(dom.Cs+dom.ConstVelPeriodic));
 
 	dom.AddRandomBox(3 ,Vec3_t ( -100.0*0.002 , -100.0*0.002 , 0.0 ), 200.0*0.002 ,200.0*0.002  ,  0 , 0.001 ,rho, h);
 
@@ -151,8 +155,6 @@ int main(int argc, char **argv) try
 		dom.AddSingleParticle(4,Vec3_t ( xb ,  yb , 0.0 ), mass , rho , h , true);
 	}
 
-	double maz;
-	maz=(0.1*h/(dom.Cs+dom.ConstVelPeriodic));
 
 	dom.Solve(/*tf*/10000.0,/*dt*/maz,/*dtOut*/(2.0*h/(dom.Cs+dom.ConstVelPeriodic)),"test06");
 	return 0;

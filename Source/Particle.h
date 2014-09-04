@@ -47,9 +47,10 @@ public:
     Vec3_t  v;				///< Velocity of the particle n+1,
     Vec3_t	VXSPH;			///< Mean Velocity of neighbor particles
     Vec3_t  a;				///< Acceleration of the particle
+    Vec3_t  Vis;			///< To check viscosity force
+
     double	ZWab;			///< Summation of the mb/db*Wab
     double	SumDen;			///< Summation of neighbor particle density
-
     double 	Pressure;		///< Pressure at the position of the particle
     double	Density;		///< Density at the position of the particle n+1
     double 	Densityb;		///< Density at the position of the particle n-1
@@ -65,14 +66,12 @@ public:
     Vec3_t 	NoSlip1;		///< Current cell No for the particle (linked-list)
     Vec3_t 	NoSlip2;		///< Current cell No for the particle (linked-list)
 
-    int		ct;				///< Correction step for the Verlet Algorithm
+    int		ct;				///< Correction step for the Verlet Algorithm and Shepard filter
 
     omp_lock_t my_lock;		///< Open MP lock
-    Vec3_t  Vis;			///< To check viscosity force
 
     // Methods
     void Move			(double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3_t domainmin, bool ShepardFilter);	///< Update the important quantities of a particle
-    bool CellUpdate		(Vec3_t CellSize, Vec3_t BLPF);										///< Check if the particle cell needs to be updated
 
 };
 
@@ -205,14 +204,6 @@ inline void Particle::Move (double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3
 		}
 		ct=0;
 	}
-}
-
-inline bool Particle::CellUpdate (Vec3_t CellSize, Vec3_t BLPF)
-{
-	bool update;
-	if ((CC[0] == (int) ((x(0) - BLPF(0)) / CellSize(0))) && (CC[1] == (int) ((x(1) - BLPF(1)) / CellSize(1))) && (CC[2] == (int) ((x(2) - BLPF(2)) / CellSize(2)))) update=false;
-	else update=true;
-	return update;
 }
 
 }; // namespace SPH
