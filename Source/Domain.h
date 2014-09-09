@@ -238,7 +238,7 @@ inline void Domain::CalcForce(Particle * P1, Particle * P2)
     	if (MU!=0.0 && VisEq==0) VI = 2.0*MU/(di*dj)*GK*vij;																		//Morris et al 1997
     	if (MU!=0.0 && VisEq==1) VI = 8.0*MU/((di+dj)*(di+dj))*GK*vij;																//Shao et al 2003
     	if (MU!=0.0 && VisEq==2) VI = -MU/(di*dj)*LaplaceKernel(Dimension, KernelType, rij, h)*vij;									//Real Viscosity (considering incompressible fluid)
-    	if (MU!=0.0 && VisEq==3) VI = -MU/(di*dj)*( LaplaceKernel(Dimension, KernelType, rij, h)*vij +
+    	if (MU!=0.0 && VisEq==3) VI = -4*MU/(di*dj)*( LaplaceKernel(Dimension, KernelType, rij, h)*vij +
     			1.0/3.0*(GK*vij + dot(vij,xij) * xij / (rij*rij) * (-GK+SecDerivativeKernel(Dimension, KernelType, rij, h) ) ) );	//Takeda et al 1994 (Real viscosity considering 1/3Mu for compressibility as per Navier Stokes but ignore volumetric viscosity)
     }
     else
@@ -253,7 +253,7 @@ inline void Domain::CalcForce(Particle * P1, Particle * P2)
     	if (MU!=0.0 && VisEq==0) VI = 2.0*MU/(di*dj)*GK*vab;																		//Morris et al 1997
     	if (MU!=0.0 && VisEq==1) VI = 8.0*MU/((di+dj)*(di+dj))*GK*vab;																//Shao et al 2003
     	if (MU!=0.0 && VisEq==2) VI = -MU/(di*dj)*LaplaceKernel(Dimension, KernelType, rij, h)*vab;									//Real Viscosity (considering incompressible fluid)
-    	if (MU!=0.0 && VisEq==3) VI = -MU/(di*dj)*( LaplaceKernel(Dimension, KernelType, rij, h)*vab +
+    	if (MU!=0.0 && VisEq==3) VI = -4*MU/(di*dj)*( LaplaceKernel(Dimension, KernelType, rij, h)*vab +
     			1.0/3.0*(GK*vij + dot(vij,xij) * xij / (rij*rij) * (-GK+SecDerivativeKernel(Dimension, KernelType, rij, h) ) ) );	//Takeda et al 1994 (Real viscosity considering 1/3Mu for compressibility as per Navier Stokes but ignore volumetric viscosity)
     }
 

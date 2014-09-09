@@ -39,7 +39,7 @@ int main(int argc, char **argv) try
     SPH::Domain		dom;
 	dom.Dimension	= 2;
 
-	dom.NoSlip		= false;
+	dom.NoSlip		= true;
 	dom.PeriodicX	= true;
 	dom.PeriodicY	= true;
 
@@ -48,9 +48,9 @@ int main(int argc, char **argv) try
 
 	dom.MU			= 1.002e-3;
 	dom.PresEq		= 0;
-	dom.VisEq		= 0;
+	dom.VisEq		= 3;
 	dom.KernelType	= 4;
-	dom.Nproc		= 3;
+	dom.Nproc		= 8;
 
 //	dom.TI			= 0.05;
 
@@ -59,7 +59,7 @@ int main(int argc, char **argv) try
 	size_t no;
 
 	rho = 998.21;
-	h = 0.002*P0f;
+	h = 0.002*1.1;
 	dx = 0.002;
 	Rc = 0.02;
 	mass = (sqrt(3.0)*dx*dx/4.0)*rho;
@@ -67,7 +67,7 @@ int main(int argc, char **argv) try
 
 	dom.ConstVelPeriodic= Re*dom.MU/(rho*2.0*Rc);
 	dom.Cs				= dom.ConstVelPeriodic*Csf;
-	dom.P0				= dom.Cs*dom.Cs*rho*0.5;
+	dom.P0				= dom.Cs*dom.Cs*rho*P0f;
 	dom.InitialDist 	= dx;
 
 	std::cout<<"Re = "<<Re<<std::endl;
@@ -76,7 +76,7 @@ int main(int argc, char **argv) try
 	std::cout<<"P0 = "<<dom.P0<<std::endl;
 
 	double maz;
-	maz=(0.2*h/(dom.Cs+dom.ConstVelPeriodic));
+	maz=(0.1*h/(dom.Cs+dom.ConstVelPeriodic));
 
 	dom.AddRandomBox(3 ,Vec3_t ( -100.0*0.002 , -100.0*0.002 , 0.0 ), 200.0*0.002 ,200.0*0.002  ,  0 , 0.001 ,rho, h);
 
@@ -110,49 +110,17 @@ int main(int argc, char **argv) try
 		dom.AddSingleParticle(3,Vec3_t ( xb ,  yb , 0.0 ), mass , rho , h , false);
 	}
 
-	R = Rc;
-	no = ceil(2*M_PI*R/dx);
-	for (size_t i=0; i<no; i++)
+	for (size_t j=0;j<12;j++)
 	{
-		xb = R*cos(2*M_PI/no*i);
-		yb = R*sin(2*M_PI/no*i);
-		dom.AddSingleParticle(4,Vec3_t ( xb ,  yb , 0.0 ), mass , rho , h , true);
-	}
-
-	R = Rc-sqrt(3.0)/2.0*dx;
-//	no = ceil(2*M_PI*R/dx);
-	for (size_t i=0; i<no; i++)
-	{
-		xb = R*cos(2*M_PI/no*i+M_PI/no);
-		yb = R*sin(2*M_PI/no*i+M_PI/no);
-		dom.AddSingleParticle(4,Vec3_t ( xb ,  yb , 0.0 ), mass , rho , h , true);
-	}
-
-	R = R-sqrt(3.0)/2*dx;
-//	no = ceil(2*M_PI*R/dx);
-	for (size_t i=0; i<no; i++)
-	{
-		xb = R*cos(2*M_PI/no*i);
-		yb = R*sin(2*M_PI/no*i);
-		dom.AddSingleParticle(4,Vec3_t ( xb ,  yb , 0.0 ), mass , rho , h , true);
-	}
-
-	R = R-sqrt(3.0)/2*dx;
-//	no = ceil(2*M_PI*R/dx);
-	for (size_t i=0; i<no; i++)
-	{
-		xb = R*cos(2*M_PI/no*i+M_PI/no);
-		yb = R*sin(2*M_PI/no*i+M_PI/no);
-		dom.AddSingleParticle(4,Vec3_t ( xb ,  yb , 0.0 ), mass , rho , h , true);
-	}
-
-	R = R-sqrt(3.0)/2*dx;
-//	no = ceil(2*M_PI*R/dx);
-	for (size_t i=0; i<no; i++)
-	{
-		xb = R*cos(2*M_PI/no*i);
-		yb = R*sin(2*M_PI/no*i);
-		dom.AddSingleParticle(4,Vec3_t ( xb ,  yb , 0.0 ), mass , rho , h , true);
+		R = Rc-sqrt(3.0)/2.0*dx*j;
+		no = ceil(2*M_PI*R/dx);
+		cout<<no<<endl;
+		for (size_t i=0; i<no; i++)
+		{
+			xb = R*cos(2*M_PI/no*i);
+			yb = R*sin(2*M_PI/no*i);
+			dom.AddSingleParticle(4,Vec3_t ( xb ,  yb , 0.0 ), mass , rho , h , true);
+		}
 	}
 
 
