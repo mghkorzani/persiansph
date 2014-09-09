@@ -28,7 +28,7 @@ int main(int argc, char **argv) try
     SPH::Domain		dom;
 	dom.Dimension	= 2;
 
-	dom.NoSlip		= false;
+	dom.NoSlip		= true;
 	dom.PeriodicX	= true;
 	dom.PeriodicY	= true;
 
@@ -65,7 +65,7 @@ int main(int argc, char **argv) try
 	std::cout<<"P0 = "<<dom.P0<<std::endl;
 
 	double maz;
-	maz=(0.2*h/(dom.Cs+dom.ConstVelPeriodic));
+	maz=(0.15*h/(dom.Cs+dom.ConstVelPeriodic));
 
 	dom.AddRandomBox(3 ,Vec3_t ( -100.0*0.002 , -100.0*0.002 , 0.0 ), 200.0*0.002 ,200.0*0.002  ,  0 , 0.001 ,rho, h);
 
@@ -97,6 +97,16 @@ int main(int argc, char **argv) try
 		xb = R*cos(2*M_PI/no*i);
 		yb = R*sin(2*M_PI/no*i);
 		dom.AddSingleParticle(3,Vec3_t ( xb ,  yb , 0.0 ), mass , rho , h , false);
+	}
+
+	//No-Slip BC
+	R = Rc;
+	no = ceil(2*M_PI*R/(dx/10.0));
+	for (size_t i=0; i<no; i++)
+	{
+		xb = R*cos(2*M_PI/no*i);
+		yb = R*sin(2*M_PI/no*i);
+		dom.AddSingleParticle(Vec3_t ( xb ,  yb , 0.0 ));
 	}
 
 	for (size_t j=0;j<12;j++)

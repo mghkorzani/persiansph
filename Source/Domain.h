@@ -51,6 +51,8 @@ public:
     void AddRandomBox				(int tag, Vec3_t const &V, double Lx, double Ly, double Lz,double r, double Density, double h);		///< Add a cube of random positioned particles with a defined dimensions
     void AddBoxLength				(int tag, Vec3_t const &V, double Lx, double Ly, double Lz, size_t nx, size_t ny, size_t nz,
     									double Mass, double Density, double h, bool Fixed);												///< Add a cube of particles with a defined dimensions
+    void AddSingleParticle			(Vec3_t const & x);
+    void AddBoxLength				(Vec3_t const & V, double Lx, double Ly, double Lz, size_t nx, size_t ny, size_t nz);
 
     void DelParticles				(int const & Tags);																					///< Delete particles by tag
     void CheckParticleLeave			();																									///< Check if any particles leave the domain, they will be deleted
@@ -77,6 +79,7 @@ public:
 
     // Data
     Array <Particle*>		Particles;     	 	///< Array of particles
+    Array <Particle*>		NSParticles;     	///< Array of particles for No-Slip condition
     double					R;					///< Particle Radius in addrandombox
 
     Array <std::pair<size_t,size_t> > PairsWFixed;	///< Array to save pairs of particles which one of them is fixed
@@ -300,6 +303,11 @@ inline void Domain::AddSingleParticle(int tag, Vec3_t const & x, double Mass, do
    	Particles.Push(new Particle(tag,x,Vec3_t(0,0,0),Mass,Density,h,Fixed));
 }
 
+inline void Domain::AddSingleParticle(Vec3_t const & x)
+{
+   	NSParticles.Push(new Particle(0,x,Vec3_t(0,0,0),0.0,0.0,0.0,true));
+}
+
 inline void Domain::AddBoxLength(int tag, Vec3_t const & V, double Lx, double Ly, double Lz, size_t nx, size_t ny, size_t nz, double Mass, double Density, double h, bool Fixed)
 {
     std::cout << "\n--------------Generating particles by AddBoxLength with defined length--------------" << std::endl;
@@ -317,6 +325,19 @@ inline void Domain::AddBoxLength(int tag, Vec3_t const & V, double Lx, double Ly
     }
 
     std::cout << "\nNo. of added particles = " << Particles.Size()-PrePS << std::endl;
+}
+
+inline void Domain::AddBoxLength(Vec3_t const & V, double Lx, double Ly, double Lz, size_t nx, size_t ny, size_t nz)
+{
+    for (size_t i=0; i<nx; i++)
+    for (size_t j=0; j<ny; j++)
+    for (size_t k=0; k<nz; k++)
+    {
+		double x = V(0)+i*Lx/nx;
+		double y = V(1)+j*Ly/ny;
+		double z = V(2)+k*Lz/nz;
+		NSParticles.Push(new Particle(0,Vec3_t(x,y,z),Vec3_t(0,0,0),0.0,0.0,0.0,0.0));
+    }
 }
 
 inline void Domain::AddRandomBox(int tag, Vec3_t const & V, double Lx, double Ly, double Lz,double r, double Density, double h)
@@ -841,25 +862,24 @@ inline void Domain::ComputeAcceleration ()
 	if (NoSlip)
 	{
 		Vec3_t temp1=0.0;
+		if (NSParticles.Size()<1)
+		{
+			std::cout<<"Please define the particles for No-Slip BC and run again"<<std::endl;
+			abort();
+		}
 
 		for (size_t i=0; i<PairsWFixed.Size(); i++)
 		{
 			if (Particles[PairsWFixed[i].first]->IsFree && Particles[PairsWFixed[i].first]->NoSlip2(1)!=1.0)
 			{
-				#pragma omp parallel for num_threads(Nproc)
-				for (size_t j=0; j<Particles.Size(); j++)
+				for (size_t j=0; j<NSParticles.Size(); j++)
 				{
-					if (!Particles[j]->IsFree)
-					{
-						if (norm(Particles[PairsWFixed[i].first]->x - Particles[j]->x) < Particles[PairsWFixed[i].first]->NoSlip2(2))
+						if (norm(Particles[PairsWFixed[i].first]->x - NSParticles[j]->x) < Particles[PairsWFixed[i].first]->NoSlip2(2))
 						{
-							omp_set_lock(&Particles[PairsWFixed[i].first]->my_lock);
-							Particles[PairsWFixed[i].first]->NoSlip1    = Particles[PairsWFixed[i].first]->x - Particles[j]->x;
-							Particles[PairsWFixed[i].first]->NoSlip2(2) = norm(Particles[PairsWFixed[i].first]->x - Particles[j]->x);
-							temp1 = Particles[j]->x;
-							omp_unset_lock(&Particles[PairsWFixed[i].first]->my_lock);
+							Particles[PairsWFixed[i].first]->NoSlip1    = Particles[PairsWFixed[i].first]->x - NSParticles[j]->x;
+							Particles[PairsWFixed[i].first]->NoSlip2(2) = norm(Particles[PairsWFixed[i].first]->x - NSParticles[j]->x);
+							temp1 = NSParticles[j]->x;
 						}
-					}
 				}
 				Particles[PairsWFixed[i].first]->NoSlip2(1) = 1.0;
 				Particles[PairsWFixed[i].first]->NoSlip1    = Particles[PairsWFixed[i].first]->NoSlip1 / Particles[PairsWFixed[i].first]->NoSlip2(2);
@@ -868,20 +888,14 @@ inline void Domain::ComputeAcceleration ()
 
 			if (Particles[PairsWFixed[i].second]->IsFree && Particles[PairsWFixed[i].second]->NoSlip2(1)!=1.0)
 			{
-				#pragma omp parallel for num_threads(Nproc)
-				for (size_t j=0; j<Particles.Size(); j++)
+				for (size_t j=0; j<NSParticles.Size(); j++)
 				{
-					if (!Particles[j]->IsFree)
-					{
-						if (norm(Particles[PairsWFixed[i].second]->x - Particles[j]->x) < Particles[PairsWFixed[i].second]->NoSlip2(2))
+						if (norm(Particles[PairsWFixed[i].second]->x - NSParticles[j]->x) < Particles[PairsWFixed[i].second]->NoSlip2(2))
 						{
-							omp_set_lock(&Particles[PairsWFixed[i].second]->my_lock);
-							Particles[PairsWFixed[i].second]->NoSlip1    = Particles[PairsWFixed[i].second]->x - Particles[j]->x;
-							Particles[PairsWFixed[i].second]->NoSlip2(2) = norm(Particles[PairsWFixed[i].second]->x - Particles[j]->x);
-							temp1 = Particles[j]->x;
-							omp_unset_lock(&Particles[PairsWFixed[i].second]->my_lock);
+							Particles[PairsWFixed[i].second]->NoSlip1    = Particles[PairsWFixed[i].second]->x - NSParticles[j]->x;
+							Particles[PairsWFixed[i].second]->NoSlip2(2) = norm(Particles[PairsWFixed[i].second]->x - NSParticles[j]->x);
+							temp1 = NSParticles[j]->x;
 						}
-					}
 				}
 				Particles[PairsWFixed[i].second]->NoSlip2(1) = 1.0;
 				Particles[PairsWFixed[i].second]->NoSlip1    = Particles[PairsWFixed[i].second]->NoSlip1/Particles[PairsWFixed[i].second]->NoSlip2(2);

@@ -110,11 +110,20 @@ int main(int argc, char **argv) try
 		dom.AddSingleParticle(3,Vec3_t ( xb ,  yb , 0.0 ), mass , rho , h , false);
 	}
 
+	//No-Slip BC
+	R = Rc;
+	no = ceil(2*M_PI*R/(dx/50.0));
+	for (size_t i=0; i<no; i++)
+	{
+		xb = R*cos(2*M_PI/no*i);
+		yb = R*sin(2*M_PI/no*i);
+		dom.AddSingleParticle(Vec3_t ( xb ,  yb , 0.0 ));
+	}
+
 	for (size_t j=0;j<12;j++)
 	{
 		R = Rc-sqrt(3.0)/2.0*dx*j;
 		no = ceil(2*M_PI*R/dx);
-		cout<<no<<endl;
 		for (size_t i=0; i<no; i++)
 		{
 			xb = R*cos(2*M_PI/no*i);
