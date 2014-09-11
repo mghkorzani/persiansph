@@ -241,7 +241,7 @@ inline void Domain::CalcForce(Particle * P1, Particle * P2)
     	if (MU!=0.0 && VisEq==0) VI = 2.0*MU/(di*dj)*GK*vij;																		//Morris et al 1997
     	if (MU!=0.0 && VisEq==1) VI = 8.0*MU/((di+dj)*(di+dj))*GK*vij;																//Shao et al 2003
     	if (MU!=0.0 && VisEq==2) VI = -MU/(di*dj)*LaplaceKernel(Dimension, KernelType, rij, h)*vij;									//Real Viscosity (considering incompressible fluid)
-    	if (MU!=0.0 && VisEq==3) VI = -4*MU/(di*dj)*( LaplaceKernel(Dimension, KernelType, rij, h)*vij +
+    	if (MU!=0.0 && VisEq==3) VI = -MU/(di*dj)*( 4.0*LaplaceKernel(Dimension, KernelType, rij, h)*vij +
     			1.0/3.0*(GK*vij + dot(vij,xij) * xij / (rij*rij) * (-GK+SecDerivativeKernel(Dimension, KernelType, rij, h) ) ) );	//Takeda et al 1994 (Real viscosity considering 1/3Mu for compressibility as per Navier Stokes but ignore volumetric viscosity)
     }
     else
@@ -256,7 +256,7 @@ inline void Domain::CalcForce(Particle * P1, Particle * P2)
     	if (MU!=0.0 && VisEq==0) VI = 2.0*MU/(di*dj)*GK*vab;																		//Morris et al 1997
     	if (MU!=0.0 && VisEq==1) VI = 8.0*MU/((di+dj)*(di+dj))*GK*vab;																//Shao et al 2003
     	if (MU!=0.0 && VisEq==2) VI = -MU/(di*dj)*LaplaceKernel(Dimension, KernelType, rij, h)*vab;									//Real Viscosity (considering incompressible fluid)
-    	if (MU!=0.0 && VisEq==3) VI = -4*MU/(di*dj)*( LaplaceKernel(Dimension, KernelType, rij, h)*vab +
+    	if (MU!=0.0 && VisEq==3) VI = -MU/(di*dj)*( 4.0*LaplaceKernel(Dimension, KernelType, rij, h)*vab +
     			1.0/3.0*(GK*vij + dot(vij,xij) * xij / (rij*rij) * (-GK+SecDerivativeKernel(Dimension, KernelType, rij, h) ) ) );	//Takeda et al 1994 (Real viscosity considering 1/3Mu for compressibility as per Navier Stokes but ignore volumetric viscosity)
     }
 
@@ -1023,6 +1023,10 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
 
     CellInitiate();
     ListGenerate();
+
+//    #pragma omp parallel for schedule (static) num_threads(Nproc)
+//    for (size_t i=0; i<Particles.Size(); i++) Particles[i]->v=ConstVelPeriodic,0.0,0.0;
+
 
     while (Time<tf)
     {

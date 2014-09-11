@@ -50,7 +50,7 @@ int main(int argc, char **argv) try
 	dom.PresEq		= 0;
 	dom.VisEq		= 3;
 	dom.KernelType	= 4;
-	dom.Nproc		= 8;
+	dom.Nproc		= 32;
 
 //	dom.TI			= 0.05;
 
@@ -59,8 +59,8 @@ int main(int argc, char **argv) try
 	size_t no;
 
 	rho = 998.21;
-	h = 0.002*1.1;
 	dx = 0.002;
+	h = dx*1.1;
 	Rc = 0.02;
 	mass = (sqrt(3.0)*dx*dx/4.0)*rho;
 	Re = Ref;
@@ -69,16 +69,17 @@ int main(int argc, char **argv) try
 	dom.Cs				= dom.ConstVelPeriodic*Csf;
 	dom.P0				= dom.Cs*dom.Cs*rho*P0f;
 	dom.InitialDist 	= dx;
+	double maz;
+	maz=(0.2*h/(dom.Cs+dom.ConstVelPeriodic));
 
 	std::cout<<"Re = "<<Re<<std::endl;
-	std::cout<<"V  = "<<dom.Cs/Csf<<std::endl;
+	std::cout<<"V  = "<<dom.ConstVelPeriodic<<std::endl;
 	std::cout<<"Cs = "<<dom.Cs<<std::endl;
 	std::cout<<"P0 = "<<dom.P0<<std::endl;
+	std::cout<<"Time Step = "<<maz<<std::endl;
+	std::cout<<"Resolution = "<<(2.0*Rc/dx)<<std::endl;
 
-	double maz;
-	maz=(0.1*h/(dom.Cs+dom.ConstVelPeriodic));
-
-	dom.AddRandomBox(3 ,Vec3_t ( -100.0*0.002 , -100.0*0.002 , 0.0 ), 200.0*0.002 ,200.0*0.002  ,  0 , 0.001 ,rho, h);
+	dom.AddRandomBox(3 ,Vec3_t ( -10.0*Rc , -5.0*Rc , 0.0 ), 20.0*Rc , 10.0*Rc  ,  0 , dx/2.0 ,rho, h);
 
 	for (size_t a=0; a<dom.Particles.Size(); a++)
 	{
@@ -112,7 +113,7 @@ int main(int argc, char **argv) try
 
 	//No-Slip BC
 	R = Rc;
-	no = ceil(2*M_PI*R/(dx/50.0));
+	no = ceil(2*M_PI*R/(dx/5.0));
 	for (size_t i=0; i<no; i++)
 	{
 		xb = R*cos(2*M_PI/no*i);
@@ -120,7 +121,7 @@ int main(int argc, char **argv) try
 		dom.AddSingleParticle(Vec3_t ( xb ,  yb , 0.0 ));
 	}
 
-	for (size_t j=0;j<12;j++)
+	for (size_t j=0;j<6;j++)
 	{
 		R = Rc-sqrt(3.0)/2.0*dx*j;
 		no = ceil(2*M_PI*R/dx);
@@ -133,7 +134,7 @@ int main(int argc, char **argv) try
 	}
 
 
-	dom.Solve(/*tf*/10000.0,/*dt*/maz,/*dtOut*/(2.0*h/(dom.Cs+dom.ConstVelPeriodic)),"test06");
+	dom.Solve(/*tf*/1000.0,/*dt*/maz,/*dtOut*/(20.0*maz),"test06");
 	return 0;
 }
 MECHSYS_CATCH
