@@ -65,7 +65,7 @@ public:
     void Move						(double dt);																						///< Move particles
 
     void AvgParticleVelocity		();																									///< Calculate the average velocity of the last 2 column of cells in X direction
-    void Solve						(double tf, double dt, double dtOut, char const * TheFileKey);										///< The solving function
+    void Solve						(double tf, double dt, double dtOut, char const * TheFileKey, size_t cutoff);						///< The solving function
 
     void CellInitiate				();																									///< Find the size of the domain as a cube, make cells and HOCs
     void ListGenerate				();																									///< Generate linked-list
@@ -240,7 +240,7 @@ inline void Domain::CalcForce(Particle * P1, Particle * P2)
     {
     	if (MU!=0.0 && VisEq==0) VI = 2.0*MU/(di*dj)*GK*vij;																		//Morris et al 1997
     	if (MU!=0.0 && VisEq==1) VI = 8.0*MU/((di+dj)*(di+dj))*GK*vij;																//Shao et al 2003
-    	if (MU!=0.0 && VisEq==2) VI = -MU/(di*dj)*LaplaceKernel(Dimension, KernelType, rij, h)*vij;									//Real Viscosity (considering incompressible fluid)
+    	if (MU!=0.0 && VisEq==2) VI = -MU/(di*dj)*4.0* LaplaceKernel(Dimension, KernelType, rij, h)*vij;									//Real Viscosity (considering incompressible fluid)
     	if (MU!=0.0 && VisEq==3) VI = -MU/(di*dj)*( 4.0*LaplaceKernel(Dimension, KernelType, rij, h)*vij +
     			1.0/3.0*(GK*vij + dot(vij,xij) * xij / (rij*rij) * (-GK+SecDerivativeKernel(Dimension, KernelType, rij, h) ) ) );	//Takeda et al 1994 (Real viscosity considering 1/3Mu for compressibility as per Navier Stokes but ignore volumetric viscosity)
     }
@@ -255,7 +255,7 @@ inline void Domain::CalcForce(Particle * P1, Particle * P2)
 
     	if (MU!=0.0 && VisEq==0) VI = 2.0*MU/(di*dj)*GK*vab;																		//Morris et al 1997
     	if (MU!=0.0 && VisEq==1) VI = 8.0*MU/((di+dj)*(di+dj))*GK*vab;																//Shao et al 2003
-    	if (MU!=0.0 && VisEq==2) VI = -MU/(di*dj)*LaplaceKernel(Dimension, KernelType, rij, h)*vab;									//Real Viscosity (considering incompressible fluid)
+    	if (MU!=0.0 && VisEq==2) VI = -MU/(di*dj)*4.0*LaplaceKernel(Dimension, KernelType, rij, h)*vab;									//Real Viscosity (considering incompressible fluid)
     	if (MU!=0.0 && VisEq==3) VI = -MU/(di*dj)*( 4.0*LaplaceKernel(Dimension, KernelType, rij, h)*vab +
     			1.0/3.0*(GK*vij + dot(vij,xij) * xij / (rij*rij) * (-GK+SecDerivativeKernel(Dimension, KernelType, rij, h) ) ) );	//Takeda et al 1994 (Real viscosity considering 1/3Mu for compressibility as per Navier Stokes but ignore volumetric viscosity)
     }
@@ -729,11 +729,15 @@ inline void Domain::ListGenerate ()
 
 inline void Domain::CellReset ()
 {
+
+	#pragma omp parallel for schedule (static) num_threads(Nproc)
     for(int i =0; i<CellNo[0]; i++)
-    for(int j =0; j<CellNo[1]; j++)
-    for(int k =0; k<CellNo[2];k++)
     {
-    	HOC[i][j][k] = -1;
+		for(int j =0; j<CellNo[1]; j++)
+		for(int k =0; k<CellNo[2];k++)
+		{
+			HOC[i][j][k] = -1;
+		}
     }
 
     #pragma omp parallel for schedule (static) num_threads(Nproc)
@@ -952,19 +956,22 @@ inline void Domain::ConstVel ()
 {
 	if (PeriodicX && ConstVelPeriodic>0.0)
 	{
-		int temp;
-		for (int q3=0; q3<CellNo[2]; q3++)
+		#pragma omp parallel for schedule (dynamic) num_threads(Nproc)
 		for (int q2=0; q2<CellNo[1]; q2++)
-		for (int q1=0; q1<2; q1++)
 		{
-			if (HOC[q1][q2][q3]==-1) continue;
-			else
+			int temp;
+			for (int q3=0; q3<CellNo[2]; q3++)
+			for (int q1=0; q1<2; q1++)
 			{
-				temp = HOC[q1][q2][q3];
-				while (temp != -1)
+				if (HOC[q1][q2][q3]==-1) continue;
+				else
 				{
-					if (Particles[temp]->IsFree) Particles[temp]->v = Vec3_t (ConstVelPeriodic,0.0,0.0);
-					temp = Particles[temp]->LL;
+					temp = HOC[q1][q2][q3];
+					while (temp != -1)
+					{
+						if (Particles[temp]->IsFree) Particles[temp]->v = Vec3_t (ConstVelPeriodic,0.0,0.0);
+						temp = Particles[temp]->LL;
+					}
 				}
 			}
 		}
@@ -1000,7 +1007,7 @@ inline void Domain::AvgParticleVelocity ()
 	AvgVelocity = AvgVelocity / j;
 }
 
-inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheFileKey)
+inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheFileKey,size_t cutoff)
 {
     if (Dimension<=1 || Dimension>3)
     {
@@ -1070,7 +1077,7 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
 
        Time += dt;
 
-       if (idx_out>3500) abort();
+       if (idx_out>cutoff) abort();
 
        CheckParticleLeave();
        CellReset();

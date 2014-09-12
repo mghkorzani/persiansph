@@ -50,7 +50,7 @@ int main(int argc, char **argv) try
 	dom.PresEq		= 0;
 	dom.VisEq		= 3;
 	dom.KernelType	= 4;
-	dom.Nproc		= 32;
+	dom.Nproc		= 24;
 
 //	dom.TI			= 0.05;
 
@@ -70,7 +70,7 @@ int main(int argc, char **argv) try
 	dom.P0				= dom.Cs*dom.Cs*rho*P0f;
 	dom.InitialDist 	= dx;
 	double maz;
-	maz=(0.2*h/(dom.Cs+dom.ConstVelPeriodic));
+	maz=(0.1*h/(dom.Cs+dom.ConstVelPeriodic));
 
 	std::cout<<"Re = "<<Re<<std::endl;
 	std::cout<<"V  = "<<dom.ConstVelPeriodic<<std::endl;
@@ -79,7 +79,7 @@ int main(int argc, char **argv) try
 	std::cout<<"Time Step = "<<maz<<std::endl;
 	std::cout<<"Resolution = "<<(2.0*Rc/dx)<<std::endl;
 
-	dom.AddRandomBox(3 ,Vec3_t ( -10.0*Rc , -5.0*Rc , 0.0 ), 20.0*Rc , 10.0*Rc  ,  0 , dx/2.0 ,rho, h);
+	dom.AddRandomBox(3 ,Vec3_t ( -10.0*Rc , -10.0*Rc , 0.0 ), 20.0*Rc , 20.0*Rc  ,  0 , dx/2.0 ,rho, h);
 
 	for (size_t a=0; a<dom.Particles.Size(); a++)
 	{
@@ -134,7 +134,7 @@ int main(int argc, char **argv) try
 	}
 
 
-	dom.Solve(/*tf*/1000.0,/*dt*/maz,/*dtOut*/(20.0*maz),"test06");
+	dom.Solve(/*tf*/20000.0,/*dt*/maz,/*dtOut*/(20.0*maz),"test06",6000);
 	return 0;
 }
 MECHSYS_CATCH
