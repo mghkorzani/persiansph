@@ -72,7 +72,7 @@ public:
 
     // Methods
     void Move			(double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3_t domainmin, bool ShepardFilter);	///< Update the important quantities of a particle
-
+    void translate		(Vec3_t acceleration, Vec3_t velocity, double dt);
 };
 
 inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double Mass0, double Density0, double h0,bool Fixed)
@@ -204,6 +204,25 @@ inline void Particle::Move (double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3
 		}
 		ct=0;
 	}
+}
+
+inline void Particle::translate	(Vec3_t acceleration, Vec3_t velocity, double dt)
+{
+
+	if (v(0) < velocity(0) || v(1) < velocity(1) || v(2) < velocity(2))
+	{
+		x = x + dt*vb + 0.5*dt*dt*acceleration;
+
+		Vec3_t temp;
+		temp = v;
+		v = vb + 2*dt*acceleration;
+		vb = temp;
+	}
+	else
+	{
+		x = x + dt*v;
+	}
+
 }
 
 }; // namespace SPH

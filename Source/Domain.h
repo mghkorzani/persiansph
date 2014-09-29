@@ -113,6 +113,9 @@ public:
     int						RBTag;				///< Tag of particles for rigid body
     Vec3_t					RBForce;			///< Rigid body force
     Vec3_t					RBForceVis;			///< Rigid body force viscosity
+    Vec3_t					Acc;
+    Vec3_t					vel;
+    Array<int> 				RigidParticles;
 
     size_t					PresEq;				///< Selecting variable to choose an equation of state
     size_t					VisEq;				///< Selecting variable to choose an equation for viscosity
@@ -182,6 +185,10 @@ inline Domain::Domain ()
 
     deltat	= 0.0;
     Shepard = true;
+    Acc		= 0.0,0.0,0.0;
+    vel		= 0.0,0.0,0.0;
+    RigidParticles.Resize(0);
+
 }
 
 inline Domain::~Domain ()
@@ -236,11 +243,11 @@ inline void Domain::CalcForce(Particle * P1, Particle * P2)
 
     //Real Viscosity
     Vec3_t VI = 0.0;
-    if (!NoSlip || (P1->IsFree*P1->IsFree))
+    if (!NoSlip || (P1->IsFree*P2->IsFree))
     {
     	if (MU!=0.0 && VisEq==0) VI = 2.0*MU/(di*dj)*GK*vij;																		//Morris et al 1997
     	if (MU!=0.0 && VisEq==1) VI = 8.0*MU/((di+dj)*(di+dj))*GK*vij;																//Shao et al 2003
-    	if (MU!=0.0 && VisEq==2) VI = -MU/(di*dj)*4.0* LaplaceKernel(Dimension, KernelType, rij, h)*vij;									//Real Viscosity (considering incompressible fluid)
+    	if (MU!=0.0 && VisEq==2) VI = -MU/(di*dj)*4.0* LaplaceKernel(Dimension, KernelType, rij, h)*vij;							//Real Viscosity (considering incompressible fluid)
     	if (MU!=0.0 && VisEq==3) VI = -MU/(di*dj)*( 4.0*LaplaceKernel(Dimension, KernelType, rij, h)*vij +
     			1.0/3.0*(GK*vij + dot(vij,xij) * xij / (rij*rij) * (-GK+SecDerivativeKernel(Dimension, KernelType, rij, h) ) ) );	//Takeda et al 1994 (Real viscosity considering 1/3Mu for compressibility as per Navier Stokes but ignore volumetric viscosity)
     }
@@ -249,13 +256,13 @@ inline void Domain::CalcForce(Particle * P1, Particle * P2)
     	//Corrected velocity for fixed particle as per Morris et al 1997
     	Vec3_t vab;
     	if (P1->IsFree)
-   			vab = P1->v - std::max( -0.5 , -1.0 * fabs(dot( P2->x , P1->NoSlip1 ) + P1->NoSlip2(0) ) / std::max( sqrt(3.0) / 4 * InitialDist , P1->NoSlip2(2) ) ) * P1->v;
+   			vab = vij * std::min( 1.5 , 1.0 + fabs(dot( P2->x , P1->NoSlip1 ) + P1->NoSlip2(0) ) / P1->NoSlip2(2) );
    		else
-    		vab = std::max( -0.5 , -1.0 * fabs(dot( P1->x , P2->NoSlip1 ) + P2->NoSlip2(0) ) / std::max( sqrt(3.0) / 4 * InitialDist , P2->NoSlip2(2) ) ) * P2->v - P2->v;
+    		vab = vij * std::min( 1.5 , 1.0 + fabs(dot( P1->x , P2->NoSlip1 ) + P2->NoSlip2(0) ) / P2->NoSlip2(2) );
 
     	if (MU!=0.0 && VisEq==0) VI = 2.0*MU/(di*dj)*GK*vab;																		//Morris et al 1997
     	if (MU!=0.0 && VisEq==1) VI = 8.0*MU/((di+dj)*(di+dj))*GK*vab;																//Shao et al 2003
-    	if (MU!=0.0 && VisEq==2) VI = -MU/(di*dj)*4.0*LaplaceKernel(Dimension, KernelType, rij, h)*vab;									//Real Viscosity (considering incompressible fluid)
+    	if (MU!=0.0 && VisEq==2) VI = -MU/(di*dj)*4.0*LaplaceKernel(Dimension, KernelType, rij, h)*vab;								//Real Viscosity (considering incompressible fluid)
     	if (MU!=0.0 && VisEq==3) VI = -MU/(di*dj)*( 4.0*LaplaceKernel(Dimension, KernelType, rij, h)*vab +
     			1.0/3.0*(GK*vij + dot(vij,xij) * xij / (rij*rij) * (-GK+SecDerivativeKernel(Dimension, KernelType, rij, h) ) ) );	//Takeda et al 1994 (Real viscosity considering 1/3Mu for compressibility as per Navier Stokes but ignore volumetric viscosity)
     }
@@ -934,7 +941,7 @@ inline void Domain::Move (double dt)
 	#pragma omp parallel for schedule (static) num_threads(Nproc)
 	for (size_t i=0; i<Particles.Size(); i++) Particles[i]->Move(dt,DomSize,TRPR,BLPF,Shepard);
 
-	if (RigidBody)
+	if (RigidBody && RigidParticles.Size()==0)
 	{
 		RBForce = 0.0;
 		RBForceVis = 0.0;
@@ -944,10 +951,39 @@ inline void Domain::Move (double dt)
 			if (Particles[i]->ID==RBTag)
 			{
 				omp_set_lock(&dom_lock);
+				RigidParticles.Push(i);
 				RBForce    +=Particles[i]->Mass * Particles[i]->a;
 				RBForceVis +=Particles[i]->Mass * Particles[i]->Vis;
 				omp_unset_lock(&dom_lock);
+				if (norm(Acc)!=0.0 || norm(vel)!=0.0)
+				{
+					Particles[i]->translate(Acc,vel,dt);
+				}
 			}
+		}
+	}
+
+	if (RigidBody && RigidParticles.Size()!=0)
+	{
+		RBForce = 0.0;
+		RBForceVis = 0.0;
+		for (size_t i=0; i<RigidParticles.Size(); i++)
+		{
+				RBForce    +=Particles[RigidParticles[i]]->Mass * Particles[RigidParticles[i]]->a;
+				RBForceVis +=Particles[RigidParticles[i]]->Mass * Particles[RigidParticles[i]]->Vis;
+
+				if (norm(Acc)!=0.0 || norm(vel)!=0.0)
+				{
+					Particles[RigidParticles[i]]->translate(Acc,vel,dt);
+				}
+		}
+	}
+
+	if (NoSlip && (norm(Acc)!=0.0 || norm(vel)!=0.0))
+	{
+		for (size_t i=0; i<NSParticles.Size(); i++)
+		{
+			NSParticles[i]->translate(Acc,vel,dt);
 		}
 	}
 }
