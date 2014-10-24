@@ -245,11 +245,20 @@ inline void Domain::CalcForce(Particle * P1, Particle * P2)
     Vec3_t VI = 0.0;
     if (!NoSlip || (P1->IsFree*P2->IsFree))
     {
-    	if (MU!=0.0 && VisEq==0) VI = 2.0*MU/(di*dj)*GK*vij;																		//Morris et al 1997
+    	if (MU!=0.0 && VisEq==0) VI = 8.0*MU/(di*dj)*GK*vij;																		//Morris et al 1997
     	if (MU!=0.0 && VisEq==1) VI = 8.0*MU/((di+dj)*(di+dj))*GK*vij;																//Shao et al 2003
     	if (MU!=0.0 && VisEq==2) VI = -MU/(di*dj)*4.0* LaplaceKernel(Dimension, KernelType, rij, h)*vij;							//Real Viscosity (considering incompressible fluid)
     	if (MU!=0.0 && VisEq==3) VI = -MU/(di*dj)*( 4.0*LaplaceKernel(Dimension, KernelType, rij, h)*vij +
     			1.0/3.0*(GK*vij + dot(vij,xij) * xij / (rij*rij) * (-GK+SecDerivativeKernel(Dimension, KernelType, rij, h) ) ) );	//Takeda et al 1994 (Real viscosity considering 1/3Mu for compressibility as per Navier Stokes but ignore volumetric viscosity)
+    	if (MU!=0.0 && (VisEq<0 || VisEq>3))
+    	{
+    	   	std::cout << "Viscosity Equation No is out of range. Please correct it and run again" << std::endl;
+    		std::cout << "0 => Morris et al 1997" << std::endl;
+    		std::cout << "1 => Shao et al 2003" << std::endl;
+    		std::cout << "2 => Real viscosity for incompressible fluids" << std::endl;
+    		std::cout << "3 => Takeda et al 1994 (Real viscosity for compressible fluids)" << std::endl;
+    	    abort();
+    	}
     }
     else
     {
@@ -260,11 +269,20 @@ inline void Domain::CalcForce(Particle * P1, Particle * P2)
    		else
     		vab = vij * std::min( 1.5 , 1.0 + fabs(dot( P1->x , P2->NoSlip1 ) + P2->NoSlip2(0) ) / P2->NoSlip2(2) );
 
-    	if (MU!=0.0 && VisEq==0) VI = 2.0*MU/(di*dj)*GK*vab;																		//Morris et al 1997
+    	if (MU!=0.0 && VisEq==0) VI = 8.0*MU/(di*dj)*GK*vab;																		//Morris et al 1997
     	if (MU!=0.0 && VisEq==1) VI = 8.0*MU/((di+dj)*(di+dj))*GK*vab;																//Shao et al 2003
     	if (MU!=0.0 && VisEq==2) VI = -MU/(di*dj)*4.0*LaplaceKernel(Dimension, KernelType, rij, h)*vab;								//Real Viscosity (considering incompressible fluid)
     	if (MU!=0.0 && VisEq==3) VI = -MU/(di*dj)*( 4.0*LaplaceKernel(Dimension, KernelType, rij, h)*vab +
     			1.0/3.0*(GK*vij + dot(vij,xij) * xij / (rij*rij) * (-GK+SecDerivativeKernel(Dimension, KernelType, rij, h) ) ) );	//Takeda et al 1994 (Real viscosity considering 1/3Mu for compressibility as per Navier Stokes but ignore volumetric viscosity)
+    	if (MU!=0.0 && (VisEq<0 || VisEq>3))
+    	{
+    	   	std::cout << "Viscosity Equation No is out of range. Please correct it and run again" << std::endl;
+    		std::cout << "0 => Morris et al 1997" << std::endl;
+    		std::cout << "1 => Shao et al 2003" << std::endl;
+    		std::cout << "2 => Real viscosity for incompressible fluids" << std::endl;
+    		std::cout << "3 => Takeda et al 1994 (Real viscosity for compressible fluids)" << std::endl;
+    	    abort();
+    	}
     }
 
     // XSPH Monaghan
@@ -431,27 +449,49 @@ inline void Domain::AddRandomBox(int tag, Vec3_t const & V, double Lx, double Ly
 //			yp = V(1) + (2*j+1)*r;
 //		}
 
-		j = 0;
-		yp = V(1);
+//		j = 0;
+//		yp = V(1);
+//
+//		while (yp <= (V(1)+Ly-r))
+//		{
+//			i = 0;
+//			xp = V(0);
+//			while (xp <= (V(0)+Lx-r))
+//			{
+//				x = V(0) + (2*i+(j%2)+1)*r;
+//				y = V(1) + (sqrt(3.0)*j+1)*r;
+//				Particles.Push(new Particle(tag,Vec3_t((x + qin*r*double(rand())/RAND_MAX),(y+ qin*r*double(rand())/RAND_MAX),0.0),Vec3_t(0,0,0),(sqrt(3.0)*r*r)*Density,Density,h,false));
+////				Particles.Push(new Particle(tag,Vec3_t(x,y,0.0),Vec3_t(0,0,0),(sqrt(3.0)*r*r)*Density,Density,h,false));
+//				i++;
+//				xp = V(0) + (2*i+(j%2)+1)*r;
+//			}
+//			j++;
+//			yp = V(1) + (sqrt(3.0)*j+1)*r;
+//		}
+//    }
 
-		while (yp <= (V(1)+Ly-r))
+    	i = 0;
+    	xp = V(0);
+
+    	while (xp <= (V(0)+Lx-r))
 		{
-			i = 0;
-			xp = V(0);
-			while (xp <= (V(0)+Lx-r))
+			j = 0;
+			yp = V(1);
+			while (yp <= (V(1)+Ly-r))
 			{
-				x = V(0) + (2*i+(j%2)+1)*r;
-				y = V(1) + (sqrt(3.0)*j+1)*r;
+				x = V(0) + (sqrt(3.0)*i+1)*r;
+				y = V(1) + (2*j+(i%2)+1)*r;
 				Particles.Push(new Particle(tag,Vec3_t((x + qin*r*double(rand())/RAND_MAX),(y+ qin*r*double(rand())/RAND_MAX),0.0),Vec3_t(0,0,0),(sqrt(3.0)*r*r)*Density,Density,h,false));
 //				Particles.Push(new Particle(tag,Vec3_t(x,y,0.0),Vec3_t(0,0,0),(sqrt(3.0)*r*r)*Density,Density,h,false));
-				i++;
-				xp = V(0) + (2*i+(j%2)+1)*r;
+				j++;
+				yp = V(1) + (2*j+(i%2)+1)*r;
 			}
-			j++;
-			yp = V(1) + (sqrt(3.0)*j+1)*r;
+			i++;
+			xp = V(0) + (sqrt(3.0)*i+1)*r;
 		}
     }
-    R = r;
+
+		R = r;
 
     std::cout << "\nNo. of added particles = " << Particles.Size()-PrePS << std::endl;
 }

@@ -50,7 +50,7 @@ int main(int argc, char **argv) try
 	dom.PresEq		= 0;
 	dom.VisEq		= 3;
 	dom.KernelType	= 4;
-	dom.Nproc		= 24;
+	dom.Nproc		= 64;
 
 //	dom.TI			= 0.05;
 
@@ -61,28 +61,31 @@ int main(int argc, char **argv) try
 	rho = 998.21;
 	dx = 0.002;
 	h = dx*1.1;
-	Rc = 0.05;
+	Rc = 0.050;
 	mass = (sqrt(3.0)*dx*dx/4.0)*rho;
 	Re = Ref;
 
-//	dom.ConstVelPeriodic= Re*dom.MU/(rho*2.0*Rc);
-	dom.vel				= Re*dom.MU/(rho*2.0*Rc),0.0,0.0;
-	double temp 		= norm(dom.vel);
-	dom.Acc				= 6e-6,0.0,0.0;
-	dom.Cs				= temp*Csf;
+	dom.ConstVelPeriodic= Re*dom.MU/(rho*2.0*Rc);
+//	dom.vel				= Re*dom.MU/(rho*2.0*Rc),0.0,0.0;
+//	double temp 		= norm(dom.vel);
+//	dom.Acc				= 3e-6,0.0,0.0;
+//	dom.Cs				= temp*Csf;
+	dom.Cs				= Csf*dom.ConstVelPeriodic;
 	dom.P0				= dom.Cs*dom.Cs*rho*P0f;
 	dom.InitialDist 	= dx;
 	double maz;
-	maz=(0.2*h/(dom.Cs+temp));
+//	maz=(0.2*h/(dom.Cs+temp));
+	maz=(0.15*h/(dom.Cs+dom.ConstVelPeriodic));
 
 	std::cout<<"Re = "<<Re<<std::endl;
-	std::cout<<"V  = "<<temp<<std::endl;
+//	std::cout<<"V  = "<<temp<<std::endl;
+	std::cout<<"V  = "<<dom.ConstVelPeriodic<<std::endl;
 	std::cout<<"Cs = "<<dom.Cs<<std::endl;
 	std::cout<<"P0 = "<<dom.P0<<std::endl;
 	std::cout<<"Time Step = "<<maz<<std::endl;
 	std::cout<<"Resolution = "<<(2.0*Rc/dx)<<std::endl;
 
-	dom.AddRandomBox(3 ,Vec3_t ( -5.0*Rc , -10.0*Rc , 0.0 ), 30.0*Rc , 20.0*Rc  ,  0 , dx/2.0 ,rho, h);
+	dom.AddRandomBox(3 ,Vec3_t ( -3.0*Rc , -5.0*Rc , 0.0 ), 20.0*Rc , 10.0*Rc  ,  0 , dx/2.0 ,rho, h);
 
 	for (size_t a=0; a<dom.Particles.Size(); a++)
 	{
