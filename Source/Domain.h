@@ -245,10 +245,10 @@ inline void Domain::CalcForce(Particle * P1, Particle * P2)
     Vec3_t VI = 0.0;
     if (!NoSlip || (P1->IsFree*P2->IsFree))
     {
-    	if (MU!=0.0 && VisEq==0) VI = 8.0*MU/(di*dj)*GK*vij;																		//Morris et al 1997
+    	if (MU!=0.0 && VisEq==0) VI = 2.0*MU/(di*dj)*GK*vij;																		//Morris et al 1997
     	if (MU!=0.0 && VisEq==1) VI = 8.0*MU/((di+dj)*(di+dj))*GK*vij;																//Shao et al 2003
-    	if (MU!=0.0 && VisEq==2) VI = -MU/(di*dj)*4.0* LaplaceKernel(Dimension, KernelType, rij, h)*vij;							//Real Viscosity (considering incompressible fluid)
-    	if (MU!=0.0 && VisEq==3) VI = -MU/(di*dj)*( 4.0*LaplaceKernel(Dimension, KernelType, rij, h)*vij +
+    	if (MU!=0.0 && VisEq==2) VI = -MU/(di*dj)*3.0* LaplaceKernel(Dimension, KernelType, rij, h)*vij;							//Real Viscosity (considering incompressible fluid)
+    	if (MU!=0.0 && VisEq==3) VI = -MU/(di*dj)*( 3.0*LaplaceKernel(Dimension, KernelType, rij, h)*vij +
     			1.0/3.0*(GK*vij + dot(vij,xij) * xij / (rij*rij) * (-GK+SecDerivativeKernel(Dimension, KernelType, rij, h) ) ) );	//Takeda et al 1994 (Real viscosity considering 1/3Mu for compressibility as per Navier Stokes but ignore volumetric viscosity)
     	if (MU!=0.0 && (VisEq<0 || VisEq>3))
     	{
@@ -269,10 +269,10 @@ inline void Domain::CalcForce(Particle * P1, Particle * P2)
    		else
     		vab = vij * std::min( 1.5 , 1.0 + fabs(dot( P1->x , P2->NoSlip1 ) + P2->NoSlip2(0) ) / P2->NoSlip2(2) );
 
-    	if (MU!=0.0 && VisEq==0) VI = 8.0*MU/(di*dj)*GK*vab;																		//Morris et al 1997
+    	if (MU!=0.0 && VisEq==0) VI = 2.0*MU/(di*dj)*GK*vab;																		//Morris et al 1997
     	if (MU!=0.0 && VisEq==1) VI = 8.0*MU/((di+dj)*(di+dj))*GK*vab;																//Shao et al 2003
-    	if (MU!=0.0 && VisEq==2) VI = -MU/(di*dj)*4.0*LaplaceKernel(Dimension, KernelType, rij, h)*vab;								//Real Viscosity (considering incompressible fluid)
-    	if (MU!=0.0 && VisEq==3) VI = -MU/(di*dj)*( 4.0*LaplaceKernel(Dimension, KernelType, rij, h)*vab +
+    	if (MU!=0.0 && VisEq==2) VI = -MU/(di*dj)*3.0*LaplaceKernel(Dimension, KernelType, rij, h)*vab;								//Real Viscosity (considering incompressible fluid)
+    	if (MU!=0.0 && VisEq==3) VI = -MU/(di*dj)*( 3.0*LaplaceKernel(Dimension, KernelType, rij, h)*vab +
     			1.0/3.0*(GK*vij + dot(vij,xij) * xij / (rij*rij) * (-GK+SecDerivativeKernel(Dimension, KernelType, rij, h) ) ) );	//Takeda et al 1994 (Real viscosity considering 1/3Mu for compressibility as per Navier Stokes but ignore volumetric viscosity)
     	if (MU!=0.0 && (VisEq<0 || VisEq>3))
     	{
@@ -481,8 +481,8 @@ inline void Domain::AddRandomBox(int tag, Vec3_t const & V, double Lx, double Ly
 			{
 				x = V(0) + (sqrt(3.0)*i+1)*r;
 				y = V(1) + (2*j+(i%2)+1)*r;
-				Particles.Push(new Particle(tag,Vec3_t((x + qin*r*double(rand())/RAND_MAX),(y+ qin*r*double(rand())/RAND_MAX),0.0),Vec3_t(0,0,0),(sqrt(3.0)*r*r)*Density,Density,h,false));
-//				Particles.Push(new Particle(tag,Vec3_t(x,y,0.0),Vec3_t(0,0,0),(sqrt(3.0)*r*r)*Density,Density,h,false));
+//				Particles.Push(new Particle(tag,Vec3_t((x + qin*r*double(rand())/RAND_MAX),(y+ qin*r*double(rand())/RAND_MAX),0.0),Vec3_t(0,0,0),(sqrt(3.0)*r*r)*Density,Density,h,false));
+				Particles.Push(new Particle(tag,Vec3_t(x,y,0.0),Vec3_t(0,0,0),(sqrt(3.0)*r*r)*Density,Density,h,false));
 				j++;
 				yp = V(1) + (2*j+(i%2)+1)*r;
 			}
@@ -562,7 +562,7 @@ inline void Domain::CellInitiate ()
     }
 
 	//Because of Hexagonal close packing in x direction domain is modified
-	if (!PeriodicX) {TRPR(0) += hmax/2;	BLPF(0) -= hmax/2;}else{TRPR(0) += R/50; BLPF(0) -= R/50;}
+	if (!PeriodicX) {TRPR(0) += hmax/2;	BLPF(0) -= hmax/2;}else{TRPR(0) += R; BLPF(0) -= R;}
 	if (!PeriodicY) {TRPR(1) += hmax/2;	BLPF(1) -= hmax/2;}else{TRPR(1) += R; BLPF(1) -= R;}
 	if (!PeriodicZ) {TRPR(2) += hmax/2;	BLPF(2) -= hmax/2;}else{TRPR(2) += R; BLPF(2) -= R;}
 

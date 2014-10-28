@@ -275,7 +275,7 @@ inline double Pressure(size_t EQ, double Cs0, double P00, double Density, double
 		return P00+(Cs0*Cs0)*(Density-Density0);
 		break;
 	case 1:
-		return P00+(Density0*Cs0*Cs0/7)*(pow(Density/Density0,7)-1);
+		return P00+(Density0*Cs0*Cs0/7.0)*(pow(Density/Density0,7.0)-1);
 		break;
 	case 2:
 		return (Cs0*Cs0)*Density;
@@ -298,7 +298,7 @@ inline double SoundSpeed(size_t EQ, double Cs0, double Density, double Density0)
 		return Cs0;
 		break;
 	case 1:
-		return sqrt((Cs0*Cs0)*pow(Density/Density0,6));
+		return sqrt((Cs0*Cs0)*pow(Density/Density0,6.0));
 		break;
 	case 2:
 		return Cs0;

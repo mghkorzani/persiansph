@@ -50,7 +50,7 @@ int main(int argc, char **argv) try
 	dom.PresEq		= 0;
 	dom.VisEq		= 3;
 	dom.KernelType	= 4;
-	dom.Nproc		= 64;
+	dom.Nproc		= 24;
 
 //	dom.TI			= 0.05;
 
@@ -75,7 +75,7 @@ int main(int argc, char **argv) try
 	dom.InitialDist 	= dx;
 	double maz;
 //	maz=(0.2*h/(dom.Cs+temp));
-	maz=(0.15*h/(dom.Cs+dom.ConstVelPeriodic));
+	maz=(0.2*h/(dom.Cs+dom.ConstVelPeriodic));
 
 	std::cout<<"Re = "<<Re<<std::endl;
 //	std::cout<<"V  = "<<temp<<std::endl;
@@ -91,7 +91,7 @@ int main(int argc, char **argv) try
 	{
 		xb=dom.Particles[a]->x(0);
 		yb=dom.Particles[a]->x(1);
-		if ((xb*xb+yb*yb)<((Rc+3.0/2.0*sqrt(3.0)*dx)*(Rc+3.0/2.0*sqrt(3.0)*dx)))
+		if ((xb*xb+yb*yb)<((Rc+dx/2)*(Rc+dx/2)))
 		{
 			dom.Particles[a]->ID=4;
 			dom.Particles[a]->IsFree=false;
@@ -99,23 +99,23 @@ int main(int argc, char **argv) try
 	}
 	dom.DelParticles(4);
 
-	R = Rc+sqrt(3.0)*dx;
-	no = ceil(2*M_PI*R/dx);
-	for (size_t i=0; i<no; i++)
-	{
-		xb = R*cos(2*M_PI/no*i);
-		yb = R*sin(2*M_PI/no*i);
-		dom.AddSingleParticle(3,Vec3_t ( xb ,  yb , 0.0 ), mass , rho , h , false);
-	}
-
-	R = Rc+sqrt(3.0)/2.0*dx;
-	no = ceil(2*M_PI*R/dx);
-	for (size_t i=0; i<no; i++)
-	{
-		xb = R*cos(2*M_PI/no*i);
-		yb = R*sin(2*M_PI/no*i);
-		dom.AddSingleParticle(3,Vec3_t ( xb ,  yb , 0.0 ), mass , rho , h , false);
-	}
+//	R = Rc+sqrt(3.0)*dx;
+//	no = ceil(2*M_PI*R/dx);
+//	for (size_t i=0; i<no; i++)
+//	{
+//		xb = R*cos(2*M_PI/no*i);
+//		yb = R*sin(2*M_PI/no*i);
+//		dom.AddSingleParticle(3,Vec3_t ( xb ,  yb , 0.0 ), mass , rho , h , false);
+//	}
+//
+//	R = Rc+sqrt(3.0)/2.0*dx;
+//	no = ceil(2*M_PI*R/dx);
+//	for (size_t i=0; i<no; i++)
+//	{
+//		xb = R*cos(2*M_PI/no*i);
+//		yb = R*sin(2*M_PI/no*i);
+//		dom.AddSingleParticle(3,Vec3_t ( xb ,  yb , 0.0 ), mass , rho , h , false);
+//	}
 
 	//No-Slip BC
 	R = Rc;
@@ -142,7 +142,7 @@ int main(int argc, char **argv) try
 	}
 
 
-	dom.Solve(/*tf*/20000.0,/*dt*/maz,/*dtOut*/(100.0*maz),"test06",1500);
+	dom.Solve(/*tf*/50000.0,/*dt*/maz,/*dtOut*/(100.0*maz),"test06",1500);
 	return 0;
 }
 MECHSYS_CATCH
