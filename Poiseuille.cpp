@@ -25,20 +25,53 @@ using std::endl;
 int main(int argc, char **argv) try
 {
         SPH::Domain		dom;
-        dom.Gravity		= 0.2,0.0,0.0;
+
+        dom.Gravity		= 0.002,0.0,0.0;
         dom.Dimension	= 2;
-        dom.Cs			= 0.1;
-        dom.Periodic	= true;
-        dom.MU			= 0.001;
+        dom.Cs			= 0.0025;
+        dom.PeriodicX	= true;
+        dom.MU			= 1.002e-3;
+        dom.Nproc		= 24;
+    	dom.PresEq		= 0;
+    	dom.VisEq		= 3;
+    	dom.KernelType	= 4;
+    	dom.NoSlip		= true;
 
-        dom.AddBoxLength(1 ,Vec3_t ( 1.0000 , 1.0010125 , 0.0 ), 0.00375 , 0 , 0 , 150 , 1 , 1 , 0.000000625 , 1000 , 0.0000275 , true);
-        dom.AddBoxLength(1 ,Vec3_t ( 1.0000 , 0.9999875 , 0.0 ), 0.00375 , 0 , 0 , 150 , 1 , 1 , 0.000000625 , 1000 , 0.0000275 , true);
+        double xb,yb,h,rho;
+    	double dx;
 
-        dom.AddBoxLength(1 ,Vec3_t ( 1.0005 , 1.0005 , 0.0 ), 0 , 0.000050 , 0 , 1 , 2 , 1 , 0.000000625 , 1000 , 0.0000275 , true);
+    	rho = 998.21;
+    	dx = 2.5e-5;
+    	h = dx*1.1;
+    	dom.InitialDist 	= dx;
 
-        dom.AddRandomBox(3 ,Vec3_t ( 1.000 , 1.000 , 0.0 ), 0.003725 , 0.001 ,  0 , 149 , 40 , 1 , 0.000000625 , 1000, 0.0000275);
+        double maz;
+        maz=(0.005*h/(dom.Cs+0.00025));
+        std::cout<<maz<<std::endl;
 
-        dom.Solve(/*tf*/10.0,/*dt*/0.00001,/*dtOut*/0.002,"test05");
+    	dom.AddRandomBox(3 ,Vec3_t ( 0.0 , -0.0000875001 , 0.0 ), 0.0005 , 0.00118  ,  0 , dx/2.0 ,rho, h, 1 , 0 );
+
+    	for (size_t a=0; a<dom.Particles.Size(); a++)
+    	{
+    		yb=dom.Particles[a]->x(1);
+    		if (yb>=0.0009901 || yb<0.0)
+    		{
+    			dom.Particles[a]->ID=4;
+    			dom.Particles[a]->IsFree=false;
+    		}
+    	}
+
+
+    	for (size_t i=0; i<50; i++)
+    	{
+    		xb = -0.0001+0.0007/50.0*i;
+    		dom.AddSingleParticle(Vec3_t ( xb ,  0.0 , 0.0 ));
+    		dom.AddSingleParticle(Vec3_t ( xb ,  0.001 , 0.0 ));
+    	}
+
+
+//    	dom.WriteXDMF("maz");
+    	dom.Solve(/*tf*/50000.0,/*dt*/maz,/*dtOut*/(100.0*maz),"test06",1500);
         return 0;
 }
 MECHSYS_CATCH

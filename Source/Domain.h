@@ -48,7 +48,7 @@ public:
 
     // Domain Part
     void AddSingleParticle			(int tag, Vec3_t const & x, double Mass, double Density, double h, bool Fixed);						///< Add one particle
-    void AddRandomBox				(int tag, Vec3_t const &V, double Lx, double Ly, double Lz,double r, double Density, double h);		///< Add a cube of random positioned particles with a defined dimensions
+    void AddRandomBox				(int tag, Vec3_t const &V, double Lx, double Ly, double Lz,double r, double Density, double h, int type, int rotation);		///< Add a cube of random positioned particles with a defined dimensions
     void AddBoxLength				(int tag, Vec3_t const &V, double Lx, double Ly, double Lz, size_t nx, size_t ny, size_t nz,
     									double Mass, double Density, double h, bool Fixed);												///< Add a cube of particles with a defined dimensions
     void AddSingleParticle			(Vec3_t const & x);
@@ -247,8 +247,8 @@ inline void Domain::CalcForce(Particle * P1, Particle * P2)
     {
     	if (MU!=0.0 && VisEq==0) VI = 2.0*MU/(di*dj)*GK*vij;																		//Morris et al 1997
     	if (MU!=0.0 && VisEq==1) VI = 8.0*MU/((di+dj)*(di+dj))*GK*vij;																//Shao et al 2003
-    	if (MU!=0.0 && VisEq==2) VI = -MU/(di*dj)*3.0* LaplaceKernel(Dimension, KernelType, rij, h)*vij;							//Real Viscosity (considering incompressible fluid)
-    	if (MU!=0.0 && VisEq==3) VI = -MU/(di*dj)*( 3.0*LaplaceKernel(Dimension, KernelType, rij, h)*vij +
+    	if (MU!=0.0 && VisEq==2) VI = -MU/(di*dj)* LaplaceKernel(Dimension, KernelType, rij, h)*vij;							//Real Viscosity (considering incompressible fluid)
+    	if (MU!=0.0 && VisEq==3) VI = -MU/(di*dj)*( LaplaceKernel(Dimension, KernelType, rij, h)*vij +
     			1.0/3.0*(GK*vij + dot(vij,xij) * xij / (rij*rij) * (-GK+SecDerivativeKernel(Dimension, KernelType, rij, h) ) ) );	//Takeda et al 1994 (Real viscosity considering 1/3Mu for compressibility as per Navier Stokes but ignore volumetric viscosity)
     	if (MU!=0.0 && (VisEq<0 || VisEq>3))
     	{
@@ -271,8 +271,8 @@ inline void Domain::CalcForce(Particle * P1, Particle * P2)
 
     	if (MU!=0.0 && VisEq==0) VI = 2.0*MU/(di*dj)*GK*vab;																		//Morris et al 1997
     	if (MU!=0.0 && VisEq==1) VI = 8.0*MU/((di+dj)*(di+dj))*GK*vab;																//Shao et al 2003
-    	if (MU!=0.0 && VisEq==2) VI = -MU/(di*dj)*3.0*LaplaceKernel(Dimension, KernelType, rij, h)*vab;								//Real Viscosity (considering incompressible fluid)
-    	if (MU!=0.0 && VisEq==3) VI = -MU/(di*dj)*( 3.0*LaplaceKernel(Dimension, KernelType, rij, h)*vab +
+    	if (MU!=0.0 && VisEq==2) VI = -MU/(di*dj)*LaplaceKernel(Dimension, KernelType, rij, h)*vab;								//Real Viscosity (considering incompressible fluid)
+    	if (MU!=0.0 && VisEq==3) VI = -MU/(di*dj)*( LaplaceKernel(Dimension, KernelType, rij, h)*vab +
     			1.0/3.0*(GK*vij + dot(vij,xij) * xij / (rij*rij) * (-GK+SecDerivativeKernel(Dimension, KernelType, rij, h) ) ) );	//Takeda et al 1994 (Real viscosity considering 1/3Mu for compressibility as per Navier Stokes but ignore volumetric viscosity)
     	if (MU!=0.0 && (VisEq<0 || VisEq>3))
     	{
@@ -365,9 +365,34 @@ inline void Domain::AddBoxLength(Vec3_t const & V, double Lx, double Ly, double 
     }
 }
 
-inline void Domain::AddRandomBox(int tag, Vec3_t const & V, double Lx, double Ly, double Lz,double r, double Density, double h)
+inline void Domain::AddRandomBox(int tag, Vec3_t const & V, double Lx, double Ly, double Lz,double r, double Density, double h, int type, int rotation)
 {
-    Util::Stopwatch stopwatch;
+    if (!(type==0 || type==1))
+    {
+	   	std::cout << "Packing Type is out of range. Please correct it and run again" << std::endl;
+		std::cout << "0 => Hexagonal Close Packing" << std::endl;
+		std::cout << "1 => Cubic Close Packing" << std::endl;
+	    abort();
+    }
+
+    if (!(rotation==0 || rotation==90))
+    {
+	   	std::cout << "Packing Rotation Angle is out of range. Please correct it and run again" << std::endl;
+		std::cout << "0 => " << std::endl;
+		std::cout << "0 0 0 0" << std::endl;
+		std::cout << " 0 0 0 0" << std::endl;
+		std::cout << "0 0 0 0" << std::endl;
+		std::cout << " 0 0 0 0" << std::endl;
+		std::cout << std::endl;
+		std::cout << "90 => Cubic Close Packing" << std::endl;
+		std::cout << "  0   0" << std::endl;
+		std::cout << "0 0 0 0" << std::endl;
+		std::cout << "0 0 0 0" << std::endl;
+		std::cout << "0   0  " << std::endl;
+		abort();
+    }
+
+	Util::Stopwatch stopwatch;
     std::cout << "\n--------------Generating random packing of particles by AddRandomBox----------------" << std::endl;
 
     size_t PrePS = Particles.Size();
@@ -429,66 +454,76 @@ inline void Domain::AddRandomBox(int tag, Vec3_t const & V, double Lx, double Ly
 
     if (Dimension==2)
     {
-//		j = 0;
-//		yp = V(1);
-//
-//		while (yp <= (V(1)+Ly-r))
-//		{
-//			i = 0;
-//			xp = V(0);
-//			while (xp <= (V(0)+Lx-r))
-//			{
-//				x = V(0) + (2*i+1)*r;
-//				y = V(1) + (2*j+1)*r;
-////				Particles.Push(new Particle(tag,Vec3_t((x + qin*r*double(rand())/RAND_MAX),(y+ qin*r*double(rand())/RAND_MAX),0.0),Vec3_t(0,0,0),(sqrt(3.0)*r*r)*Density,Density,h,false));
-//				Particles.Push(new Particle(tag,Vec3_t(x,y,0.0),Vec3_t(0,0,0),(sqrt(3.0)*r*r)*Density,Density,h,false));
-//				i++;
-//				xp = V(0) + (2*i+1)*r;
-//			}
-//			j++;
-//			yp = V(1) + (2*j+1)*r;
-//		}
+    	if (type==0)
+    	{
+    		if (rotation==0)
+    		{
+				j = 0;
+				yp = V(1);
 
-//		j = 0;
-//		yp = V(1);
-//
-//		while (yp <= (V(1)+Ly-r))
-//		{
-//			i = 0;
-//			xp = V(0);
-//			while (xp <= (V(0)+Lx-r))
-//			{
-//				x = V(0) + (2*i+(j%2)+1)*r;
-//				y = V(1) + (sqrt(3.0)*j+1)*r;
-//				Particles.Push(new Particle(tag,Vec3_t((x + qin*r*double(rand())/RAND_MAX),(y+ qin*r*double(rand())/RAND_MAX),0.0),Vec3_t(0,0,0),(sqrt(3.0)*r*r)*Density,Density,h,false));
-////				Particles.Push(new Particle(tag,Vec3_t(x,y,0.0),Vec3_t(0,0,0),(sqrt(3.0)*r*r)*Density,Density,h,false));
-//				i++;
-//				xp = V(0) + (2*i+(j%2)+1)*r;
-//			}
-//			j++;
-//			yp = V(1) + (sqrt(3.0)*j+1)*r;
-//		}
-//    }
+				while (yp <= (V(1)+Ly-r))
+				{
+					i = 0;
+					xp = V(0);
+					while (xp <= (V(0)+Lx-r))
+					{
+						x = V(0) + (2*i+(j%2)+1)*r;
+						y = V(1) + (sqrt(3.0)*j+1)*r;
+//						Particles.Push(new Particle(tag,Vec3_t((x + qin*r*double(rand())/RAND_MAX),(y+ qin*r*double(rand())/RAND_MAX),0.0),Vec3_t(0,0,0),(sqrt(3.0)*r*r)*Density,Density,h,false));
+						Particles.Push(new Particle(tag,Vec3_t(x,y,0.0),Vec3_t(0,0,0),(sqrt(3.0)*r*r)*Density,Density,h,false));
+						i++;
+						xp = V(0) + (2*i+(j%2)+1)*r;
+					}
+					j++;
+					yp = V(1) + (sqrt(3.0)*j+1)*r;
+				}
+			}
+    		else
+    		{
+				i = 0;
+				xp = V(0);
 
-    	i = 0;
-    	xp = V(0);
-
-    	while (xp <= (V(0)+Lx-r))
-		{
+				while (xp <= (V(0)+Lx-r))
+				{
+					j = 0;
+					yp = V(1);
+					while (yp <= (V(1)+Ly-r))
+					{
+						x = V(0) + (sqrt(3.0)*i+1)*r;
+						y = V(1) + (2*j+(i%2)+1)*r;
+//						Particles.Push(new Particle(tag,Vec3_t((x + qin*r*double(rand())/RAND_MAX),(y+ qin*r*double(rand())/RAND_MAX),0.0),Vec3_t(0,0,0),(sqrt(3.0)*r*r)*Density,Density,h,false));
+						Particles.Push(new Particle(tag,Vec3_t(x,y,0.0),Vec3_t(0,0,0),(sqrt(3.0)*r*r)*Density,Density,h,false));
+						j++;
+						yp = V(1) + (2*j+(i%2)+1)*r;
+					}
+					i++;
+					xp = V(0) + (sqrt(3.0)*i+1)*r;
+				}
+    		}
+    	}
+    	else
+    	{
 			j = 0;
 			yp = V(1);
+
 			while (yp <= (V(1)+Ly-r))
 			{
-				x = V(0) + (sqrt(3.0)*i+1)*r;
-				y = V(1) + (2*j+(i%2)+1)*r;
-//				Particles.Push(new Particle(tag,Vec3_t((x + qin*r*double(rand())/RAND_MAX),(y+ qin*r*double(rand())/RAND_MAX),0.0),Vec3_t(0,0,0),(sqrt(3.0)*r*r)*Density,Density,h,false));
-				Particles.Push(new Particle(tag,Vec3_t(x,y,0.0),Vec3_t(0,0,0),(sqrt(3.0)*r*r)*Density,Density,h,false));
+				i = 0;
+				xp = V(0);
+				while (xp <= (V(0)+Lx-r))
+				{
+					x = V(0) + (2*i+1)*r;
+					y = V(1) + (2*j+1)*r;
+//					Particles.Push(new Particle(tag,Vec3_t((x + qin*r*double(rand())/RAND_MAX),(y+ qin*r*double(rand())/RAND_MAX),0.0),Vec3_t(0,0,0),(sqrt(3.0)*r*r)*Density,Density,h,false));
+					Particles.Push(new Particle(tag,Vec3_t(x,y,0.0),Vec3_t(0,0,0),2.0*r*2.0*r*Density,Density,h,false));
+					i++;
+					xp = V(0) + (2*i+1)*r;
+				}
 				j++;
-				yp = V(1) + (2*j+(i%2)+1)*r;
+				yp = V(1) + (2*j+1)*r;
 			}
-			i++;
-			xp = V(0) + (sqrt(3.0)*i+1)*r;
-		}
+
+    	}
     }
 
 		R = r;

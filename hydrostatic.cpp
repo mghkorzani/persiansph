@@ -28,12 +28,13 @@ int main(int argc, char **argv) try
     SPH::Domain		dom;
 	dom.Dimension	= 2;
 
-	dom.Alpha		= 0.05;
-	dom.PresEq		= 1;
-	dom.KernelType	= 4;
-	dom.Nproc		= 64;
+	dom.MU			= 1.002e-3;
+	dom.VisEq		= 0;
+	dom.PresEq		= 0;
+	dom.KernelType	= 0;
+	dom.Nproc		= 24;
 
-	dom.TI			= 0.1;
+	dom.TI			= 0.05;
 
 	double xb,yb,h,rho;
 	double dx;
@@ -43,28 +44,60 @@ int main(int argc, char **argv) try
 	h = dx*1.1;
 
 	dom.Gravity			= 0.0,-9.81,0.0;
-	dom.Cs				= 10.0*sqrt(2.0*9.81*1.25);
+	dom.Cs				= 10.0*sqrt(2.0*9.81*1.5);
 	dom.InitialDist 	= dx;
 	double maz;
 	maz=(0.2*h/dom.Cs);
 
 
-	dom.AddRandomBox(3 ,Vec3_t ( 0 , 0.0 , 0.0 ), 1.0 , 1.25  ,  0 , dx/2.0 ,rho, h);
+	dom.AddRandomBox(3 ,Vec3_t ( 0.0   , 0.0 , 0.0 ), 1.1 , 1.5  ,  0 , dx/2.0 ,rho, h);
+	dom.AddRandomBox(3 ,Vec3_t ( 1.098 , 0.0 , 0.0 ), 4.8 , 0.01 ,  0 , dx/2.0 ,rho, h);
+	dom.AddRandomBox(3 ,Vec3_t ( 5.897 , 0.0 , 0.0 ), 0.103 , 1.5  ,  0 , dx/2.0 ,rho, h);
 
 	for (size_t a=0; a<dom.Particles.Size(); a++)
 	{
-		dom.Particles[a]->Density  = rho*pow((1+rho*9.81*(1.25-dom.Particles[a]->x(1))/(rho*dom.Cs*dom.Cs/7.0)),(1.0/7.0));
-		dom.Particles[a]->Densityb = rho*pow((1+rho*9.81*(1.25-dom.Particles[a]->x(1))/(rho*dom.Cs*dom.Cs/7.0)),(1.0/7.0));
 		xb=dom.Particles[a]->x(0);
 		yb=dom.Particles[a]->x(1);
-		if (xb<0.007 || xb>0.993 || yb<0.007)
+		if (xb<0.007)
 		{
 			dom.Particles[a]->ID=4;
 			dom.Particles[a]->IsFree=false;
 		}
+		if (xb>5.991)
+		{
+			dom.Particles[a]->ID=4;
+			dom.Particles[a]->IsFree=false;
+		}
+		if (yb<0.007)
+		{
+			dom.Particles[a]->ID=4;
+			dom.Particles[a]->IsFree=false;
+		}
+//		if (yb>1.492)
+//		{
+//			dom.Particles[a]->ID=4;
+//			dom.Particles[a]->IsFree=false;
+//		}
+		if (xb<1.007 && xb>1.0 && yb>0.107)
+		{
+			dom.Particles[a]->ID=4;
+			dom.Particles[a]->IsFree=false;
+		}
+		if (xb>1.007 && dom.Particles[a]->ID==3)
+		{
+			dom.Particles[a]->ID=5;
+		}
+		if (dom.Particles[a]->ID==3)
+		{
+//			dom.Particles[a]->Density  = rho*pow((1+rho*9.81*(1.5-dom.Particles[a]->x(1))/(rho*dom.Cs*dom.Cs/7.0)),(1.0/7.0));
+//			dom.Particles[a]->Densityb = rho*pow((1+rho*9.81*(1.5-dom.Particles[a]->x(1))/(rho*dom.Cs*dom.Cs/7.0)),(1.0/7.0));
+			dom.Particles[a]->Density  = rho*((1+9.81*(1.5-dom.Particles[a]->x(1))/(dom.Cs*dom.Cs)));
+			dom.Particles[a]->Densityb = rho*((1+9.81*(1.5-dom.Particles[a]->x(1))/(dom.Cs*dom.Cs)));
+		}
 	}
+	dom.DelParticles(5);
 
-	dom.Solve(/*tf*/50000.0,/*dt*/maz,/*dtOut*/(100.0*maz),"test06",1500);
+	dom.Solve(/*tf*/50000.0,/*dt*/maz,/*dtOut*/(100.0*maz),"test06",10000);
 	return 0;
 }
 MECHSYS_CATCH
