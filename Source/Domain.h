@@ -51,7 +51,7 @@ public:
     void AddRandomBox				(int tag, Vec3_t const &V, double Lx, double Ly, double Lz,double r, double Density, double h, int type, int rotation);		///< Add a cube of random positioned particles with a defined dimensions
     void AddBoxLength				(int tag, Vec3_t const &V, double Lx, double Ly, double Lz, size_t nx, size_t ny, size_t nz,
     									double Mass, double Density, double h, bool Fixed);												///< Add a cube of particles with a defined dimensions
-    void AddSingleParticle			(Vec3_t const & x);
+    void AddSingleParticle			(int tag, Vec3_t const & x, bool Fixed);
     void AddBoxLength				(Vec3_t const & V, double Lx, double Ly, double Lz, size_t nx, size_t ny, size_t nz);
 
     void DelParticles				(int const & Tags);																					///< Delete particles by tag
@@ -81,8 +81,6 @@ public:
     Array <Particle*>		Particles;     	 	///< Array of particles
     Array <Particle*>		NSParticles;     	///< Array of particles for No-Slip condition
     double					R;					///< Particle Radius in addrandombox
-
-    Array <std::pair<size_t,size_t> > PairsWFixed;	///< Array to save pairs of particles which one of them is fixed
 
     double					Time;          	 	///< The simulation time at each step
     double					AutoSaveInt;		///< Automatic save interval time step
@@ -115,6 +113,7 @@ public:
     Vec3_t					RBForceVis;			///< Rigid body force viscosity
     Vec3_t					Acc;
     Vec3_t					vel;
+    Vec3_t					vellim;
     Array<int> 				RigidParticles;
 
     size_t					PresEq;				///< Selecting variable to choose an equation of state
@@ -187,6 +186,7 @@ inline Domain::Domain ()
     Shepard = true;
     Acc		= 0.0,0.0,0.0;
     vel		= 0.0,0.0,0.0;
+    vellim		= 0.0,0.0,0.0;
     RigidParticles.Resize(0);
 
 }
@@ -328,9 +328,9 @@ inline void Domain::AddSingleParticle(int tag, Vec3_t const & x, double Mass, do
    	Particles.Push(new Particle(tag,x,Vec3_t(0,0,0),Mass,Density,h,Fixed));
 }
 
-inline void Domain::AddSingleParticle(Vec3_t const & x)
+inline void Domain::AddSingleParticle(int tag, Vec3_t const & x, bool Fixed)
 {
-   	NSParticles.Push(new Particle(0,x,Vec3_t(0,0,0),0.0,0.0,0.0,true));
+   	NSParticles.Push(new Particle(tag,x,Vec3_t(0,0,0),0.0,0.0,0.0,!Fixed));
 }
 
 inline void Domain::AddBoxLength(int tag, Vec3_t const & V, double Lx, double Ly, double Lz, size_t nx, size_t ny, size_t nz, double Mass, double Density, double h, bool Fixed)
@@ -903,23 +903,70 @@ inline void Domain::YZCellsComputeAcceleration(int q1)
 		}
 	}
 
+	Vec3_t temp1 = 0.0;
+	Vec3_t temp  = 0.0;
+	double temp2 = 1000000.0;
+
 	for (size_t i=0; i<LocalPairs.Size();i++)
 	{
 		if (Particles[LocalPairs[i].first]->IsFree || Particles[LocalPairs[i].second]->IsFree)
 		{
-			CalcForce(Particles[LocalPairs[i].first],Particles[LocalPairs[i].second]);
-
 			// No Slip BC
 			if (NoSlip)
+			{
 				if (!Particles[LocalPairs[i].first]->IsFree || !Particles[LocalPairs[i].second]->IsFree)
 				{
-					omp_set_lock(&dom_lock);
-					PairsWFixed.Push(LocalPairs[i]);
-					omp_unset_lock(&dom_lock);
+					if (Particles[LocalPairs[i].first]->IsFree && int(Particles[LocalPairs[i].first]->NoSlip2(1))!=Particles[LocalPairs[i].second]->ID)
+					{
+						temp2 = 1000000.0;
+						for (size_t j=0; j<NSParticles.Size(); j++)
+						{
+							if (Particles[LocalPairs[i].second]->ID == NSParticles[j]->ID)
+							{
+								if (norm(Particles[LocalPairs[i].first]->x - NSParticles[j]->x) < temp2)
+								{
+									temp  = Particles[LocalPairs[i].first]->x - NSParticles[j]->x;
+									temp2 = norm(Particles[LocalPairs[i].first]->x - NSParticles[j]->x);
+									temp1 = NSParticles[j]->x;
+								}
+							}
+						}
+						omp_set_lock(&Particles[LocalPairs[i].first]->my_lock);
+						Particles[LocalPairs[i].first]->NoSlip2(1) = Particles[LocalPairs[i].second]->ID;
+						Particles[LocalPairs[i].first]->NoSlip2(2) =  temp2;
+						Particles[LocalPairs[i].first]->NoSlip1    =  temp / temp2;
+						Particles[LocalPairs[i].first]->NoSlip2(0) = -1.0*dot(Particles[LocalPairs[i].first]->NoSlip1 , temp1);
+						omp_unset_lock(&Particles[LocalPairs[i].first]->my_lock);
+					}
+
+					if (Particles[LocalPairs[i].second]->IsFree && int(Particles[LocalPairs[i].second]->NoSlip2(1))!=Particles[LocalPairs[i].first]->ID)
+					{
+						temp2 = 1000000.0;
+						for (size_t j=0; j<NSParticles.Size(); j++)
+						{
+							if (Particles[LocalPairs[i].first]->ID == NSParticles[j]->ID)
+							{
+								if (norm(Particles[LocalPairs[i].second]->x - NSParticles[j]->x) < temp2)
+								{
+									temp  = Particles[LocalPairs[i].second]->x - NSParticles[j]->x;
+									temp2 = norm(Particles[LocalPairs[i].second]->x - NSParticles[j]->x);
+									temp1 = NSParticles[j]->x;
+								}
+							}
+						}
+						omp_set_lock(&Particles[LocalPairs[i].second]->my_lock);
+						Particles[LocalPairs[i].second]->NoSlip2(1) = Particles[LocalPairs[i].first]->ID;
+						Particles[LocalPairs[i].second]->NoSlip2(2) = temp2;
+						Particles[LocalPairs[i].second]->NoSlip1    = temp / temp2;
+						Particles[LocalPairs[i].second]->NoSlip2(0) = -1.0*dot(Particles[LocalPairs[i].second]->NoSlip1 , temp1);
+						omp_unset_lock(&Particles[LocalPairs[i].second]->my_lock);
+					}
 				}
+			}
+			CalcForce(Particles[LocalPairs[i].first],Particles[LocalPairs[i].second]);
 		}
 	}
-LocalPairs.Clear();
+	LocalPairs.Clear();
 }
 
 inline void Domain::StartAcceleration (Vec3_t const & a)
@@ -934,7 +981,7 @@ inline void Domain::StartAcceleration (Vec3_t const & a)
         Particles[i]->SumDen	= 0.0;
         Particles[i]->Vis		= 0.0;
         Particles[i]->NoSlip1	= 0.0;
-        Particles[i]->NoSlip2	= 0.0,0.0,1000000.0;
+        Particles[i]->NoSlip2	= 0.0,1000000.0,1000000.0;
 
         if (isnan(Particles[i]->dDensity) || isnan(Particles[i]->Density) || isnan(norm(Particles[i]->v)) || isnan(norm(Particles[i]->x)) || isnan(norm(Particles[i]->a)))
         {
@@ -946,52 +993,13 @@ inline void Domain::StartAcceleration (Vec3_t const & a)
 inline void Domain::ComputeAcceleration ()
 {
 	if (NoSlip)
-	{
-		Vec3_t temp1=0.0;
 		if (NSParticles.Size()<1)
 		{
 			std::cout<<"Please define the particles for No-Slip BC and run again"<<std::endl;
 			abort();
 		}
 
-		for (size_t i=0; i<PairsWFixed.Size(); i++)
-		{
-			if (Particles[PairsWFixed[i].first]->IsFree && Particles[PairsWFixed[i].first]->NoSlip2(1)!=1.0)
-			{
-				for (size_t j=0; j<NSParticles.Size(); j++)
-				{
-						if (norm(Particles[PairsWFixed[i].first]->x - NSParticles[j]->x) < Particles[PairsWFixed[i].first]->NoSlip2(2))
-						{
-							Particles[PairsWFixed[i].first]->NoSlip1    = Particles[PairsWFixed[i].first]->x - NSParticles[j]->x;
-							Particles[PairsWFixed[i].first]->NoSlip2(2) = norm(Particles[PairsWFixed[i].first]->x - NSParticles[j]->x);
-							temp1 = NSParticles[j]->x;
-						}
-				}
-				Particles[PairsWFixed[i].first]->NoSlip2(1) = 1.0;
-				Particles[PairsWFixed[i].first]->NoSlip1    = Particles[PairsWFixed[i].first]->NoSlip1 / Particles[PairsWFixed[i].first]->NoSlip2(2);
-				Particles[PairsWFixed[i].first]->NoSlip2(0) = -1.0*dot(Particles[PairsWFixed[i].first]->NoSlip1 , temp1);
-			}
-
-			if (Particles[PairsWFixed[i].second]->IsFree && Particles[PairsWFixed[i].second]->NoSlip2(1)!=1.0)
-			{
-				for (size_t j=0; j<NSParticles.Size(); j++)
-				{
-						if (norm(Particles[PairsWFixed[i].second]->x - NSParticles[j]->x) < Particles[PairsWFixed[i].second]->NoSlip2(2))
-						{
-							Particles[PairsWFixed[i].second]->NoSlip1    = Particles[PairsWFixed[i].second]->x - NSParticles[j]->x;
-							Particles[PairsWFixed[i].second]->NoSlip2(2) = norm(Particles[PairsWFixed[i].second]->x - NSParticles[j]->x);
-							temp1 = NSParticles[j]->x;
-						}
-				}
-				Particles[PairsWFixed[i].second]->NoSlip2(1) = 1.0;
-				Particles[PairsWFixed[i].second]->NoSlip1    = Particles[PairsWFixed[i].second]->NoSlip1/Particles[PairsWFixed[i].second]->NoSlip2(2);
-				Particles[PairsWFixed[i].second]->NoSlip2(0) = -1.0*dot(Particles[PairsWFixed[i].second]->NoSlip1 , temp1);
-			}
-		}
-	}
-
 	//Compute everything
-	PairsWFixed.Resize(0);
     int q1;
 
     if (PeriodicX)
@@ -1032,7 +1040,22 @@ inline void Domain::Move (double dt)
 				omp_unset_lock(&dom_lock);
 				if (norm(Acc)!=0.0 || norm(vel)!=0.0)
 				{
-					Particles[i]->translate(Acc,vel,dt);
+					Particles[i]->translate(Acc,vellim,dt,DomSize,TRPR,BLPF);
+					Particles[i]->vb = vel;
+					Particles[i]->v = vel;
+				}
+			}
+		}
+
+		if (NoSlip && (norm(Acc)!=0.0 || norm(vel)!=0.0))
+		{
+			for (size_t i=0; i<NSParticles.Size(); i++)
+			{
+				if (NSParticles[i]->ID==RBTag && NSParticles[i]->IsFree)
+				{
+					NSParticles[i]->translate(Acc,vellim,dt,DomSize,TRPR,BLPF);
+					NSParticles[i]->vb = vel;
+					NSParticles[i]->v = vel;
 				}
 			}
 		}
@@ -1049,16 +1072,16 @@ inline void Domain::Move (double dt)
 
 				if (norm(Acc)!=0.0 || norm(vel)!=0.0)
 				{
-					Particles[RigidParticles[i]]->translate(Acc,vel,dt);
+					Particles[RigidParticles[i]]->translate(Acc,vellim,dt,DomSize,TRPR,BLPF);
 				}
 		}
 	}
 
-	if (NoSlip && (norm(Acc)!=0.0 || norm(vel)!=0.0))
+	if (NoSlip && (norm(Acc)!=0.0 || norm(vel)!=0.0) && RigidParticles.Size()!=0)
 	{
 		for (size_t i=0; i<NSParticles.Size(); i++)
 		{
-			NSParticles[i]->translate(Acc,vel,dt);
+			if (NSParticles[i]->ID==RBTag && NSParticles[i]->IsFree) NSParticles[i]->translate(Acc,vellim,dt,DomSize,TRPR,BLPF);
 		}
 	}
 }

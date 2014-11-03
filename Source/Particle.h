@@ -72,7 +72,7 @@ public:
 
     // Methods
     void Move			(double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3_t domainmin, bool ShepardFilter);	///< Update the important quantities of a particle
-    void translate		(Vec3_t acceleration, Vec3_t velocity, double dt);
+    void translate		(Vec3_t acceleration, Vec3_t vellim, double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3_t domainmin);
 };
 
 inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double Mass0, double Density0, double h0,bool Fixed)
@@ -117,22 +117,6 @@ inline void Particle::Move (double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3
 			double dens = Density;
 			Density = Densityb + 2*dt*dDensity;
 			Densityb = dens;
-
-			if (Domainsize(0)>0.0)
-			{
-				(x(0)>(domainmax(0))) ? x(0) -= Domainsize(0) : x(0);
-				(x(0)<(domainmin(0))) ? x(0) += Domainsize(0) : x(0);
-			}
-			if (Domainsize(1)>0.0)
-			{
-				(x(1)>(domainmax(1))) ? x(1) -= Domainsize(1) : x(1);
-				(x(1)<(domainmin(1))) ? x(1) += Domainsize(1) : x(1);
-			}
-			if (Domainsize(2)>0.0)
-			{
-				(x(2)>(domainmax(2))) ? x(2) -= Domainsize(2) : x(2);
-				(x(2)<(domainmin(2))) ? x(2) += Domainsize(2) : x(2);
-			}
 		}
 		else
 		{
@@ -141,6 +125,23 @@ inline void Particle::Move (double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3
 			Density = Densityb + 2*dt*dDensity;
 			Densityb = dens;
 		}
+
+		if (Domainsize(0)>0.0)
+		{
+			(x(0)>(domainmax(0))) ? x(0) -= Domainsize(0) : x(0);
+			(x(0)<(domainmin(0))) ? x(0) += Domainsize(0) : x(0);
+		}
+		if (Domainsize(1)>0.0)
+		{
+			(x(1)>(domainmax(1))) ? x(1) -= Domainsize(1) : x(1);
+			(x(1)<(domainmin(1))) ? x(1) += Domainsize(1) : x(1);
+		}
+		if (Domainsize(2)>0.0)
+		{
+			(x(2)>(domainmax(2))) ? x(2) -= Domainsize(2) : x(2);
+			(x(2)<(domainmin(2))) ? x(2) += Domainsize(2) : x(2);
+		}
+
 		ct++;
 	}
 	else
@@ -169,22 +170,6 @@ inline void Particle::Move (double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3
 				Density = Density + dt*dDensity;
 				Densityb = dens;
 			}
-
-			if (Domainsize(0)>0.0)
-			{
-				(x(0)>(domainmax(0))) ? x(0) -= Domainsize(0) : x(0);
-				(x(0)<(domainmin(0))) ? x(0) += Domainsize(0) : x(0);
-			}
-			if (Domainsize(1)>0.0)
-			{
-				(x(1)>(domainmax(1))) ? x(1) -= Domainsize(1) : x(1);
-				(x(1)<(domainmin(1))) ? x(1) += Domainsize(1) : x(1);
-			}
-			if (Domainsize(2)>0.0)
-			{
-				(x(2)>(domainmax(2))) ? x(2) -= Domainsize(2) : x(2);
-				(x(2)<(domainmin(2))) ? x(2) += Domainsize(2) : x(2);
-			}
 		}
 		else
 		{
@@ -202,14 +187,30 @@ inline void Particle::Move (double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3
 				Densityb = dens;
 			}
 		}
+
+		if (Domainsize(0)>0.0)
+		{
+			(x(0)>(domainmax(0))) ? x(0) -= Domainsize(0) : x(0);
+			(x(0)<(domainmin(0))) ? x(0) += Domainsize(0) : x(0);
+		}
+		if (Domainsize(1)>0.0)
+		{
+			(x(1)>(domainmax(1))) ? x(1) -= Domainsize(1) : x(1);
+			(x(1)<(domainmin(1))) ? x(1) += Domainsize(1) : x(1);
+		}
+		if (Domainsize(2)>0.0)
+		{
+			(x(2)>(domainmax(2))) ? x(2) -= Domainsize(2) : x(2);
+			(x(2)<(domainmin(2))) ? x(2) += Domainsize(2) : x(2);
+		}
+
 		ct=0;
 	}
 }
 
-inline void Particle::translate	(Vec3_t acceleration, Vec3_t velocity, double dt)
+inline void Particle::translate	(Vec3_t acceleration, Vec3_t vellim, double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3_t domainmin)
 {
-
-	if (v(0) < velocity(0) || v(1) < velocity(1) || v(2) < velocity(2))
+	if (v(0) < vellim(0) || v(1) < vellim(1) || v(2) < vellim(2))
 	{
 		x = x + dt*vb + 0.5*dt*dt*acceleration;
 
@@ -223,6 +224,21 @@ inline void Particle::translate	(Vec3_t acceleration, Vec3_t velocity, double dt
 		x = x + dt*v;
 	}
 
+	if (Domainsize(0)>0.0)
+	{
+		(x(0)>(domainmax(0))) ? x(0) -= Domainsize(0) : x(0);
+		(x(0)<(domainmin(0))) ? x(0) += Domainsize(0) : x(0);
+	}
+	if (Domainsize(1)>0.0)
+	{
+		(x(1)>(domainmax(1))) ? x(1) -= Domainsize(1) : x(1);
+		(x(1)<(domainmin(1))) ? x(1) += Domainsize(1) : x(1);
+	}
+	if (Domainsize(2)>0.0)
+	{
+		(x(2)>(domainmax(2))) ? x(2) -= Domainsize(2) : x(2);
+		(x(2)<(domainmin(2))) ? x(2) += Domainsize(2) : x(2);
+	}
 }
 
 }; // namespace SPH

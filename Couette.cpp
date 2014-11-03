@@ -26,7 +26,6 @@ int main(int argc, char **argv) try
 {
         SPH::Domain		dom;
 
-        dom.Gravity		= 0.002,0.0,0.0;
         dom.Dimension	= 2;
         dom.Cs			= 0.0025;
         dom.PeriodicX	= true;
@@ -36,6 +35,11 @@ int main(int argc, char **argv) try
     	dom.VisEq		= 3;
     	dom.KernelType	= 4;
     	dom.NoSlip		= true;
+
+    	dom.RigidBody	= true;
+    	dom.RBTag		= 4;
+    	dom.vel			= 2.5e-5,0.0,0.0;
+    	dom.vellim		= 2.5e-5,0.0,0.0;
 
         double xb,yb,h,rho;
     	double dx;
@@ -54,9 +58,14 @@ int main(int argc, char **argv) try
     	for (size_t a=0; a<dom.Particles.Size(); a++)
     	{
     		yb=dom.Particles[a]->x(1);
-    		if (yb>=0.0009901 || yb<0.0)
+    		if (yb>=0.0009901)
     		{
     			dom.Particles[a]->ID=4;
+    			dom.Particles[a]->IsFree=false;
+    		}
+    		if (yb<0.0)
+    		{
+    			dom.Particles[a]->ID=5;
     			dom.Particles[a]->IsFree=false;
     		}
     	}
@@ -65,7 +74,7 @@ int main(int argc, char **argv) try
     	for (size_t i=0; i<50; i++)
     	{
     		xb = -0.0001+0.0007/50.0*i;
-    		dom.AddSingleParticle(4,Vec3_t ( xb ,  0.0   , 0.0 ),true);
+    		dom.AddSingleParticle(5,Vec3_t ( xb ,  0.0   , 0.0 ),true);
     		dom.AddSingleParticle(4,Vec3_t ( xb ,  0.001 , 0.0 ),true);
     	}
 

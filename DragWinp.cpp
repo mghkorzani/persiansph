@@ -39,7 +39,7 @@ int main(int argc, char **argv) try
     SPH::Domain		dom;
 	dom.Dimension	= 2;
 
-	dom.NoSlip		= true;
+//	dom.NoSlip		= true;
 	dom.PeriodicX	= true;
 	dom.PeriodicY	= true;
 
@@ -85,7 +85,7 @@ int main(int argc, char **argv) try
 	std::cout<<"Time Step = "<<maz<<std::endl;
 	std::cout<<"Resolution = "<<(2.0*Rc/dx)<<std::endl;
 
-	dom.AddRandomBox(3 ,Vec3_t ( -3.0*Rc , -5.0*Rc , 0.0 ), 20.0*Rc , 10.0*Rc  ,  0 , dx/2.0 ,rho, h);
+	dom.AddRandomBox(3 ,Vec3_t ( -3.0*Rc , -5.0*Rc , 0.0 ), 20.0*Rc , 10.0*Rc  ,  0 , dx/2.0 ,rho, h,1,90);
 
 	for (size_t a=0; a<dom.Particles.Size(); a++)
 	{
@@ -97,7 +97,7 @@ int main(int argc, char **argv) try
 			dom.Particles[a]->IsFree=false;
 		}
 	}
-	dom.DelParticles(4);
+//	dom.DelParticles(4);
 
 //	R = Rc+sqrt(3.0)*dx;
 //	no = ceil(2*M_PI*R/dx);
@@ -117,31 +117,32 @@ int main(int argc, char **argv) try
 //		dom.AddSingleParticle(3,Vec3_t ( xb ,  yb , 0.0 ), mass , rho , h , false);
 //	}
 
-	//No-Slip BC
-	R = Rc;
-	no = ceil(2*M_PI*R/(dx/5.0));
-	for (size_t i=0; i<no; i++)
-	{
-		xb = R*cos(2*M_PI/no*i);
-		yb = R*sin(2*M_PI/no*i);
-		dom.AddSingleParticle(Vec3_t ( xb ,  yb , 0.0 ));
-	}
-
-	no = ceil(2*M_PI*Rc/dx);
-
-	for (size_t j=0;j<6;j++)
-	{
-		R = Rc-sqrt(3.0)/2.0*dx*j;
+//	//No-Slip BC
+//	R = Rc;
+//	no = ceil(2*M_PI*R/(dx/5.0));
+//	for (size_t i=0; i<no; i++)
+//	{
+//		xb = R*cos(2*M_PI/no*i);
+//		yb = R*sin(2*M_PI/no*i);
+//		dom.AddSingleParticle(Vec3_t ( xb ,  yb , 0.0 ));
+//	}
+//
+//	no = ceil(2*M_PI*Rc/dx);
+//
+//	for (size_t j=0;j<6;j++)
+//	{
+////		R = Rc-sqrt(3.0)/2.0*dx*j;
+//		R = Rc-dx*j;
 //		no = ceil(2*M_PI*R/dx);
-		for (size_t i=0; i<no; i++)
-		{
-			xb = R*cos(2*M_PI/no*i+(j%2)*M_PI/no);
-			yb = R*sin(2*M_PI/no*i+(j%2)*M_PI/no);
-			dom.AddSingleParticle(4,Vec3_t ( xb ,  yb , 0.0 ), mass , rho , h , true);
-		}
-	}
-
-
+//		for (size_t i=0; i<no; i++)
+//		{
+//			xb = R*cos(2*M_PI/no*i+(j%2)*M_PI/no);
+//			yb = R*sin(2*M_PI/no*i+(j%2)*M_PI/no);
+//			dom.AddSingleParticle(4,Vec3_t ( xb ,  yb , 0.0 ), mass , rho , h , true);
+//		}
+//	}
+//
+//
 	dom.Solve(/*tf*/50000.0,/*dt*/maz,/*dtOut*/(100.0*maz),"test06",1500);
 	return 0;
 }
