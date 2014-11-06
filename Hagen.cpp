@@ -29,7 +29,7 @@ int main(int argc, char **argv) try
         dom.Gravity		= 0.0,0.0,0.002;
         dom.Dimension	= 3;
         dom.Cs			= 0.0025;
-        dom.PeriodicZ	= true;
+        dom.BC.Periodic[2]	= true;
         dom.MU			= 1.002e-3;
         dom.Nproc		= 21;
     	dom.PresEq		= 0;

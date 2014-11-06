@@ -82,7 +82,6 @@ public:
     void CalcForce					(Particle * P1, Particle * P2);																		///< Calculates the contact force between particles
     void Move						(double dt);																						///< Move particles
 
-    void AvgParticleVelocity		();																									///< Calculate the average velocity of the last 2 column of cells in X direction
     void Solve						(double tf, double dt, double dtOut, char const * TheFileKey, size_t cutoff);						///< The solving function
 
     void CellInitiate				();																									///< Find the size of the domain as a cube, make cells and HOCs
@@ -139,10 +138,6 @@ public:
     size_t					PresEq;				///< Selecting variable to choose an equation of state
     size_t					VisEq;				///< Selecting variable to choose an equation for viscosity
     size_t					KernelType;			///< Selecting variable to choose a kernel
-
-    bool					PeriodicX; 			///< If it is true, periodic boundary condition along x direction will be considered
-    bool					PeriodicY; 			///< If it is true, periodic boundary condition along y direction will be considered
-    bool					PeriodicZ; 			///< If it is true, periodic boundary condition along z direction will be considered
 
     bool					NoSlip;				///< To simulate No Slip Boundary
     double 					XSPH;				///< Velocity correction factor
@@ -208,9 +203,6 @@ inline Domain::Domain ()
     VisEq	= 0;
 
     NoSlip	= false;
-    PeriodicX = false;
-    PeriodicY = false;
-    PeriodicZ = false;
     ConstVelPeriodic = 0.0;
 
     XSPH	= 0.0;
@@ -777,9 +769,9 @@ inline void Domain::CellInitiate ()
     }
 
 	//Because of Hexagonal close packing in x direction domain is modified
-	if (!PeriodicX) {TRPR(0) += hmax/2;	BLPF(0) -= hmax/2;}else{TRPR(0) += R; BLPF(0) -= R;}
-	if (!PeriodicY) {TRPR(1) += hmax/2;	BLPF(1) -= hmax/2;}else{TRPR(1) += R; BLPF(1) -= R;}
-	if (!PeriodicZ) {TRPR(2) += hmax/2;	BLPF(2) -= hmax/2;}else{TRPR(2) += R; BLPF(2) -= R;}
+	if (!BC.Periodic[0]) {TRPR(0) += hmax/2;	BLPF(0) -= hmax/2;}else{TRPR(0) += R; BLPF(0) -= R;}
+	if (!BC.Periodic[1]) {TRPR(1) += hmax/2;	BLPF(1) -= hmax/2;}else{TRPR(1) += R; BLPF(1) -= R;}
+	if (!BC.Periodic[2]) {TRPR(2) += hmax/2;	BLPF(2) -= hmax/2;}else{TRPR(2) += R; BLPF(2) -= R;}
 
     // Calculate Cells Properties
 	switch (Dimension)
@@ -825,13 +817,13 @@ inline void Domain::CellInitiate ()
 	}
 
 	// Periodic BC modifications
-	if (PeriodicX) CellNo[0] += 2;
-    if (PeriodicY) CellNo[1] += 2;
-    if (PeriodicZ) CellNo[2] += 2;
+	if (BC.Periodic[0]) CellNo[0] += 2;
+    if (BC.Periodic[1]) CellNo[1] += 2;
+    if (BC.Periodic[2]) CellNo[2] += 2;
 
-    if (PeriodicX) DomSize[0] = (TRPR(0)-BLPF(0));
-    if (PeriodicY) DomSize[1] = (TRPR(1)-BLPF(1));
-    if (PeriodicZ) DomSize[2] = (TRPR(2)-BLPF(2));
+    if (BC.Periodic[0]) DomSize[0] = (TRPR(0)-BLPF(0));
+    if (BC.Periodic[1]) DomSize[1] = (TRPR(1)-BLPF(1));
+    if (BC.Periodic[2]) DomSize[2] = (TRPR(2)-BLPF(2));
 
     // Initiate Head of Chain array for Linked-List
     HOC = new int**[(int) CellNo[0]];
@@ -939,7 +931,7 @@ inline void Domain::ListGenerate ()
 		break;
 	}
 
-	if (PeriodicX)
+	if (BC.Periodic[0])
 	{
 	   for(int j =0; j<CellNo[1]; j++)
 	   for(int k =0; k<CellNo[2]; k++)
@@ -948,7 +940,7 @@ inline void Domain::ListGenerate ()
 		  HOC[CellNo[0]-2][j][k] =  HOC[0][j][k];
 	   }
 	}
-	if (PeriodicY)
+	if (BC.Periodic[1])
 	{
 	   for(int i =0; i<CellNo[0]; i++)
 	   for(int k =0; k<CellNo[2]; k++)
@@ -957,7 +949,7 @@ inline void Domain::ListGenerate ()
 		  HOC[i][CellNo[1]-2][k] =  HOC[i][0][k];
 	   }
 	}
-	if (PeriodicZ)
+	if (BC.Periodic[2])
 	{
 	   for(int i =0; i<CellNo[0]; i++)
 	   for(int j =0; j<CellNo[1]; j++)
@@ -993,8 +985,8 @@ inline void Domain::YZCellsComputeAcceleration(int q1)
 	int q3,q2;
 	Array<std::pair<size_t,size_t> > LocalPairs;
 
-	for (PeriodicZ ? q3=1 : q3=0;PeriodicZ ? (q3<(CellNo[2]-1)) : (q3<CellNo[2]); q3++)
-	for (PeriodicY ? q2=1 : q2=0;PeriodicY ? (q2<(CellNo[1]-1)) : (q2<CellNo[1]); q2++)
+	for (BC.Periodic[2] ? q3=1 : q3=0;BC.Periodic[2] ? (q3<(CellNo[2]-1)) : (q3<CellNo[2]); q3++)
+	for (BC.Periodic[1] ? q2=1 : q2=0;BC.Periodic[1] ? (q2<(CellNo[1]-1)) : (q2<CellNo[1]); q2++)
 	{
 		if (HOC[q1][q2][q3]==-1) continue;
 		else
@@ -1161,7 +1153,7 @@ inline void Domain::ComputeAcceleration ()
 	//Compute everything
     int q1;
 
-    if (PeriodicX)
+    if (BC.Periodic[0])
     {
 		#pragma omp parallel for schedule (dynamic) num_threads(Nproc)
 		for (q1=1;q1<(CellNo[0]-1); q1++)	YZCellsComputeAcceleration(q1);
@@ -1247,14 +1239,17 @@ inline void Domain::Move (double dt)
 
 inline void Domain::ConstValues ()
 {
-	if (PeriodicX && ConstVelPeriodic>0.0)
+	int q1,q2,q3;
+
+	// X direction inflow
+	if (BC.inout[0]==1 || BC.inout[0]==3)
 	{
-		#pragma omp parallel for schedule (dynamic) num_threads(Nproc)
-		for (int q2=0; q2<CellNo[1]; q2++)
+		#pragma omp parallel for schedule (static) num_threads(Nproc)
+		for (q2=0; q2<CellNo[1]; q2++)
 		{
 			int temp;
-			for (int q3=0; q3<CellNo[2]; q3++)
-			for (int q1=0; q1<2; q1++)
+			for (q3=0; q3<CellNo[2]	; q3++)
+			for (q1=0; q1<3			; q1++)
 			{
 				if (HOC[q1][q2][q3]==-1) continue;
 				else
@@ -1262,42 +1257,200 @@ inline void Domain::ConstValues ()
 					temp = HOC[q1][q2][q3];
 					while (temp != -1)
 					{
-						if (Particles[temp]->IsFree) Particles[temp]->v = Vec3_t (ConstVelPeriodic,0.0,0.0);
+						if (Particles[temp]->IsFree && norm(BC.inv[0])>0.0)
+						{
+							Particles[temp]->v  = BC.inv[0];
+							Particles[temp]->vb = BC.inv[0];
+						}
+						if (Particles[temp]->IsFree && norm(BC.ina[0])>0.0) Particles[temp]->a = BC.ina[0];
+						if (BC.inDensity[0]>0.0)
+						{
+							Particles[temp]->Density  = BC.inDensity[0];
+							Particles[temp]->Densityb = BC.inDensity[0];
+						}
+
 						temp = Particles[temp]->LL;
 					}
 				}
 			}
 		}
 	}
-}
 
-inline void Domain::AvgParticleVelocity ()
-{
-	AvgVelocity = 0.0;
-	int j = 0;
-
-		int temp;
-		for (int q3=0; q3<CellNo[2]; q3++)
-		for (int q2=0; q2<CellNo[1]; q2++)
-		for (int q1=CellNo[0]-4; q1<CellNo[0]-2; q1++)
+	// X direction outflow
+	if (BC.inout[0]==2 || BC.inout[0]==3)
+	{
+		#pragma omp parallel for schedule (static) num_threads(Nproc)
+		for (q2=0; q2<CellNo[1]; q2++)
 		{
-			if (HOC[q1][q2][q3]==-1) continue;
-			else
+			int temp;
+			for (q3=0; q3<CellNo[2]; q3++)
+			for (BC.Periodic[0] ? q1=CellNo[0]-5 : q1=CellNo[0]-3 ; BC.Periodic[0] ? q1<CellNo[0]-2 : q1<CellNo[0] ; q1++)
 			{
-				temp = HOC[q1][q2][q3];
-				while (temp != -1)
+				if (HOC[q1][q2][q3]==-1) continue;
+				else
 				{
-					if (Particles[temp]->IsFree)
+					temp = HOC[q1][q2][q3];
+					while (temp != -1)
 					{
-					AvgVelocity += Particles[temp]->v(0);
-					j++;
+						if (Particles[temp]->IsFree && norm(BC.outv[0])>0.0)
+						{
+							Particles[temp]->v  = BC.outv[0];
+							Particles[temp]->vb = BC.outv[0];
+						}
+						if (Particles[temp]->IsFree && norm(BC.outa[0])>0.0) Particles[temp]->a = BC.outa[0];
+						if (BC.outDensity[0]>0.0)
+						{
+							Particles[temp]->Density  = BC.outDensity[0];
+							Particles[temp]->Densityb = BC.outDensity[0];
+						}
+
+						temp = Particles[temp]->LL;
 					}
-					temp = Particles[temp]->LL;
 				}
 			}
 		}
+	}
 
-	AvgVelocity = AvgVelocity / j;
+	// Y direction inflow
+	if (BC.inout[1]==1 || BC.inout[1]==3)
+	{
+		#pragma omp parallel for schedule (static) num_threads(Nproc)
+		for (q1=0; q1<CellNo[0]; q1++)
+		{
+			int temp;
+			for (q3=0; q3<CellNo[2]	; q3++)
+			for (q2=0; q2<3			; q2++)
+			{
+				if (HOC[q1][q2][q3]==-1) continue;
+				else
+				{
+					temp = HOC[q1][q2][q3];
+					while (temp != -1)
+					{
+						if (Particles[temp]->IsFree && norm(BC.inv[1])>0.0)
+						{
+							Particles[temp]->v  = BC.inv[1];
+							Particles[temp]->vb = BC.inv[1];
+						}
+						if (Particles[temp]->IsFree && norm(BC.ina[1])>0.0) Particles[temp]->a = BC.ina[1];
+						if (BC.inDensity[1]>0.0)
+						{
+							Particles[temp]->Density  = BC.inDensity[1];
+							Particles[temp]->Densityb = BC.inDensity[1];
+						}
+
+						temp = Particles[temp]->LL;
+					}
+				}
+			}
+		}
+	}
+
+	// Y direction outflow
+	if (BC.inout[1]==2 || BC.inout[1]==3)
+	{
+		#pragma omp parallel for schedule (static) num_threads(Nproc)
+		for (q1=0; q1<CellNo[0]; q1++)
+		{
+			int temp;
+			for (q3=0; q3<CellNo[2]; q3++)
+			for (BC.Periodic[1] ? q2=CellNo[1]-5 : q2=CellNo[1]-3 ; BC.Periodic[1] ? q2<CellNo[1]-2 : q2<CellNo[1] ; q2++)
+			{
+				if (HOC[q1][q2][q3]==-1) continue;
+				else
+				{
+					temp = HOC[q1][q2][q3];
+					while (temp != -1)
+					{
+						if (Particles[temp]->IsFree && norm(BC.outv[1])>0.0)
+						{
+							Particles[temp]->v  = BC.outv[1];
+							Particles[temp]->vb = BC.outv[1];
+						}
+						if (Particles[temp]->IsFree && norm(BC.outa[1])>0.0) Particles[temp]->a = BC.outa[1];
+						if (BC.outDensity[1]>0.0)
+						{
+							Particles[temp]->Density  = BC.outDensity[1];
+							Particles[temp]->Densityb = BC.outDensity[1];
+						}
+
+						temp = Particles[temp]->LL;
+					}
+				}
+			}
+		}
+	}
+
+	// Z direction inflow
+	if (BC.inout[2]==1 || BC.inout[2]==3)
+	{
+		#pragma omp parallel for schedule (static) num_threads(Nproc)
+		for (q1=0; q1<CellNo[0]; q1++)
+		{
+			int temp;
+			for (q3=0; q3<3			; q3++)
+			for (q2=0; q2<CellNo[1]	; q2++)
+			{
+				if (HOC[q1][q2][q3]==-1) continue;
+				else
+				{
+					temp = HOC[q1][q2][q3];
+					while (temp != -1)
+					{
+						if (Particles[temp]->IsFree && norm(BC.inv[2])>0.0)
+						{
+							Particles[temp]->v  = BC.inv[2];
+							Particles[temp]->vb = BC.inv[2];
+						}
+						if (Particles[temp]->IsFree && norm(BC.ina[2])>0.0) Particles[temp]->a = BC.ina[2];
+						if (BC.inDensity[2]>0.0)
+						{
+							Particles[temp]->Density  = BC.inDensity[2];
+							Particles[temp]->Densityb = BC.inDensity[2];
+						}
+
+						temp = Particles[temp]->LL;
+					}
+				}
+			}
+		}
+	}
+
+	// z direction outflow
+	if (BC.inout[2]==2 || BC.inout[2]==3)
+	{
+		#pragma omp parallel for schedule (static) num_threads(Nproc)
+		for (q1=0; q1<CellNo[0]; q1++)
+		{
+			int temp;
+			for (BC.Periodic[2] ? q3=CellNo[2]-5 : q3=CellNo[2]-3 ; BC.Periodic[2] ? q3<CellNo[2]-2 : q3<CellNo[2] ; q3++)
+			for (q2=0; q2<CellNo[1]; q2++)
+			{
+				if (HOC[q1][q2][q3]==-1) continue;
+				else
+				{
+					temp = HOC[q1][q2][q3];
+					while (temp != -1)
+					{
+						if (Particles[temp]->IsFree && norm(BC.outv[2])>0.0)
+						{
+							Particles[temp]->v  = BC.outv[2];
+							Particles[temp]->vb = BC.outv[2];
+						}
+						if (Particles[temp]->IsFree && norm(BC.outa[2])>0.0) Particles[temp]->a = BC.outa[2];
+						if (BC.outDensity[2]>0.0)
+						{
+							Particles[temp]->Density  = BC.outDensity[2];
+							Particles[temp]->Densityb = BC.outDensity[2];
+						}
+
+						temp = Particles[temp]->LL;
+					}
+				}
+			}
+		}
+	}
+
 }
 
 inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheFileKey,size_t cutoff)
@@ -1325,6 +1478,16 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
     ListGenerate();
     PrintInput(TheFileKey);
 
+    //Apply a constant velocity to all particles in the initial time step
+    if (norm(BC.allv)>0.0)
+    {
+		#pragma omp parallel for schedule (static) num_threads(Nproc)
+    	for (size_t i=0 ; i<Particles.Size() ; i++)
+    	{
+    		Particles[i]->v  = BC.allv;
+    		Particles[i]->vb = BC.allv;
+    	}
+    }
 
     while (Time<tf)
     {
@@ -1332,7 +1495,6 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
     	ConstValues();
     	ComputeAcceleration();
     	Move(dt);
-    	if (PeriodicX && ConstVelPeriodic>0.0) AvgParticleVelocity();
 
         // output
         if (Time>=tout)
@@ -1471,8 +1633,11 @@ inline void Domain::PrintInput(char const * FileKey)
     }
     oss << "External Acceleration = "<<Gravity<< " m/s2\n";
     oss << "No of Thread = "<<Nproc<<"\n";
-    oss << "No-Slip Boundary Condition = " << NoSlip  << "\n";
-    oss << "Shepard Filter for Density = " << Shepard << "\n";
+    oss << "No-Slip Boundary Condition = " << NoSlip ? "True" : "False"  << "\n";
+    oss << "Shepard Filter for Density = " << Shepard ? "True" : "False" << "\n";
+    oss << "Periodic Boundary Condition X dir= " << BC.Periodic[0] ? "True" : "False" << "\n";
+    oss << "Periodic Boundary Condition Y dir= " << BC.Periodic[1] ? "True" : "False" << "\n";
+    oss << "Periodic Boundary Condition Z dir= " << BC.Periodic[2] ? "True" : "False" << "\n";
 
     fn = FileKey;
     fn.append("log.dat");
