@@ -36,6 +36,23 @@
 
 namespace SPH {
 
+class Boundary
+{
+public:
+    // Data
+    Vec3_t  allv;			///< Apply a certain velocity to all particle
+    Vec3_t  ina[3];			///< Apply a certain acceleration to inflow particles
+    Vec3_t  outa[3];		///< Apply a certain acceleration to outflow particles
+    double	inDensity[3];	///< Apply a certain density to inflow particles
+    double	outDensity[3];	///< Apply a certain density to outflow particles
+    Vec3_t 	inv[3];			///< Apply a certain velocity to inflow particles
+    Vec3_t 	outv[3];		///< Apply a certain velocity to outflow particles
+    bool 	Periodic[3];	///< Considering periodic in all directions => 0=X, 1=Y, 2=Z
+    int		inout[3];		///< Recognizing inflow or outflow or both => 0=none, 1=in, 2=out, 3=both. For example inout[2]=1 means outflow in Y direction
+
+    Boundary();
+};
+
 class Domain
 {
 public:
@@ -59,7 +76,7 @@ public:
     void CheckParticleLeave			();																									///< Check if any particles leave the domain, they will be deleted
 
     void StartAcceleration			(Vec3_t const & a = Vec3_t(0.0,0.0,0.0));															///< Add a fixed acceleration such as the Gravity
-    void ConstVel					();																									///< Give a defined velocity to the first 2 column of cells in X direction
+    void ConstValues				();																									///< Give a defined velocity to the first 2 column of cells in X direction
     void ComputeAcceleration		();																									///< Compute the acceleration due to the other particles
     void YZCellsComputeAcceleration	(int q1);																							///< Create pairs of particles in XZ plan of cells and calculate the force
     void CalcForce					(Particle * P1, Particle * P2);																		///< Calculates the contact force between particles
@@ -76,6 +93,7 @@ public:
     void Save						(char const * FileKey);																				///< Save the domain in a file
     void Load						(char const * FileKey);																				///< Load the domain from a file
 
+    void PrintInput					(char const * FileKey);
     //Interaction Part
 
     // Data
@@ -105,6 +123,7 @@ public:
     double 					Cellfac;			///< Factor which should be multiplied by h to change the size of cells (Min 2)
 	double 					hmax;				///< Max of h for the cell size  determination
     Vec3_t                  DomSize;			///< Each component of the vector is the domain size in that direction if periodic boundary condition is defined in that direction as well
+	double					rhomax;
 
     int					*** HOC;				///< Array of "Head of Chain" for each cell
 
@@ -135,10 +154,31 @@ public:
 
     size_t					Nproc;				///< No of threads which are going to use in parallel calculation
     omp_lock_t 				dom_lock;			///< Open MP lock to lock Interactions array
-
+    Boundary				BC;
 
 };
 /////////////////////////////////////////////////////////////////////////////////////////// Implementation /////
+
+inline Boundary::Boundary()
+{
+	allv	= 0.0;
+	ina[0]	= 0.0;
+	ina[1]	= 0.0;
+	ina[2]	= 0.0;
+	outa[0]	= 0.0;
+    outa[1]	= 0.0;
+	outa[2]	= 0.0;
+	inv[0]	= 0.0;
+	inv[1]	= 0.0;
+	inv[2]	= 0.0;
+	outv[0]	= 0.0;
+	outv[1]	= 0.0;
+	outv[2]	= 0.0;
+	Periodic[0]=Periodic[1]=Periodic[2]			= false;
+	inout[0]=inout[1]=inout[2]					= 0;
+	inDensity[0]=inDensity[1]=inDensity[2]		= 0.0;
+	outDensity[0]=outDensity[1]=outDensity[2]	= 0.0;
+}
 
 // Constructor
 inline Domain::Domain ()
@@ -155,7 +195,7 @@ inline Domain::Domain ()
     Gravity	= 0.0,0.0,0.0;
     Cs		= 0.0;
 
-    if (KernelType==4)Cellfac = 3.0; else Cellfac = 2.0;
+    Cellfac = 2.0;
 
     RigidBody = false;
     RBTag	= 0;
@@ -466,8 +506,6 @@ inline void Domain::AddBoxNo(int tag, Vec3_t const & V, size_t nx, size_t ny, si
     }
 
 	R = r;
-
-    std::cout << "\nNo. of added particles = " << Particles.Size()-PrePS << std::endl;
 }
 
 inline void Domain::AddBoxLength(int tag, Vec3_t const & V, double Lx, double Ly, double Lz, double r, double Density, double h, int type, int rotation, bool random, bool Fixed)
@@ -671,8 +709,6 @@ inline void Domain::AddBoxLength(int tag, Vec3_t const & V, double Lx, double Ly
     }
 
 	R = r;
-
-    std::cout << "\nNo. of added particles = " << Particles.Size()-PrePS << std::endl;
 }
 
 inline void Domain::DelParticles (int const & Tags)
@@ -724,7 +760,7 @@ inline void Domain::CellInitiate ()
 	BLPF = Particles[0]->x;
 	TRPR = Particles[0]->x;
 	hmax = Particles[0]->h;
-	double rho = 0.0;
+	rhomax = Particles[0]->Density;
 
 	for (size_t i=0; i<Particles.Size(); i++)
     {
@@ -737,7 +773,7 @@ inline void Domain::CellInitiate ()
         if (Particles[i]->x(2) < BLPF(2)) BLPF(2) = Particles[i]->x(2);
 
         if (Particles[i]->h > hmax) hmax=Particles[i]->h;
-        if (Particles[i]->Density > rho) rho=Particles[i]->Density;
+        if (Particles[i]->Density > rhomax) rhomax=Particles[i]->Density;
     }
 
 	//Because of Hexagonal close packing in x direction domain is modified
@@ -796,27 +832,6 @@ inline void Domain::CellInitiate ()
     if (PeriodicX) DomSize[0] = (TRPR(0)-BLPF(0));
     if (PeriodicY) DomSize[1] = (TRPR(1)-BLPF(1));
     if (PeriodicZ) DomSize[2] = (TRPR(2)-BLPF(2));
-
-    // Check the time step
-    double t1,t2;
-    t1 = 0.25*hmax/(Cs+ConstVelPeriodic);
-    t2 = 0.125*hmax*hmax*rho/MU;
-    std::cout << "Max time step should be Min value of { "<< t1 <<" , "<< t2 <<" }" << std::endl;
-    if (deltat > std::min(t1,t2))
-    {
-    	std::cout << "Please decrease the time step and run again"<< std::endl;
-    	abort();
-    }
-
-    std::cout << std::endl;
-    std::cout << "Min domain Point = " << BLPF << std::endl;
-    std::cout << "Max domain Point = " << TRPR << std::endl;
-    std::cout << std::endl;
-    std::cout << "Cell Size = " << CellSize << std::endl;
-    std::cout << std::endl;
-    std::cout << "No of Cells in X Direction = " << CellNo[0] << std::endl;
-    std::cout << "No of Cells in Y Direction = " << CellNo[1] << std::endl;
-    std::cout << "No of Cells in Z Direction = " << CellNo[2] << std::endl;
 
     // Initiate Head of Chain array for Linked-List
     HOC = new int**[(int) CellNo[0]];
@@ -1230,7 +1245,7 @@ inline void Domain::Move (double dt)
 	}
 }
 
-inline void Domain::ConstVel ()
+inline void Domain::ConstValues ()
 {
 	if (PeriodicX && ConstVelPeriodic>0.0)
 	{
@@ -1287,13 +1302,13 @@ inline void Domain::AvgParticleVelocity ()
 
 inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheFileKey,size_t cutoff)
 {
+    if (KernelType==4) Cellfac = 3.0; else Cellfac = 2.0;
+
     if (Dimension<=1 || Dimension>3)
     {
     	std::cout << "Please correct the dimension (2=>2D or 3=>3D) and run again" << std::endl;
 		abort();
     }
-
-    std::cout << "\nTotal No. of particles = " << Particles.Size()<< std::endl;
 
     Util::Stopwatch stopwatch;
     std::cout << "\n--------------Solving---------------------------------------------------------------" << std::endl;
@@ -1308,15 +1323,13 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
 
     CellInitiate();
     ListGenerate();
-
-//    #pragma omp parallel for schedule (static) num_threads(Nproc)
-//    for (size_t i=0; i<Particles.Size(); i++) Particles[i]->v=ConstVelPeriodic,0.0,0.0;
+    PrintInput(TheFileKey);
 
 
     while (Time<tf)
     {
 		StartAcceleration(Gravity);
-    	ConstVel();
+    	ConstValues();
     	ComputeAcceleration();
     	Move(dt);
     	if (PeriodicX && ConstVelPeriodic>0.0) AvgParticleVelocity();
@@ -1330,7 +1343,6 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
                 fn.Printf    ("%s_%04d", TheFileKey, idx_out);
                 WriteXDMF    (fn.CStr());
                 std::cout << "\n" << "Output No. " << idx_out << " at " << Time << " has been generated" << std::endl;
-                if (PeriodicX) std::cout << AvgVelocity<< std::endl;
             	}
             idx_out++;
             tout += dtOut;
@@ -1361,6 +1373,113 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
        CellReset();
        ListGenerate();
     }
+}
+
+inline void Domain::PrintInput(char const * FileKey)
+{
+    //Writing Inputs in a Log file
+	String fn(FileKey);
+    std::ostringstream oss;
+
+    oss << "Dimension = "<< Dimension << "D\n";
+
+    oss << "Kernel Type = ";
+	switch (KernelType)
+    {
+		case 0:
+			oss << "0 => Qubic Spline\n";
+			break;
+		case 1:
+			oss << "1 => Quadratic\n";
+			break;
+		case 2:
+			oss << "2 => Quintic\n";
+			break;
+		case 3:
+			oss << "3 => Gaussian with compact support of q<2\n";
+			break;
+		case 4:
+			oss << "4 => Quintic Spline\n";
+			break;
+    }
+
+    oss << "Viscosity Equation = ";
+    if (MU==0.0) oss << "Artificial Viscosity by Monaghan\nAlpha = "<<Alpha<<"   Beta = "<<Beta <<"\n";
+    else
+	{
+    	switch (VisEq)
+		{
+			case 0:
+				oss << "0 => Morris et al 1997\n";
+				break;
+			case 1:
+				oss << "1 => Shao et al 2003\n";
+				break;
+			case 2:
+				oss << "2 => Real viscosity for incompressible fluids\n";
+				break;
+			case 3:
+				oss << "3 => Takeda et al 1994 (Real viscosity for compressible fluids)\n";
+				break;
+		}
+		oss << "Dynamic Viscosity => Mu = "<<MU<<" Pa.S\n" ;
+	}
+
+    oss << "Equation of State = ";
+	switch (PresEq)
+    {
+		case 0:
+			oss << "0 => P0+(Cs*Cs)*(Density-Density0)\n";
+			break;
+		case 1:
+			oss << "1 => P0+(Density0*Cs*Cs/7)*(pow(Density/Density0,7)-1)\n";
+			break;
+		case 2:
+			oss << "2 => (Cs*Cs)*Density\n";
+			break;
+    }
+	oss << "Cs = "<<Cs<<" m/s\n";
+	oss << "P0 = "<<P0<<" Pa\n";
+	oss << "\n";
+
+    oss << "Min domain Point = " << BLPF <<" m\n";
+    oss << "Max domain Point = " << TRPR <<" m\n";
+    oss << "Max of smoothing length, h = " << hmax << " m\n";
+    oss << "Cell factor in Linked List (at least 2) = " << Cellfac << "\n";
+    oss << "Cell Size = " << CellSize <<" m\n";
+    oss << "No of Cells in X Direction = " << CellNo[0] <<"\n" ;
+    oss << "No of Cells in Y Direction = " << CellNo[1] <<"\n" ;
+    oss << "No of Cells in Z Direction = " << CellNo[2] <<"\n" ;
+	oss << "\n";
+
+	oss << " Total No of Particles = " << Particles.Size() << "\n" ;
+
+    // Check the time step
+    double t1,t2;
+    t1 = 0.25*hmax/(Cs+ConstVelPeriodic);
+    t2 = 0.125*hmax*hmax*rhomax/MU;
+
+    oss << "Max time step should be less than Min value of { "<< t1 <<" , "<< t2 <<" } S\n";
+    oss << "Time Step = "<<deltat << " S\n";
+
+    if (deltat > std::min(t1,t2))
+    {
+        std::cout << "Max time step should be less than Min value of { "<< t1 <<" , "<< t2 <<" }" << std::endl;
+        std::cout << "Time Step = "<<deltat << std::endl;
+    	std::cout << "Please decrease the time step and run again"<< std::endl;
+    	abort();
+    }
+    oss << "External Acceleration = "<<Gravity<< " m/s2\n";
+    oss << "No of Thread = "<<Nproc<<"\n";
+    oss << "No-Slip Boundary Condition = " << NoSlip  << "\n";
+    oss << "Shepard Filter for Density = " << Shepard << "\n";
+
+    fn = FileKey;
+    fn.append("log.dat");
+    std::ofstream of(fn.CStr(), std::ios::out);
+    of << oss.str();
+    of.close();
+
 }
 
 inline void Domain::WriteXDMF (char const * FileKey)

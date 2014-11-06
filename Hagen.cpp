@@ -26,18 +26,18 @@ int main(int argc, char **argv) try
 {
         SPH::Domain		dom;
 
-        dom.Gravity		= 0.002,0.0,0.0;
+        dom.Gravity		= 0.0,0.0,0.002;
         dom.Dimension	= 3;
         dom.Cs			= 0.0025;
-        dom.PeriodicX	= true;
+        dom.PeriodicZ	= true;
         dom.MU			= 1.002e-3;
-        dom.Nproc		= 11;
+        dom.Nproc		= 21;
     	dom.PresEq		= 0;
-    	dom.VisEq		= 2;
-    	dom.KernelType	= 2;
+    	dom.VisEq		= 1;
+    	dom.KernelType	= 0;
 //    	dom.NoSlip		= true;
 
-        double xb,yb,zb,h,rho;
+        double xb,yb,h,rho;
     	double dx;
 
     	rho = 998.21;
@@ -47,21 +47,20 @@ int main(int argc, char **argv) try
 
         double maz;
         maz=(0.001*h/(dom.Cs+0.00025));
-        std::cout<<maz<<std::endl;
 
-    	dom.AddBoxLength(3 ,Vec3_t ( 0.0 , -0.0006 , -0.0006 ), 0.0005 , 0.0012  ,  0.0012 , dx/2.0 ,rho, h, 1 , 0 , false, false );
+    	dom.AddBoxLength(3 ,Vec3_t ( -0.0006 , -0.0006 , 0.0 ), 0.0012 , 0.0012  ,  0.0005 , dx/2.0 ,rho, h, 1 , 0 , false, false );
 
     	for (size_t a=0; a<dom.Particles.Size(); a++)
     	{
     		yb=dom.Particles[a]->x(1);
-    		zb=dom.Particles[a]->x(2);
-    		if ((yb*yb+zb*zb)>=(0.0005*0.0005))
+    		xb=dom.Particles[a]->x(0);
+    		if ((yb*yb+xb*xb)>=(0.0005*0.0005))
     		{
     			dom.Particles[a]->ID=4;
     			dom.Particles[a]->IsFree=false;
     		}
 
-    		if ((yb*yb+zb*zb)>(0.0006*0.0006))
+    		if ((yb*yb+xb*xb)>(0.0006*0.0006))
     		{
     			dom.Particles[a]->ID=5;
     			dom.Particles[a]->IsFree=false;

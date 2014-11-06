@@ -33,11 +33,6 @@ namespace SPH {
 class Particle
 {
 public:
-
-    // Constructor
-    Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double Mass0, double Density0, double h0, bool Fixed=false);
-
-
     // Data
     bool   	IsFree;			///< Check the particle if it is free to move or not
     int    	ID;				///< an Integer value to identify type of the particles
@@ -69,6 +64,9 @@ public:
     int		ct;				///< Correction step for the Verlet Algorithm and Shepard filter
 
     omp_lock_t my_lock;		///< Open MP lock
+
+    // Constructor
+    Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double Mass0, double Density0, double h0, bool Fixed=false);
 
     // Methods
     void Move			(double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3_t domainmin, bool ShepardFilter);	///< Update the important quantities of a particle
