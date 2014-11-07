@@ -1484,15 +1484,18 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
 		#pragma omp parallel for schedule (static) num_threads(Nproc)
     	for (size_t i=0 ; i<Particles.Size() ; i++)
     	{
-    		Particles[i]->v  = BC.allv;
-    		Particles[i]->vb = BC.allv;
+    		if (Particles[i]->IsFree)
+    		{
+    			Particles[i]->v  = BC.allv;
+    			Particles[i]->vb = BC.allv;
+    		}
     	}
     }
 
     while (Time<tf)
     {
 		StartAcceleration(Gravity);
-    	ConstValues();
+    	if (BC.inout[0]>0 || BC.inout[1]>0 || BC.inout[2]>0) ConstValues();
     	ComputeAcceleration();
     	Move(dt);
 
@@ -1633,11 +1636,11 @@ inline void Domain::PrintInput(char const * FileKey)
     }
     oss << "External Acceleration = "<<Gravity<< " m/s2\n";
     oss << "No of Thread = "<<Nproc<<"\n";
-    oss << "No-Slip Boundary Condition = " << NoSlip ? "True" : "False"  << "\n";
-    oss << "Shepard Filter for Density = " << Shepard ? "True" : "False" << "\n";
-    oss << "Periodic Boundary Condition X dir= " << BC.Periodic[0] ? "True" : "False" << "\n";
-    oss << "Periodic Boundary Condition Y dir= " << BC.Periodic[1] ? "True" : "False" << "\n";
-    oss << "Periodic Boundary Condition Z dir= " << BC.Periodic[2] ? "True" : "False" << "\n";
+    oss << "No-Slip Boundary Condition = " << (NoSlip ? "True" : "False")  << "\n";
+    oss << "Shepard Filter for Density = " << (Shepard ? "True" : "False") << "\n";
+    oss << "Periodic Boundary Condition X dir= " << (BC.Periodic[0] ? "True" : "False") << "\n";
+    oss << "Periodic Boundary Condition Y dir= " << (BC.Periodic[1] ? "True" : "False") << "\n";
+    oss << "Periodic Boundary Condition Z dir= " << (BC.Periodic[2] ? "True" : "False") << "\n";
 
     fn = FileKey;
     fn.append("log.dat");

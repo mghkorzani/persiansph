@@ -31,10 +31,10 @@ int main(int argc, char **argv) try
         dom.Cs			= 0.0025;
         dom.BC.Periodic[2]	= true;
         dom.MU			= 1.002e-3;
-        dom.Nproc		= 21;
+        dom.Nproc		= 14;
     	dom.PresEq		= 0;
-    	dom.VisEq		= 1;
-    	dom.KernelType	= 0;
+    	dom.VisEq		= 3;
+    	dom.KernelType	= 4;
 //    	dom.NoSlip		= true;
 
         double xb,yb,h,rho;
