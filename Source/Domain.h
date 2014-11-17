@@ -80,7 +80,6 @@ public:
     void CheckParticleLeave			();																									///< Check if any particles leave the domain, they will be deleted
 
     void StartAcceleration			(Vec3_t const & a = Vec3_t(0.0,0.0,0.0));															///< Add a fixed acceleration such as the Gravity
-    void ConstValues				();																									///< Give a defined velocity to the first 2 column of cells in X direction
     void ComputeAcceleration		();																									///< Compute the acceleration due to the other particles
     void YZCellsComputeAcceleration	(int q1);																							///< Create pairs of particles in XZ plan of cells and calculate the force
     void CalcForce					(Particle * P1, Particle * P2);																		///< Calculates the contact force between particles
@@ -100,7 +99,6 @@ public:
     void InFlowBCLeave				();
     void InFlowBCFresh				();
     void InFlowBCReset				();
-    //Interaction Part
 
     // Data
     Array <Particle*>		Particles;     	 	///< Array of particles
@@ -1331,58 +1329,40 @@ inline void Domain::InFlowBCFresh()
 	InPart.Clear();
 	OutPart.Clear();
 
-	BC.InFlowLocIn(0)  = BLPF(0) + BC.cellfac*hmax;
+	if (BC.InFlowLocIn(0)==0.0)  BC.InFlowLocIn(0)  = BLPF(0) + BC.cellfac*hmax;
+	if (BC.InFlowLocOut(0)==0.0) BC.InFlowLocOut(0) = TRPR(0) - BC.cellfac*hmax;
+
 	int temp1 = (int) (floor((BC.InFlowLocOut(0) - BLPF(0)) / CellSize(0)));
+	int temp;
 
-	#pragma omp parallel for schedule (static) num_threads(Nproc)
-	for (int q2=0; q2<CellNo[1]; q2++)
+	for (int q2=0; q2<CellNo[1]  ; q2++)
+	for (int q3=0; q3<CellNo[2]  ; q3++)
+	for (int q1=0; q1<(temp1 + 1); q1++)
 	{
-		int temp;
-		for (int q3=0; q3<CellNo[2]; q3++)
-		for (int q1=0 ; q1<(temp1 + 1) ; q1++)
+		if (HOC[q1][q2][q3]!=-1)
 		{
-			if (HOC[q1][q2][q3]!=-1)
+			temp = HOC[q1][q2][q3];
+			while (temp != -1)
 			{
-				temp = HOC[q1][q2][q3];
-				while (temp != -1)
-				{
-					if (Particles[temp]->IsFree && (Particles[temp]->x(0) < BC.InFlowLocIn(0)) )
-					{
-						omp_set_lock(&dom_lock);
-						InPart.Push(temp);
-						omp_unset_lock(&dom_lock);
-					}
-
-					temp = Particles[temp]->LL;
-				}
+				if (Particles[temp]->IsFree && (Particles[temp]->x(0) < BC.InFlowLocIn(0)) ) InPart.Push(temp);
+				temp = Particles[temp]->LL;
 			}
 		}
 	}
 
-	BC.InFlowLocOut(0) = TRPR(0) - BC.cellfac*hmax;
 	temp1 = (int) (floor((BC.InFlowLocOut(0) - BLPF(0)) / CellSize(0)));
 
-	#pragma omp parallel for schedule (static) num_threads(Nproc)
-	for (int q2=0; q2<CellNo[1]; q2++)
+	for (int q2=0    ; q2<CellNo[1]; q2++)
+	for (int q3=0    ; q3<CellNo[2]; q3++)
+	for (int q1=temp1; q1<CellNo[0]; q1++)
 	{
-		int temp;
-		for (int q3=0; q3<CellNo[2]; q3++)
-		for (int q1=temp1 ; q1<CellNo[0] ; q1++)
+		if (HOC[q1][q2][q3]!=-1)
 		{
-			if (HOC[q1][q2][q3]!=-1)
+			temp = HOC[q1][q2][q3];
+			while (temp != -1)
 			{
-				temp = HOC[q1][q2][q3];
-				while (temp != -1)
-				{
-					if (Particles[temp]->IsFree && (Particles[temp]->x(0) > BC.InFlowLocOut(0)) )
-					{
-						omp_set_lock(&dom_lock);
-						OutPart.Push(temp);
-						omp_unset_lock(&dom_lock);
-					}
-
-					temp = Particles[temp]->LL;
-				}
+				if (Particles[temp]->IsFree && (Particles[temp]->x(0) > BC.InFlowLocOut(0)) ) OutPart.Push(temp);
+				temp = Particles[temp]->LL;
 			}
 		}
 	}
@@ -1456,222 +1436,6 @@ inline void Domain::InFlowBCReset()
 	}
 }
 
-inline void Domain::ConstValues ()
-{
-	int q1,q2,q3;
-
-	// X direction inflow
-	if (BC.inout[0]==1 || BC.inout[0]==3)
-	{
-		#pragma omp parallel for schedule (static) num_threads(Nproc)
-		for (q2=0; q2<CellNo[1]; q2++)
-		{
-			int temp;
-			for (q3=0; q3<CellNo[2]	; q3++)
-			for (q1=0; q1<3			; q1++)
-			{
-				if (HOC[q1][q2][q3]==-1) continue;
-				else
-				{
-					temp = HOC[q1][q2][q3];
-					while (temp != -1)
-					{
-						if (Particles[temp]->IsFree && norm(BC.inv[0])>0.0)
-						{
-							Particles[temp]->v  = BC.inv[0];
-							Particles[temp]->vb = BC.inv[0];
-						}
-						if (Particles[temp]->IsFree && norm(BC.ina[0])>0.0) Particles[temp]->a = BC.ina[0];
-						if (BC.inDensity[0]>0.0)
-						{
-							Particles[temp]->Density  = BC.inDensity[0];
-							Particles[temp]->Densityb = BC.inDensity[0];
-						}
-
-						temp = Particles[temp]->LL;
-					}
-				}
-			}
-		}
-	}
-
-	// X direction outflow
-	if (BC.inout[0]==2 || BC.inout[0]==3)
-	{
-		#pragma omp parallel for schedule (static) num_threads(Nproc)
-		for (q2=0; q2<CellNo[1]; q2++)
-		{
-			int temp;
-			for (q3=0; q3<CellNo[2]; q3++)
-			for (BC.Periodic[0] ? q1=CellNo[0]-5 : q1=CellNo[0]-3 ; BC.Periodic[0] ? q1<CellNo[0]-2 : q1<CellNo[0] ; q1++)
-			{
-				if (HOC[q1][q2][q3]==-1) continue;
-				else
-				{
-					temp = HOC[q1][q2][q3];
-					while (temp != -1)
-					{
-						if (Particles[temp]->IsFree && norm(BC.outv[0])>0.0)
-						{
-							Particles[temp]->v  = BC.outv[0];
-							Particles[temp]->vb = BC.outv[0];
-						}
-						if (Particles[temp]->IsFree && norm(BC.outa[0])>0.0) Particles[temp]->a = BC.outa[0];
-						if (BC.outDensity[0]>0.0)
-						{
-							Particles[temp]->Density  = BC.outDensity[0];
-							Particles[temp]->Densityb = BC.outDensity[0];
-						}
-
-						temp = Particles[temp]->LL;
-					}
-				}
-			}
-		}
-	}
-
-	// Y direction inflow
-	if (BC.inout[1]==1 || BC.inout[1]==3)
-	{
-		#pragma omp parallel for schedule (static) num_threads(Nproc)
-		for (q1=0; q1<CellNo[0]; q1++)
-		{
-			int temp;
-			for (q3=0; q3<CellNo[2]	; q3++)
-			for (q2=0; q2<3			; q2++)
-			{
-				if (HOC[q1][q2][q3]==-1) continue;
-				else
-				{
-					temp = HOC[q1][q2][q3];
-					while (temp != -1)
-					{
-						if (Particles[temp]->IsFree && norm(BC.inv[1])>0.0)
-						{
-							Particles[temp]->v  = BC.inv[1];
-							Particles[temp]->vb = BC.inv[1];
-						}
-						if (Particles[temp]->IsFree && norm(BC.ina[1])>0.0) Particles[temp]->a = BC.ina[1];
-						if (BC.inDensity[1]>0.0)
-						{
-							Particles[temp]->Density  = BC.inDensity[1];
-							Particles[temp]->Densityb = BC.inDensity[1];
-						}
-
-						temp = Particles[temp]->LL;
-					}
-				}
-			}
-		}
-	}
-
-	// Y direction outflow
-	if (BC.inout[1]==2 || BC.inout[1]==3)
-	{
-		#pragma omp parallel for schedule (static) num_threads(Nproc)
-		for (q1=0; q1<CellNo[0]; q1++)
-		{
-			int temp;
-			for (q3=0; q3<CellNo[2]; q3++)
-			for (BC.Periodic[1] ? q2=CellNo[1]-5 : q2=CellNo[1]-3 ; BC.Periodic[1] ? q2<CellNo[1]-2 : q2<CellNo[1] ; q2++)
-			{
-				if (HOC[q1][q2][q3]==-1) continue;
-				else
-				{
-					temp = HOC[q1][q2][q3];
-					while (temp != -1)
-					{
-						if (Particles[temp]->IsFree && norm(BC.outv[1])>0.0)
-						{
-							Particles[temp]->v  = BC.outv[1];
-							Particles[temp]->vb = BC.outv[1];
-						}
-						if (Particles[temp]->IsFree && norm(BC.outa[1])>0.0) Particles[temp]->a = BC.outa[1];
-						if (BC.outDensity[1]>0.0)
-						{
-							Particles[temp]->Density  = BC.outDensity[1];
-							Particles[temp]->Densityb = BC.outDensity[1];
-						}
-
-						temp = Particles[temp]->LL;
-					}
-				}
-			}
-		}
-	}
-
-	// Z direction inflow
-	if (BC.inout[2]==1 || BC.inout[2]==3)
-	{
-		#pragma omp parallel for schedule (static) num_threads(Nproc)
-		for (q1=0; q1<CellNo[0]; q1++)
-		{
-			int temp;
-			for (q3=0; q3<3			; q3++)
-			for (q2=0; q2<CellNo[1]	; q2++)
-			{
-				if (HOC[q1][q2][q3]==-1) continue;
-				else
-				{
-					temp = HOC[q1][q2][q3];
-					while (temp != -1)
-					{
-						if (Particles[temp]->IsFree && norm(BC.inv[2])>0.0)
-						{
-							Particles[temp]->v  = BC.inv[2];
-							Particles[temp]->vb = BC.inv[2];
-						}
-						if (Particles[temp]->IsFree && norm(BC.ina[2])>0.0) Particles[temp]->a = BC.ina[2];
-						if (BC.inDensity[2]>0.0)
-						{
-							Particles[temp]->Density  = BC.inDensity[2];
-							Particles[temp]->Densityb = BC.inDensity[2];
-						}
-
-						temp = Particles[temp]->LL;
-					}
-				}
-			}
-		}
-	}
-
-	// z direction outflow
-	if (BC.inout[2]==2 || BC.inout[2]==3)
-	{
-		#pragma omp parallel for schedule (static) num_threads(Nproc)
-		for (q1=0; q1<CellNo[0]; q1++)
-		{
-			int temp;
-			for (BC.Periodic[2] ? q3=CellNo[2]-5 : q3=CellNo[2]-3 ; BC.Periodic[2] ? q3<CellNo[2]-2 : q3<CellNo[2] ; q3++)
-			for (q2=0; q2<CellNo[1]; q2++)
-			{
-				if (HOC[q1][q2][q3]==-1) continue;
-				else
-				{
-					temp = HOC[q1][q2][q3];
-					while (temp != -1)
-					{
-						if (Particles[temp]->IsFree && norm(BC.outv[2])>0.0)
-						{
-							Particles[temp]->v  = BC.outv[2];
-							Particles[temp]->vb = BC.outv[2];
-						}
-						if (Particles[temp]->IsFree && norm(BC.outa[2])>0.0) Particles[temp]->a = BC.outa[2];
-						if (BC.outDensity[2]>0.0)
-						{
-							Particles[temp]->Density  = BC.outDensity[2];
-							Particles[temp]->Densityb = BC.outDensity[2];
-						}
-
-						temp = Particles[temp]->LL;
-					}
-				}
-			}
-		}
-	}
-
-}
-
 inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheFileKey)
 {
     if (KernelType==4) Cellfac = 3.0; else Cellfac = 2.0;
@@ -1716,7 +1480,6 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
     while (Time<tf)
     {
 		StartAcceleration(Gravity);
-    	if (BC.inout[0]>0 || BC.inout[1]>0 || BC.inout[2]>0) ConstValues();
     	if (BC.InFlow[0]>0 || BC.InFlow[1]>0 || BC.InFlow[2]>0) InFlowBCFresh();
     	ComputeAcceleration();
     	if (BC.InFlow[0]>0 || BC.InFlow[1]>0 || BC.InFlow[2]>0) InFlowBCReset();
