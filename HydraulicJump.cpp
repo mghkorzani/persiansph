@@ -22,6 +22,24 @@
 using std::cout;
 using std::endl;
 
+double Cs,Mu,Density;
+
+void UserInFlowCon(Vec3_t & position, Vec3_t & Vel, double & Den, SPH::Boundary & bdry)
+{
+	Vel = Vec3_t(Density*9.81*0.0105/(2.0*Mu)*(2*0.0031*position(1)-position(1)*position(1)),0.0,0.0);
+	Den = Density*(1+9.81*(0.0031-position(1))/(Cs*Cs));
+}
+void UserOutFlowCon(Vec3_t & position, Vec3_t & Vel, double & Den, SPH::Boundary & bdry)
+{
+	Vel = Vec3_t(Density*9.81*0.0105/(2.0*Mu)*(2*0.0031*position(1)-position(1)*position(1)),0.0,0.0);
+	Den = Density*(1+9.81*(0.0031-position(1))/(Cs*Cs));
+}
+void UserAllFlowCon(Vec3_t & position, Vec3_t & Vel, double & Den, SPH::Boundary & bdry)
+{
+	Vel = Vec3_t(Density*9.81*0.0105/(2.0*Mu)*(2*0.0031*position(1)-position(1)*position(1)),0.0,0.0);
+	Den = Density*(1+9.81*(0.0031-position(1))/(Cs*Cs));
+}
+
 int main(int argc, char **argv) try
 {
         SPH::Domain		dom;
@@ -33,39 +51,40 @@ int main(int argc, char **argv) try
     	dom.PresEq		= 0;
     	dom.VisEq		= 1;
     	dom.KernelType	= 4;
-//    	dom.NoSlip		= true;
     	dom.Shepard		= false;
 
 
     	dom.BC.InOutFlow =3;
-//    	dom.BC.Periodic[0]= true;
     	dom.BC.allv = 0.148,0.0,0.0;
     	dom.BC.inv = 0.328,0.0,0.0;
-    	dom.BC.inDensity = 1000.0;
+    	dom.BC.inDensity = 998.21;
+    	dom.BC.outDensity = 998.21;
+    	dom.BC.allDensity = 998.21;
     	dom.BC.outv = 0.148,0.0,0.0;
 
         double xb,yb,h,rho,Re,H,U;
     	double dx;
 
     	rho = 998.21;
-//    	Re = 100.0;
-//    	H = pow((Re*2.0*dom.MU*dom.MU*3/(2*rho*rho*9.81*.001)),(1.0/3.0));
-//    	U = rho*9.81*.001*H*H/(2.0*dom.MU);
-//    	dom.Cs = 10.0*U;
     	H = 0.0031;
     	U = 0.328;
-//    	dom.TRPR = 6.2563557e-3,0.007,0.0;
     	dom.Cs = rho*9.81*H;
 
     	dx = 2*H/125.0;
     	h = dx*1.1;
     	dom.InitialDist	= dx;
-//    	dom.TI = 0.05;
+
+    	Cs = dom.Cs;
+    	Mu = dom.MU;
+    	Density = rho;
+    	dom.InCon = & UserInFlowCon;
+    	dom.OutCon = & UserOutFlowCon;
+    	dom.AllCon = & UserAllFlowCon;
 
         double maz;
         maz=(0.1*h/(dom.Cs+U));
 
-    	dom.AddBoxLength(3 ,Vec3_t ( 0.0 , -5.0*dx , 0.0 ), 20.0*H , H+5.0*dx  ,  0 , dx/2.0 ,rho, h, 1 , 0 , false, false );
+    	dom.AddBoxLength(3 ,Vec3_t ( 0.0 , -5.0*dx , 0.0 ), 2.0*H , H+5.0*dx  ,  0 , dx/2.0 ,rho, h, 1 , 0 , false, false );
 
     	for (size_t a=0; a<dom.Particles.Size(); a++)
     	{
@@ -77,15 +96,6 @@ int main(int argc, char **argv) try
     			dom.Particles[a]->IsFree=false;
     		}
     	}
-
-//    	xb = -3.0*dx;
-//    	while (xb<(2.0*H+3.0*dx))
-//    	{
-//    		dom.AddNSSingleParticle(4 , Vec3_t ( xb , 0.0 , 0.0 ) , true);
-//    		xb += dx/10.0;
-//    	}
-
-//    	dom.WriteXDMF("maz");
 
     	dom.Solve(/*tf*/50000.0,/*dt*/maz,/*dtOut*/(500.0*maz),"test06");
         return 0;

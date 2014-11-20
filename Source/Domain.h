@@ -40,16 +40,13 @@ class Boundary
 {
 public:
     // Data
-    Vec3_t  allv;		///< Apply a certain velocity to all particle
-
-    Vec3_t  ina;		///< Apply a certain acceleration to inflow particles
-    Vec3_t  outa;		///< Apply a certain acceleration to outflow particles
-
     double	inDensity;	///< Apply a certain density to inflow particles
     double	outDensity;	///< Apply a certain density to outflow particles
+    double	allDensity;	///< Apply a certain density to outflow particles
 
     Vec3_t 	inv;		///< Apply a certain velocity to inflow particles
     Vec3_t 	outv;		///< Apply a certain velocity to outflow particles
+    Vec3_t  allv;		///< Apply a certain velocity to all particle
 
     bool 	Periodic[3];///< Considering periodic in all directions => 0=X, 1=Y, 2=Z
 
@@ -67,7 +64,7 @@ public:
 class Domain
 {
 public:
-
+	typedef void (*PtVel) (Vec3_t & position, Vec3_t & Vel, double & Den, Boundary & bdry);
     // Constructor
     Domain();
 
@@ -164,22 +161,39 @@ public:
     size_t					Nproc;				///< No of threads which are going to use in parallel calculation
     omp_lock_t 				dom_lock;			///< Open MP lock to lock Interactions array
     Boundary				BC;
-
+    PtVel 					InCon;
+    PtVel 					OutCon;
+    PtVel 					AllCon;
 
 };
 /////////////////////////////////////////////////////////////////////////////////////////// Implementation /////
+void InFlowCon(Vec3_t & position, Vec3_t & Vel, double & Den, Boundary & bdry)
+{
+	Vel = bdry.inv;
+	Den = bdry.inDensity;
+}
+
+void OutFlowCon(Vec3_t & position, Vec3_t & Vel, double & Den, Boundary & bdry)
+{
+	Vel = bdry.outv;
+	Den = bdry.outDensity;
+}
+
+void AllFlowCon(Vec3_t & position, Vec3_t & Vel, double & Den, Boundary & bdry)
+{
+	Vel = bdry.allv;
+	Den = bdry.allDensity;
+}
 
 inline Boundary::Boundary()
 {
 	allv	= 0.0;
-	ina[0]	= 0.0;
-	outa[0]	= 0.0;
-	inv[0]	= 0.0;
-	outv[0]	= 0.0;
+	inv		= 0.0;
+	outv	= 0.0;
 	Periodic[0]=Periodic[1]=Periodic[2]			= false;
 	inDensity = 0.0;
 	outDensity = 0.0;
-
+	allDensity = 0.0;
 	InOutFlow = 0;
 	InFlowLoc = 0.0;
 	OutFlowLoc = 0.0;
@@ -234,7 +248,9 @@ inline Domain::Domain ()
 
     TRPR = 0.0;
     BLPF = 0.0;
-
+    InCon = & InFlowCon;
+    OutCon = & OutFlowCon;
+    AllCon = & AllFlowCon;
 }
 
 inline Domain::~Domain ()
@@ -1372,46 +1388,43 @@ inline void Domain::InFlowBCFresh()
 		}
 	}
 
+	Vec3_t vel;
+	double den;
+
 	if (BC.InPart.Size()>0)
-		#pragma omp parallel for schedule(static) num_threads(Nproc)
+		#pragma omp parallel for schedule(static) private(vel,den) num_threads(Nproc)
 		for (size_t i=0 ; i<BC.InPart.Size() ; i++)
 		{
+			InCon(Particles[BC.InPart[i]]->x,vel,den,BC);
 			if (norm(BC.inv)>0.0)
 			{
-//				Particles[BC.InPart[i]]->v  = BC.inv[0];
-//				Particles[BC.InPart[i]]->vb = BC.inv[0];
-				Particles[BC.InPart[i]]->v(0)  = 998.21*9.81*0.0105/(2.0*MU)*(2*0.0031*Particles[BC.InPart[i]]->x(1)-Particles[BC.InPart[i]]->x(1)*Particles[BC.InPart[i]]->x(1));
-				Particles[BC.InPart[i]]->vb(0) = 998.21*9.81*0.0105/(2.0*MU)*(2*0.0031*Particles[BC.InPart[i]]->x(1)-Particles[BC.InPart[i]]->x(1)*Particles[BC.InPart[i]]->x(1));
+				Particles[BC.InPart[i]]->v  = vel;
+				Particles[BC.InPart[i]]->vb = vel;
 			}
 			if (BC.inDensity>0.0)
 			{
-//				Particles[BC.InPart[i]]->Density  = BC.inDensity[0];
-//				Particles[BC.InPart[i]]->Densityb = BC.inDensity[0];
-				Particles[BC.InPart[i]]->Density  = 998.21*(1+9.81*(0.0031-Particles[BC.InPart[i]]->x(1))/(Cs*Cs));
-				Particles[BC.InPart[i]]->Densityb = 998.21*(1+9.81*(0.0031-Particles[BC.InPart[i]]->x(1))/(Cs*Cs));
-				Particles[BC.InPart[i]]->RefDensity = 998.21;
+				Particles[BC.InPart[i]]->Density  = den;
+				Particles[BC.InPart[i]]->Densityb = den;
+				Particles[BC.InPart[i]]->RefDensity = BC.inDensity;
 			}
 		}
 
 	if (BC.OutPart.Size()>0)
-		#pragma omp parallel for schedule(static) num_threads(Nproc)
+		#pragma omp parallel for schedule(static) private(vel,den) num_threads(Nproc)
 		for (size_t i=0 ; i<BC.OutPart.Size() ; i++)
 		{
-			if (norm(BC.inv)>0.0)
+			OutCon(Particles[BC.OutPart[i]]->x,vel,den,BC);
+			if (norm(BC.outv)>0.0)
 			{
-				Particles[BC.OutPart[i]]->v  = BC.outv;
-				Particles[BC.OutPart[i]]->vb = BC.outv;
-//				Particles[BC.OutPart[i]]->v(0)  = 998.21*9.81*0.0047/(2.0*MU)*(2*0.0031*Particles[BC.OutPart[i]]->x(1)-Particles[BC.OutPart[i]]->x(1)*Particles[BC.OutPart[i]]->x(1));
-//				Particles[BC.OutPart[i]]->vb(0) = 998.21*9.81*0.0047/(2.0*MU)*(2*0.0031*Particles[BC.OutPart[i]]->x(1)-Particles[BC.OutPart[i]]->x(1)*Particles[BC.OutPart[i]]->x(1));
+				Particles[BC.OutPart[i]]->v  = vel;
+				Particles[BC.OutPart[i]]->vb = vel;
 			}
-//			if (BC.inDensity>0.0)
-//			{
-////				Particles[BC.OutPart[i]]->Density  = BC.inDensity[0];
-////				Particles[BC.OutPart[i]]->Densityb = BC.inDensity[0];
-//				Particles[BC.OutPart[i]]->Density  = 998.21*(1+9.81*(TRPR(1)-Particles[BC.OutPart[i]]->x(1))/(Cs*Cs));
-//				Particles[BC.OutPart[i]]->Densityb = 998.21*(1+9.81*(TRPR(1)-Particles[BC.OutPart[i]]->x(1))/(Cs*Cs));
-//				Particles[BC.OutPart[i]]->RefDensity = 998.21;
-//			}
+			if (BC.outDensity>0.0)
+			{
+				Particles[BC.OutPart[i]]->Density  = den;
+				Particles[BC.OutPart[i]]->Densityb = den;
+				Particles[BC.OutPart[i]]->RefDensity = BC.outDensity;
+			}
 		}
 
 }
@@ -1438,25 +1451,28 @@ inline void Domain::InFlowBCReset()
 inline void Domain::WholeVelocity()
 {
     //Apply a constant velocity to all particles in the initial time step
-    if (norm(BC.allv)>0.0)
+    if (norm(BC.allv)>0.0 || BC.allDensity>0.0)
     {
-		#pragma omp parallel for schedule (static) num_threads(Nproc)
+    	Vec3_t vel = 0.0;
+    	double den = 0.0;
+
+		#pragma omp parallel for schedule (static) private(vel,den) num_threads(Nproc)
     	for (size_t i=0 ; i<Particles.Size() ; i++)
     	{
-    		if (Particles[i]->IsFree)
+			AllCon(Particles[i]->x,vel,den,BC);
+    		if (Particles[i]->IsFree && norm(BC.allv)>0.0)
     		{
-//				Particles[i]->v  = BC.allv;
-//				Particles[i]->vb = BC.allv;
-    			Particles[i]->v(0)  = 998.21*9.81*0.0047/(2.0*MU)*(2*0.0031*Particles[i]->x(1)-Particles[i]->x(1)*Particles[i]->x(1));
-    			Particles[i]->vb(0) = 998.21*9.81*0.0047/(2.0*MU)*(2*0.0031*Particles[i]->x(1)-Particles[i]->x(1)*Particles[i]->x(1));
+				Particles[i]->v  = vel;
+				Particles[i]->vb = vel;
     		}
-//			Particles[i]->Density = 998.21*(1+9.81*(TRPR(1)-Particles[i]->x(1))/(Cs*Cs));
-//			Particles[i]->Densityb = 998.21*(1+9.81*(TRPR(1)-Particles[i]->x(1))/(Cs*Cs));
-			Particles[i]->Density = 998.21*(1+9.81*(0.0031-Particles[i]->x(1))/(Cs*Cs));
-			Particles[i]->Densityb = 998.21*(1+9.81*(0.0031-Particles[i]->x(1))/(Cs*Cs));
+    		if (BC.allDensity>0.0)
+    		{
+				Particles[i]->Density = den;
+				Particles[i]->Densityb = den;
+				Particles[i]->RefDensity = BC.allDensity;
+    		}
     	}
     }
-
 }
 
 inline void Domain::InitialChecks()
