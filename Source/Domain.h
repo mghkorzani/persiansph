@@ -164,6 +164,9 @@ public:
     PtVel 					InCon;
     PtVel 					OutCon;
     PtVel 					AllCon;
+    Vec3_t					DomMax;
+    Vec3_t					DomMin;
+
 
 };
 /////////////////////////////////////////////////////////////////////////////////////////// Implementation /////
@@ -251,6 +254,9 @@ inline Domain::Domain ()
     InCon = & InFlowCon;
     OutCon = & OutFlowCon;
     AllCon = & AllFlowCon;
+
+    DomMax = -100000000000.0;
+    DomMin = 100000000000.0;
 }
 
 inline Domain::~Domain ()
@@ -799,7 +805,15 @@ inline void Domain::CellInitiate ()
 			if (Particles[i]->Density > rhomax) rhomax=Particles[i]->Density;
 		}
 	}
-	TRPR(1) =0.007;
+
+	// Override the calculated domain size
+	if (DomMax(0)>TRPR(0)) TRPR(0) = DomMax(0);
+	if (DomMax(1)>TRPR(1)) TRPR(1) = DomMax(1);
+	if (DomMax(2)>TRPR(2)) TRPR(2) = DomMax(2);
+	if (DomMin(0)<BLPF(0)) BLPF(0) = DomMin(0);
+	if (DomMin(1)<BLPF(1)) BLPF(1) = DomMin(1);
+	if (DomMin(2)<BLPF(2)) BLPF(2) = DomMin(2);
+
 
 	//Because of Hexagonal close packing in x direction domain is modified
 	if (!BC.Periodic[0]) {TRPR(0) += hmax/2;	BLPF(0) -= hmax/2;}else{TRPR(0) += R; BLPF(0) -= R;}
@@ -1200,7 +1214,11 @@ inline void Domain::ComputeAcceleration ()
 	//Min time step calculation
 	#pragma omp parallel for schedule (static) num_threads(Nproc)
 	for (size_t i=0; i<Particles.Size(); i++)
-		if (deltat > (0.25*sqrt(Particles[i]->h/norm(Particles[i]->a))) ) std::cout << "Please decrease the time step to"<< (0.25*sqrt(Particles[i]->h/norm(Particles[i]->a))) << std::endl;
+		if (deltat > (0.25*sqrt(Particles[i]->h/norm(Particles[i]->a))) )
+		{
+			std::cout << "Please decrease the time step to"<< (0.25*sqrt(Particles[i]->h/norm(Particles[i]->a))) << std::endl;
+			abort();
+		}
 }
 
 inline void Domain::Move (double dt)
