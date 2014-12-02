@@ -29,9 +29,8 @@ int main(int argc, char **argv) try
 	dom.Dimension	= 2;
 
 	dom.NoSlip		= true;
-	dom.PeriodicX	= true;
-	dom.PeriodicY	= true;
-
+	dom.BC.Periodic[1] = true;
+//	dom.BC.Periodic[0] = true;
 	dom.RigidBody	= true;
 	dom.RBTag		= 4;
 
@@ -43,38 +42,44 @@ int main(int argc, char **argv) try
 
 //	dom.TI			= 0.05;
 
-	double xb,yb,h,rho,mass;
+	double xb,yb,h,rho,mass,U;
 	double dx,R,Rc,Re;
 	size_t no;
 
 	rho = 998.21;
 	dx = 0.002;
 	h = dx*1.1;
-	Rc = 0.02;
-	mass = (sqrt(3.0)*dx*dx/4.0)*rho;
-	Re = 10.0;
+	Rc = 0.05;
+	mass = dx*dx*rho;
+	Re = 100.0;
+	U = Re*dom.MU/(rho*2.0*Rc);
 
-	dom.ConstVelPeriodic= Re*dom.MU/(rho*2.0*Rc);
-	dom.Cs				= dom.ConstVelPeriodic*10.0;
-	dom.P0				= dom.Cs*dom.Cs*rho*0.5;
+	dom.BC.InOutFlow =3;
+	dom.BC.allv = U,0.0,0.0;
+	dom.BC.inDensity = rho;
+	dom.BC.inv = U,0.0,0.0;
+	dom.BC.outv = U,0.0,0.0;
+	dom.BC.outDensity = rho;
+
+	dom.Cs				= U*15.0;
+	dom.P0				= dom.Cs*dom.Cs*rho*0.2;
 	dom.InitialDist 	= dx;
-	double maz;
-	maz=(0.2*h/(dom.Cs+dom.ConstVelPeriodic));
+	double maz = (0.15*h/(dom.Cs+U));
 
 	std::cout<<"Re = "<<Re<<std::endl;
-	std::cout<<"V  = "<<dom.ConstVelPeriodic<<std::endl;
+	std::cout<<"V  = "<<U<<std::endl;
 	std::cout<<"Cs = "<<dom.Cs<<std::endl;
 	std::cout<<"P0 = "<<dom.P0<<std::endl;
 	std::cout<<"Time Step = "<<maz<<std::endl;
 	std::cout<<"Resolution = "<<(2.0*Rc/dx)<<std::endl;
 
-	dom.AddRandomBox(3 ,Vec3_t ( -10.0*Rc , -10.0*Rc , 0.0 ), 20.0*Rc , 20.0*Rc  ,  0 , dx/2.0 ,rho, h);
+	dom.AddBoxLength(3 ,Vec3_t ( -10.0*Rc , -5.0*Rc , 0.0 ), 20.0*Rc , 10.0*Rc  ,  0 , dx/2.0 ,rho, h, 1 , 0 , false, false );
 
 	for (size_t a=0; a<dom.Particles.Size(); a++)
 	{
 		xb=dom.Particles[a]->x(0);
 		yb=dom.Particles[a]->x(1);
-		if ((xb*xb+yb*yb)<((Rc+3.0/2.0*sqrt(3.0)*dx)*(Rc+3.0/2.0*sqrt(3.0)*dx)))
+		if ((xb*xb+yb*yb)<((Rc+h/2.0)*(Rc+h/2.0)))
 		{
 			dom.Particles[a]->ID=4;
 			dom.Particles[a]->IsFree=false;
@@ -82,23 +87,6 @@ int main(int argc, char **argv) try
 	}
 	dom.DelParticles(4);
 
-	R = Rc+sqrt(3.0)*dx;
-	no = ceil(2*M_PI*R/dx);
-	for (size_t i=0; i<no; i++)
-	{
-		xb = R*cos(2*M_PI/no*i);
-		yb = R*sin(2*M_PI/no*i);
-		dom.AddSingleParticle(3,Vec3_t ( xb ,  yb , 0.0 ), mass , rho , h , false);
-	}
-
-	R = Rc+sqrt(3.0)/2.0*dx;
-	no = ceil(2*M_PI*R/dx);
-	for (size_t i=0; i<no; i++)
-	{
-		xb = R*cos(2*M_PI/no*i);
-		yb = R*sin(2*M_PI/no*i);
-		dom.AddSingleParticle(3,Vec3_t ( xb ,  yb , 0.0 ), mass , rho , h , false);
-	}
 
 	//No-Slip BC
 	R = Rc;
@@ -107,12 +95,12 @@ int main(int argc, char **argv) try
 	{
 		xb = R*cos(2*M_PI/no*i);
 		yb = R*sin(2*M_PI/no*i);
-		dom.AddSingleParticle(Vec3_t ( xb ,  yb , 0.0 ));
+		dom.AddNSSingleParticle(4,Vec3_t ( xb ,  yb , 0.0 ),true);
 	}
 
 	for (size_t j=0;j<6;j++)
 	{
-		R = Rc-sqrt(3.0)/2.0*dx*j;
+		R = Rc-dx*j;
 		no = ceil(2*M_PI*R/dx);
 		for (size_t i=0; i<no; i++)
 		{
@@ -123,7 +111,7 @@ int main(int argc, char **argv) try
 	}
 
 
-	dom.Solve(/*tf*/20000.0,/*dt*/maz,/*dtOut*/(20.0*maz),"test06",6000);
+	dom.Solve(/*tf*/20000.0,/*dt*/maz,/*dtOut*/(200.0*maz),"test06");
 	return 0;
 }
 MECHSYS_CATCH

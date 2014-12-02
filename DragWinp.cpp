@@ -32,17 +32,18 @@ int main(int argc, char **argv) try
     double Ref;
     double Csf;
     double P0f;
+    double N;
     infile >> Ref;		infile.ignore(200,'\n');
     infile >> Csf;		infile.ignore(200,'\n');
     infile >> P0f;		infile.ignore(200,'\n');
+    infile >> N;		infile.ignore(200,'\n');
 
     SPH::Domain		dom;
 	dom.Dimension	= 2;
 
-//	dom.NoSlip		= true;
-	dom.PeriodicX	= true;
-	dom.PeriodicY	= true;
-
+	dom.NoSlip		= true;
+	dom.BC.Periodic[1] = true;
+//	dom.BC.Periodic[0] = true;
 	dom.RigidBody	= true;
 	dom.RBTag		= 4;
 
@@ -50,100 +51,80 @@ int main(int argc, char **argv) try
 	dom.PresEq		= 0;
 	dom.VisEq		= 3;
 	dom.KernelType	= 4;
-	dom.Nproc		= 24;
+	dom.Nproc		= abs(N);
 
 //	dom.TI			= 0.05;
 
-	double xb,yb,h,rho,mass;
+	double xb,yb,h,rho,mass,U;
 	double dx,R,Rc,Re;
 	size_t no;
 
 	rho = 998.21;
 	dx = 0.002;
 	h = dx*1.1;
-	Rc = 0.050;
-	mass = (sqrt(3.0)*dx*dx/4.0)*rho;
+	Rc = 0.05;
+	mass = dx*dx*rho;
 	Re = Ref;
+	U = Re*dom.MU/(rho*2.0*Rc);
 
-	dom.ConstVelPeriodic= Re*dom.MU/(rho*2.0*Rc);
-//	dom.vel				= Re*dom.MU/(rho*2.0*Rc),0.0,0.0;
-//	double temp 		= norm(dom.vel);
-//	dom.Acc				= 3e-6,0.0,0.0;
-//	dom.Cs				= temp*Csf;
-	dom.Cs				= Csf*dom.ConstVelPeriodic;
+	dom.BC.InOutFlow =3;
+	dom.BC.allv = U,0.0,0.0;
+	dom.BC.inDensity = rho;
+	dom.BC.inv = U,0.0,0.0;
+	dom.BC.outv = U,0.0,0.0;
+	dom.BC.outDensity = rho;
+
+	dom.Cs				= U*Csf;
 	dom.P0				= dom.Cs*dom.Cs*rho*P0f;
 	dom.InitialDist 	= dx;
-	double maz;
-//	maz=(0.2*h/(dom.Cs+temp));
-	maz=(0.2*h/(dom.Cs+dom.ConstVelPeriodic));
+	double maz = (0.15*h/(dom.Cs+U));
 
 	std::cout<<"Re = "<<Re<<std::endl;
-//	std::cout<<"V  = "<<temp<<std::endl;
-	std::cout<<"V  = "<<dom.ConstVelPeriodic<<std::endl;
+	std::cout<<"V  = "<<U<<std::endl;
 	std::cout<<"Cs = "<<dom.Cs<<std::endl;
 	std::cout<<"P0 = "<<dom.P0<<std::endl;
 	std::cout<<"Time Step = "<<maz<<std::endl;
 	std::cout<<"Resolution = "<<(2.0*Rc/dx)<<std::endl;
 
-	dom.AddRandomBox(3 ,Vec3_t ( -3.0*Rc , -5.0*Rc , 0.0 ), 20.0*Rc , 10.0*Rc  ,  0 , dx/2.0 ,rho, h,1,90);
+	dom.AddBoxLength(3 ,Vec3_t ( -10.0*Rc , -5.0*Rc , 0.0 ), 20.0*Rc , 10.0*Rc  ,  0 , dx/2.0 ,rho, h, 1 , 0 , false, false );
 
 	for (size_t a=0; a<dom.Particles.Size(); a++)
 	{
 		xb=dom.Particles[a]->x(0);
 		yb=dom.Particles[a]->x(1);
-		if ((xb*xb+yb*yb)<((Rc+dx/2)*(Rc+dx/2)))
+		if ((xb*xb+yb*yb)<((Rc+h/2.0)*(Rc+h/2.0)))
 		{
 			dom.Particles[a]->ID=4;
 			dom.Particles[a]->IsFree=false;
 		}
 	}
-//	dom.DelParticles(4);
+	dom.DelParticles(4);
 
-//	R = Rc+sqrt(3.0)*dx;
-//	no = ceil(2*M_PI*R/dx);
-//	for (size_t i=0; i<no; i++)
-//	{
-//		xb = R*cos(2*M_PI/no*i);
-//		yb = R*sin(2*M_PI/no*i);
-//		dom.AddSingleParticle(3,Vec3_t ( xb ,  yb , 0.0 ), mass , rho , h , false);
-//	}
-//
-//	R = Rc+sqrt(3.0)/2.0*dx;
-//	no = ceil(2*M_PI*R/dx);
-//	for (size_t i=0; i<no; i++)
-//	{
-//		xb = R*cos(2*M_PI/no*i);
-//		yb = R*sin(2*M_PI/no*i);
-//		dom.AddSingleParticle(3,Vec3_t ( xb ,  yb , 0.0 ), mass , rho , h , false);
-//	}
 
-//	//No-Slip BC
-//	R = Rc;
-//	no = ceil(2*M_PI*R/(dx/5.0));
-//	for (size_t i=0; i<no; i++)
-//	{
-//		xb = R*cos(2*M_PI/no*i);
-//		yb = R*sin(2*M_PI/no*i);
-//		dom.AddSingleParticle(Vec3_t ( xb ,  yb , 0.0 ));
-//	}
-//
-//	no = ceil(2*M_PI*Rc/dx);
-//
-//	for (size_t j=0;j<6;j++)
-//	{
-////		R = Rc-sqrt(3.0)/2.0*dx*j;
-//		R = Rc-dx*j;
-//		no = ceil(2*M_PI*R/dx);
-//		for (size_t i=0; i<no; i++)
-//		{
-//			xb = R*cos(2*M_PI/no*i+(j%2)*M_PI/no);
-//			yb = R*sin(2*M_PI/no*i+(j%2)*M_PI/no);
-//			dom.AddSingleParticle(4,Vec3_t ( xb ,  yb , 0.0 ), mass , rho , h , true);
-//		}
-//	}
-//
-//
-	dom.Solve(/*tf*/50000.0,/*dt*/maz,/*dtOut*/(100.0*maz),"test06",1500);
+	//No-Slip BC
+	R = Rc;
+	no = ceil(2*M_PI*R/(dx/5.0));
+	for (size_t i=0; i<no; i++)
+	{
+		xb = R*cos(2*M_PI/no*i);
+		yb = R*sin(2*M_PI/no*i);
+		dom.AddNSSingleParticle(4,Vec3_t ( xb ,  yb , 0.0 ),true);
+	}
+
+	for (size_t j=0;j<6;j++)
+	{
+		R = Rc-dx*j;
+		no = ceil(2*M_PI*R/dx);
+		for (size_t i=0; i<no; i++)
+		{
+			xb = R*cos(2*M_PI/no*i);
+			yb = R*sin(2*M_PI/no*i);
+			dom.AddSingleParticle(4,Vec3_t ( xb ,  yb , 0.0 ), mass , rho , h , true);
+		}
+	}
+
+
+	dom.Solve(/*tf*/20000.0,/*dt*/maz,/*dtOut*/(200.0*maz),"test06");
 	return 0;
 }
 MECHSYS_CATCH

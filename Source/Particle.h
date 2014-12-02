@@ -84,7 +84,6 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
     IsFree = !Fixed;
     hr = h0;
     h = hr;
-    dDensity=0.0;
     Pressure=0.0;
     ID = Tag;
     CC[0]= CC[1] = CC[2] = 0;
@@ -94,6 +93,8 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
     omp_init_lock(&my_lock);
     VXSPH = 0.0;
     ZWab = 0.0;
+    SumDen = 0.0;
+    dDensity=0.0;
 }
 
 inline void Particle::Move (double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3_t domainmin, bool ShepardFilter)
