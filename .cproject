@@ -58,11 +58,11 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
-					<fileInfo id="cdt.managedbuild.config.gnu.exe.debug.829054585.2047561563" name="Drag.cpp" rcbsApplicability="disable" resourcePath="Drag.cpp" toolsToInvoke="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.1274044068.859708522">
-						<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.1274044068.859708522" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.1274044068"/>
+					<fileInfo id="cdt.managedbuild.config.gnu.exe.debug.829054585.641508737" name="HydraulicJump1.cpp" rcbsApplicability="disable" resourcePath="HydraulicJump1.cpp" toolsToInvoke="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.1274044068.1336556740">
+						<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.1274044068.1336556740" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.1274044068"/>
 					</fileInfo>
 					<sourceEntries>
-						<entry excluding="Drag.cpp|HydraulicJump2.cpp|HydraulicJump1.cpp|Hagen.cpp|Couette.cpp|DragWinp.cpp|Poiseuille.cpp|hydrostatic.cpp|Drag_W_inp.cpp|Dam3D.cpp|test05Periodic.cpp|test02.cpp|test03.cpp|test04.cpp" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="Drag.cpp|HydraulicJump2.cpp|Hagen.cpp|Couette.cpp|DragWinp.cpp|Poiseuille.cpp|hydrostatic.cpp|Drag_W_inp.cpp|Dam3D.cpp|test05Periodic.cpp|test02.cpp|test03.cpp|test04.cpp" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
@@ -127,11 +127,11 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
-					<fileInfo id="cdt.managedbuild.config.gnu.exe.release.1951905185.1402103684" name="Drag.cpp" rcbsApplicability="disable" resourcePath="Drag.cpp" toolsToInvoke="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.1325570310.1460691026">
-						<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.1325570310.1460691026" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.1325570310"/>
+					<fileInfo id="cdt.managedbuild.config.gnu.exe.release.1951905185.2104447298" name="HydraulicJump1.cpp" rcbsApplicability="disable" resourcePath="HydraulicJump1.cpp" toolsToInvoke="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.1325570310.1784897173">
+						<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.1325570310.1784897173" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.1325570310"/>
 					</fileInfo>
 					<sourceEntries>
-						<entry excluding="Drag.cpp|HydraulicJump2.cpp|HydraulicJump1.cpp|Hagen.cpp|Couette.cpp|DragWinp.cpp|Poiseuille.cpp|hydrostatic.cpp|Drag_W_inp.cpp|Dam3D.cpp|test05Periodic.cpp|test02.cpp|test03.cpp|test04.cpp" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="Drag.cpp|HydraulicJump2.cpp|Hagen.cpp|Couette.cpp|DragWinp.cpp|Poiseuille.cpp|hydrostatic.cpp|Drag_W_inp.cpp|Dam3D.cpp|test05Periodic.cpp|test02.cpp|test03.cpp|test04.cpp" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>

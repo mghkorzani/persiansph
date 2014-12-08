@@ -52,8 +52,6 @@ public:
 
     int 	InOutFlow;	///< Considering inflow in all directions  by adding and deleting particles=> [0]=X, [1]=Y, [2]=Z and 0=none, 1=-
     double  InFlowLoc1;
-    double  InFlowLoc2;
-    double  InFlowLoc3;
     double  OutFlowLoc;
     double	cellfac;
 
@@ -201,8 +199,6 @@ inline Boundary::Boundary()
 	allDensity = 0.0;
 	InOutFlow = 0;
 	InFlowLoc1 = 0.0;
-	InFlowLoc2 = 0.0;
-	InFlowLoc3 = 0.0;
 	OutFlowLoc = 0.0;
 	cellfac = 4.0;
 }
@@ -423,7 +419,7 @@ inline void Domain::AddBoxNo(int tag, Vec3_t const & V, size_t nx, size_t ny, si
 		std::cout << "0 0 0 0" << std::endl;
 		std::cout << " 0 0 0 0" << std::endl;
 		std::cout << std::endl;
-		std::cout << "90 => Cubic Close Packing" << std::endl;
+		std::cout << "90 =>" << std::endl;
 		std::cout << "  0   0" << std::endl;
 		std::cout << "0 0 0 0" << std::endl;
 		std::cout << "0 0 0 0" << std::endl;
@@ -1309,17 +1305,32 @@ inline void Domain::InFlowBCLeave()
 		}
 	if (BC.InOutFlow==2) Particles.DelItems(DelPart);
 
+
 	if (BC.InOutFlow==1 || BC.InOutFlow==3)
 	{
 		for (size_t i=0 ; i<BC.InPart.Size() ; i++)
 			if(Particles[BC.InPart[i]]->x(0) > BC.InFlowLoc1)
 			{
-				double temp = Particles[BC.InPart[i]]->x(0)-(BC.InFlowLoc3-BC.InFlowLoc2)-2.0*R;
-				AddPart.Push(std::make_pair(Vec3_t(temp,Particles[BC.InPart[i]]->x(1),Particles[BC.InPart[i]]->x(2)),BC.InPart[i]));
-//				 printf ("ghadim %4.7f \n", BC.InFlowLoc2);
-//				 printf ("ghadim %4.7f \n", BC.InFlowLoc1-BC.InFlowLoc3);
+				double temp;
+				double temp1 = Particles[BC.InPart[i]]->x(0);
+				int q2 = Particles[BC.InPart[i]]->CC[1];
+				int q3 = Particles[BC.InPart[i]]->CC[2];
+				for (int q1=0; q1<Particles[BC.InPart[i]]->CC[0]; q1++)
+				{
+					if (HOC[q1][q2][q3]!=-1)
+					{
+						temp = HOC[q1][q2][q3];
+						while (temp != -1)
+						{
+							if (Particles[temp]->IsFree && temp1>Particles[temp]->x(0) && Particles[BC.InPart[i]]->x(1)==Particles[temp]->x(1) &&
+									Particles[BC.InPart[i]]->x(2)==Particles[temp]->x(2)) temp1=Particles[temp]->x(0);
+							temp = Particles[temp]->LL;
+						}
+					}
+				}
+				temp1 -= 2.0*R;
 
-//				 printf ("jadid  %4.7f \n", AddPart[AddPart.Size()-1].first(0));
+				AddPart.Push(std::make_pair(Vec3_t(temp1,Particles[BC.InPart[i]]->x(1),Particles[BC.InPart[i]]->x(2)),BC.InPart[i]));
 			}
 
 		if (AddPart.Size() > DelPart.Size())
@@ -1423,16 +1434,6 @@ inline void Domain::InFlowBCFresh()
 		}
 	}
 
-	if (BC.InFlowLoc2==0.0 && BC.InFlowLoc3==0.0)
-	{
-		BC.InFlowLoc2=Particles[BC.InPart[0]]->x(0);
-		BC.InFlowLoc3=Particles[BC.InPart[0]]->x(0);
-		for (size_t i=0 ; i<BC.InPart.Size() ; i++)
-		{
-			if (Particles[BC.InPart[i]]->x(0)<BC.InFlowLoc2) BC.InFlowLoc2=Particles[BC.InPart[i]]->x(0);
-			if (Particles[BC.InPart[i]]->x(0)>BC.InFlowLoc3) BC.InFlowLoc3=Particles[BC.InPart[i]]->x(0);
-		}
-	}
 
 	Vec3_t vel;
 	double den;
