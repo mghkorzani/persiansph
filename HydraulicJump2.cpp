@@ -22,104 +22,103 @@
 using std::cout;
 using std::endl;
 
-double Cs,Mu,Density,h1;
+double Cs,h1;
+double a = 998.21*9.81*3.66e-5/(2.0*1.002e-3);
+double c = 998.21*9.81*2.79e-6/(2.0*1.002e-3);
 
 void UserInFlowCon(Vec3_t & position, Vec3_t & Vel, double & Den, SPH::Boundary & bdry)
 {
-	Vel = Vec3_t(Density*9.81*0.0547/(2.0*Mu)*(2*0.001*position(1)-position(1)*position(1)),0.0,0.0);
-	Den = Density*(1+9.81*(0.001-position(1))/(Cs*Cs));
+//	Vel = Vec3_t(2.34,0.0,0.0);
+	Vel = Vec3_t(a*(2*0.14*position(1)-position(1)*position(1)),0.0,0.0);
+	Den = 998.21*(1+9.81*(0.14-position(1))/(Cs*Cs));
 }
-void UserOutFlowCon(Vec3_t & position, Vec3_t & Vel, double & Den, SPH::Boundary & bdry)
-{
-	Vel = Vec3_t(Density*9.81*0.006/(2.0*Mu)*(2*0.00209*position(1)-position(1)*position(1)),0.0,0.0);
-	Den = Density*(1+9.81*(0.00209-position(1))/(Cs*Cs));
-}
+
 void UserAllFlowCon(Vec3_t & position, Vec3_t & Vel, double & Den, SPH::Boundary & bdry)
 {
-	if (position(0)<(5.0*h1))
+	if (position(0)<(7.0*h1))
 	{
-		Vel = Vec3_t(Density*9.81*0.0547/(2.0*Mu)*(2*0.001*position(1)-position(1)*position(1)),0.0,0.0);
-		Den = Density*(1+9.81*(0.001-position(1))/(Cs*Cs));
+//		Vel = Vec3_t(2.34,0.0,0.0);
+		Vel = Vec3_t(a*(2*0.14*position(1)-position(1)*position(1)),0.0,0.0);
+		Den = 998.21*(1+9.81*(0.14-position(1))/(Cs*Cs));
 	}
 	else
 	{
-		Vel = Vec3_t(Density*9.81*0.006/(2.0*Mu)*(2*0.00209*position(1)-position(1)*position(1)),0.0,0.0);
-		Den = Density*(1+9.81*(0.00209-position(1))/(Cs*Cs));
+//		Vel = Vec3_t(0.99,0.0,0.0);
+		Vel = Vec3_t(c*(2*0.33*position(1)-position(1)*position(1)),0.0,0.0);
+		Den = 998.21*(1+9.81*(0.33-position(1))/(Cs*Cs));
 	}
+}
+void UserOutFlowCon(Vec3_t & position, Vec3_t & Vel, double & Den, SPH::Boundary & bdry)
+{
+//	Vel = Vec3_t(0.99,0.0,0.0);
+	Vel = Vec3_t(c*(2*0.33*position(1)-position(1)*position(1)),0.0,0.0);
+	Den = 998.21*(1+9.81*(0.33-position(1))/(Cs*Cs));
 }
 
 int main(int argc, char **argv) try
 {
-        SPH::Domain		dom;
+	SPH::Domain		dom;
 
-        dom.Gravity		= 0.0,-9.81,0.0;
-        dom.Dimension	= 2;
-        dom.MU			= 1.002e-3;
-        dom.Nproc		= 12;
-    	dom.PresEq		= 0;
-    	dom.VisEq		= 1;
-    	dom.KernelType	= 2;
-    	dom.Shepard		= true;
+	dom.Gravity		= 0.0,-9.81,0.0;
+	dom.Dimension	= 2;
+	dom.MU			= 1.002e-3;
+	dom.Nproc		= 32;
+	dom.PresEq		= 0;
+	dom.VisEq		= 0;
+	dom.KernelType	= 0;
+	dom.Shepard		= true;
+	dom.TI			= 0.025;
 
+	dom.BC.InOutFlow =3;
+	dom.BC.allv = 2.34,0.0,0.0;
+	dom.BC.inv  = 2.34,0.0,0.0;
+	dom.BC.outv = 0.99,0.0,0.0;
+	dom.BC.inDensity = 998.21;
+	dom.BC.outDensity = 998.21;
+	dom.BC.allDensity = 998.21;
 
-    	dom.BC.InOutFlow =1;
-    	dom.BC.allv = 0.148,0.0,0.0;
-    	dom.BC.inv = 0.1783,0.0,0.0;
-    	dom.BC.inDensity = 998.21;
-//    	dom.BC.outDensity = 998.21;
-    	dom.BC.allDensity = 998.21;
-//    	dom.BC.outv = 0.0852,0.0,0.0;
+	dom.InCon  = & UserInFlowCon;
+	dom.AllCon = & UserAllFlowCon;
+	dom.OutCon = & UserOutFlowCon;
 
-        double xb,yb,h,rho,Re,H,U;
-    	double dx;
+	double xb,yb,h,rho,H,U;
+	double dx;
 
-    	rho = 998.21;
-    	H = 0.001;
-    	U = 0.2673;
-//    	dom.Cs = rho*9.81*H*2.0;
-    	dom.Cs = 2.7;
-//    	dom.TI = 0.05;
+	rho	= 998.21;
+	H	= 0.14;
+	U	= 2.50;
+//	U	= 2.34;
+	dom.Cs = 10.0*U;
+	dx	= H/70.0;
+	h	= dx*1.1;
+	Cs	= dom.Cs;
+	h1  = H;
 
-    	dx = H/70.0;
-    	h = dx*1.1;
-    	dom.InitialDist	= dx;
+	dom.InitialDist	= dx;
+	dom.DomMax(1) = 4.5*H;
 
-    	Cs = dom.Cs;
-    	Mu = dom.MU;
-    	Density = rho;
-    	h1 = H;
-    	dom.InCon = & UserInFlowCon;
-//    	dom.OutCon = & UserOutFlowCon;
-    	dom.AllCon = & UserAllFlowCon;
+	double maz = (0.2*h/(dom.Cs+U));
 
-        double maz;
-        maz=(0.10*h/(dom.Cs+U));
+	dom.AddBoxLength(1 ,Vec3_t ( 0.0 , -5.0*dx , 0.0 ), 25.0*H , 2.36*H+5.0*dx  ,  0 , dx/2.0 ,rho, h, 0 , 0 , false, false );
 
-    	dom.AddBoxLength(1 ,Vec3_t ( 0.0 , -5.0*dx , 0.0 ), 15.0*H , 2.09*H+5.0*dx  ,  0 , dx/2.0 ,rho, h, 1 , 0 , false, false );
-    	dom.DomMax(1) = 2.5*H;
+	for (size_t a=0; a<dom.Particles.Size(); a++)
+	{
+		xb=dom.Particles[a]->x(0);
+		yb=dom.Particles[a]->x(1);
+		if (yb<0.0)
+		{
+			dom.Particles[a]->ID=2;
+			dom.Particles[a]->IsFree=false;
+		}
+		if (yb>0.14 && xb < 7.0*H)
+		{
+			dom.Particles[a]->ID=3;
+			dom.Particles[a]->IsFree=false;
+		}
+	}
+	dom.DelParticles(3);
 
-    	for (size_t a=0; a<dom.Particles.Size(); a++)
-    	{
-    		xb=dom.Particles[a]->x(0);
-    		yb=dom.Particles[a]->x(1);
-    		if (yb<0.0)
-    		{
-    			dom.Particles[a]->ID=2;
-    			dom.Particles[a]->IsFree=false;
-    		}
-    		if (yb<(1.5*H) && xb >(15.0*H-5.0*dx))
-    		{
-    			dom.Particles[a]->ID=2;
-    			dom.Particles[a]->IsFree=false;
-    		}
-    		if (yb>0.001 && xb<(5.0*H))
-    		{
-    			dom.Particles[a]->ID=3;
-    		}
-   	}
-    	dom.DelParticles(3);
-
-    	dom.Solve(/*tf*/50000.0,/*dt*/maz,/*dtOut*/(0.0005),"test06");
-        return 0;
+	dom.Solve(/*tf*/50000.0,/*dt*/maz,/*dtOut*/0.03,"test06");
+	return 0;
 }
 MECHSYS_CATCH

@@ -1322,8 +1322,8 @@ inline void Domain::InFlowBCLeave()
 						temp = HOC[q1][q2][q3];
 						while (temp != -1)
 						{
-							if (Particles[temp]->IsFree && temp1>Particles[temp]->x(0) && Particles[BC.InPart[i]]->x(1)==Particles[temp]->x(1) &&
-									Particles[BC.InPart[i]]->x(2)==Particles[temp]->x(2)) temp1=Particles[temp]->x(0);
+							if (Particles[temp]->IsFree && temp1>Particles[temp]->x(0) && fabs(Particles[BC.InPart[i]]->x(1)-Particles[temp]->x(1))<hmax/4.0 &&
+									fabs(Particles[BC.InPart[i]]->x(2)-Particles[temp]->x(2))<hmax/4.0) temp1=Particles[temp]->x(0);
 							temp = Particles[temp]->LL;
 						}
 					}
@@ -1405,7 +1405,7 @@ inline void Domain::InFlowBCFresh()
 				temp = HOC[q1][q2][q3];
 				while (temp != -1)
 				{
-					if (Particles[temp]->IsFree && (Particles[temp]->x(0) < BC.InFlowLoc1 ) ) BC.InPart.Push(temp);
+					if (Particles[temp]->IsFree && (Particles[temp]->x(0) < BC.InFlowLoc1 && Particles[temp]->v(0)>0.0) ) BC.InPart.Push(temp);
 					temp = Particles[temp]->LL;
 				}
 			}
