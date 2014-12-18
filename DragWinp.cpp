@@ -35,12 +35,16 @@ int main(int argc, char **argv) try
     double N;
     double Tf;
     double Rcf;
+    double Kf;
+    double Visf;
     infile >> Ref;		infile.ignore(200,'\n');
     infile >> Csf;		infile.ignore(200,'\n');
     infile >> P0f;		infile.ignore(200,'\n');
     infile >> N;		infile.ignore(200,'\n');
     infile >> Tf;		infile.ignore(200,'\n');
     infile >> Rcf;		infile.ignore(200,'\n');
+    infile >> Visf;		infile.ignore(200,'\n');
+    infile >> Kf;		infile.ignore(200,'\n');
 
     SPH::Domain		dom;
 	dom.Dimension	= 2;
@@ -51,8 +55,8 @@ int main(int argc, char **argv) try
 
 	dom.MU			= 1.002e-3;
 	dom.PresEq		= 0;
-	dom.VisEq		= 3;
-	dom.KernelType	= 4;
+	dom.VisEq		= abs(Visf);
+	dom.KernelType	= abs(Kf);
 	dom.Nproc		= abs(N);
 
 //	dom.TI			= 0.05;
@@ -67,7 +71,7 @@ int main(int argc, char **argv) try
 	Rc = Rcf;
 	mass = dx*dx*rho;
 	Re = Ref;
-	U = Re*dom.MU/(rho*2.0*(Rc+h/2.0));
+	U = Re*dom.MU/(rho*2.0*(Rc+dx/2.0));
 
 	dom.BC.InOutFlow =3;
 	dom.BC.allv = U,0.0,0.0;
@@ -86,7 +90,7 @@ int main(int argc, char **argv) try
 	std::cout<<"Cs = "<<dom.Cs<<std::endl;
 	std::cout<<"P0 = "<<dom.P0<<std::endl;
 	std::cout<<"Time Step = "<<maz<<std::endl;
-	std::cout<<"Resolution = "<<(2.0*(Rc+h/2.0)/dx)<<std::endl;
+	std::cout<<"Resolution = "<<(2.0*(Rc+dx/2.0)/dx)<<std::endl;
 
 	dom.AddBoxLength(3 ,Vec3_t ( -10.0*Rc , -10.0*Rc , 0.0 ), 25.0*Rc , 20.0*Rc  ,  0 , dx/2.0 ,rho, h, 1 , 0 , false, false );
 

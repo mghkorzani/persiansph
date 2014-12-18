@@ -28,7 +28,6 @@ double c = 998.21*9.81*2.79e-6/(2.0*1.002e-3);
 
 void UserInFlowCon(Vec3_t & position, Vec3_t & Vel, double & Den, SPH::Boundary & bdry)
 {
-//	Vel = Vec3_t(2.34,0.0,0.0);
 	Vel = Vec3_t(a*(2*0.14*position(1)-position(1)*position(1)),0.0,0.0);
 	Den = 998.21*(1+9.81*(0.14-position(1))/(Cs*Cs));
 }
@@ -37,20 +36,17 @@ void UserAllFlowCon(Vec3_t & position, Vec3_t & Vel, double & Den, SPH::Boundary
 {
 	if (position(0)<(7.0*h1))
 	{
-//		Vel = Vec3_t(2.34,0.0,0.0);
 		Vel = Vec3_t(a*(2*0.14*position(1)-position(1)*position(1)),0.0,0.0);
 		Den = 998.21*(1+9.81*(0.14-position(1))/(Cs*Cs));
 	}
 	else
 	{
-//		Vel = Vec3_t(0.99,0.0,0.0);
 		Vel = Vec3_t(c*(2*0.33*position(1)-position(1)*position(1)),0.0,0.0);
 		Den = 998.21*(1+9.81*(0.33-position(1))/(Cs*Cs));
 	}
 }
 void UserOutFlowCon(Vec3_t & position, Vec3_t & Vel, double & Den, SPH::Boundary & bdry)
 {
-//	Vel = Vec3_t(0.99,0.0,0.0);
 	Vel = Vec3_t(c*(2*0.33*position(1)-position(1)*position(1)),0.0,0.0);
 	Den = 998.21*(1+9.81*(0.33-position(1))/(Cs*Cs));
 }
@@ -62,12 +58,12 @@ int main(int argc, char **argv) try
 	dom.Gravity		= 0.0,-9.81,0.0;
 	dom.Dimension	= 2;
 	dom.MU			= 1.002e-3;
-	dom.Nproc		= 32;
+	dom.Nproc		= 12;
 	dom.PresEq		= 0;
 	dom.VisEq		= 0;
 	dom.KernelType	= 0;
 	dom.Shepard		= true;
-	dom.TI			= 0.025;
+//	dom.TI			= 0.025;
 
 	dom.BC.InOutFlow =3;
 	dom.BC.allv = 2.34,0.0,0.0;
@@ -86,8 +82,7 @@ int main(int argc, char **argv) try
 
 	rho	= 998.21;
 	H	= 0.14;
-	U	= 2.50;
-//	U	= 2.34;
+	U	= 4.00;
 	dom.Cs = 10.0*U;
 	dx	= H/70.0;
 	h	= dx*1.1;
@@ -97,9 +92,9 @@ int main(int argc, char **argv) try
 	dom.InitialDist	= dx;
 	dom.DomMax(1) = 4.5*H;
 
-	double maz = (0.2*h/(dom.Cs+U));
+	double maz = (0.02*h/(dom.Cs+U));
 
-	dom.AddBoxLength(1 ,Vec3_t ( 0.0 , -5.0*dx , 0.0 ), 25.0*H , 2.36*H+5.0*dx  ,  0 , dx/2.0 ,rho, h, 0 , 0 , false, false );
+	dom.AddBoxLength(1 ,Vec3_t ( 0.0 , -5.0*dx , 0.0 ), 20.0*H , 2.36*H+5.0*dx  ,  0 , dx/2.0 ,rho, h, 0 , 0 , false, false );
 
 	for (size_t a=0; a<dom.Particles.Size(); a++)
 	{
@@ -118,7 +113,7 @@ int main(int argc, char **argv) try
 	}
 	dom.DelParticles(3);
 
-	dom.Solve(/*tf*/50000.0,/*dt*/maz,/*dtOut*/0.03,"test06");
+	dom.Solve(/*tf*/50000.0,/*dt*/maz,/*dtOut*/0.005,"test06");
 	return 0;
 }
 MECHSYS_CATCH
