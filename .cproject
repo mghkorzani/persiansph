@@ -58,11 +58,8 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
-					<fileInfo id="cdt.managedbuild.config.gnu.exe.debug.829054585.908943045" name="HydraulicJump1.cpp" rcbsApplicability="disable" resourcePath="HydraulicJump1.cpp" toolsToInvoke="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.1274044068.168831730">
-						<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.1274044068.168831730" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.1274044068"/>
-					</fileInfo>
 					<sourceEntries>
-						<entry excluding="HydraulicJump2.cpp|DragWinp.cpp|Drag.cpp|Hagen.cpp|Couette.cpp|Poiseuille.cpp|hydrostatic.cpp|Drag_W_inp.cpp|Dam3D.cpp|test05Periodic.cpp|test02.cpp|test03.cpp|test04.cpp" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="HydraulicJump1.cpp|HydraulicJump2.cpp|Drag.cpp|Hagen.cpp|Couette.cpp|Poiseuille.cpp|hydrostatic.cpp|Drag_W_inp.cpp|Dam3D.cpp|test05Periodic.cpp|test02.cpp|test03.cpp|test04.cpp" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
@@ -83,11 +80,11 @@
 			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
 				<configuration artifactName="${ProjName}" buildArtefactType="org.eclipse.cdt.build.core.buildArtefactType.exe" buildProperties="org.eclipse.cdt.build.core.buildType=org.eclipse.cdt.build.core.buildType.release,org.eclipse.cdt.build.core.buildArtefactType=org.eclipse.cdt.build.core.buildArtefactType.exe" cleanCommand="rm -rf" description="" id="cdt.managedbuild.config.gnu.exe.release.1951905185" name="Release" parent="cdt.managedbuild.config.gnu.exe.release">
 					<folderInfo id="cdt.managedbuild.config.gnu.exe.release.1951905185." name="/" resourcePath="">
-						<toolChain id="cdt.managedbuild.toolchain.gnu.exe.release.151956867" name="Linux GCC" superClass="cdt.managedbuild.toolchain.gnu.exe.release">
+						<toolChain id="cdt.managedbuild.toolchain.gnu.exe.release.151956867" name="Linux GCC" nonInternalBuilderId="cdt.managedbuild.target.gnu.builder.exe.release" superClass="cdt.managedbuild.toolchain.gnu.exe.release">
 							<targetPlatform id="cdt.managedbuild.target.gnu.platform.exe.release.2012552777" name="Debug Platform" superClass="cdt.managedbuild.target.gnu.platform.exe.release"/>
-							<builder buildPath="${workspace_loc:/SPH/Release}" id="cdt.managedbuild.target.gnu.builder.exe.release.633462644" keepEnvironmentInBuildfile="false" managedBuildOn="true" name="Gnu Make Builder" superClass="cdt.managedbuild.target.gnu.builder.exe.release"/>
+							<builder buildPath="${workspace_loc:/SPH}/Release" id="cdt.managedbuild.target.gnu.builder.exe.release.1144681755" keepEnvironmentInBuildfile="false" name="Gnu Make Builder" superClass="cdt.managedbuild.target.gnu.builder.exe.release"/>
 							<tool id="cdt.managedbuild.tool.gnu.archiver.base.2018109849" name="GCC Archiver" superClass="cdt.managedbuild.tool.gnu.archiver.base"/>
-							<tool command="g++" commandLinePattern="${COMMAND} ${FLAGS} ${OUTPUT_FLAG} ${OUTPUT_PREFIX}${OUTPUT} ${INPUTS}" id="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.1325570310" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release">
+							<tool command="g++ " commandLinePattern="${COMMAND} ${FLAGS} ${OUTPUT_FLAG} ${OUTPUT_PREFIX}${OUTPUT} ${INPUTS}" id="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.1325570310" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release">
 								<option id="gnu.cpp.compiler.exe.release.option.optimization.level.1003527472" name="Optimization Level" superClass="gnu.cpp.compiler.exe.release.option.optimization.level" value="gnu.cpp.compiler.optimization.level.most" valueType="enumerated"/>
 								<option id="gnu.cpp.compiler.exe.release.option.debugging.level.1298270231" name="Debug Level" superClass="gnu.cpp.compiler.exe.release.option.debugging.level" value="gnu.cpp.compiler.debugging.level.none" valueType="enumerated"/>
 								<option id="gnu.cpp.compiler.option.include.paths.1415930681" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" valueType="includePath">
@@ -105,7 +102,7 @@
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.1557217883" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 							</tool>
 							<tool id="cdt.managedbuild.tool.gnu.c.linker.exe.release.2011810689" name="GCC C Linker" superClass="cdt.managedbuild.tool.gnu.c.linker.exe.release"/>
-							<tool command="g++" id="cdt.managedbuild.tool.gnu.cpp.linker.exe.release.2142297421" name="GCC C++ Linker" superClass="cdt.managedbuild.tool.gnu.cpp.linker.exe.release">
+							<tool command="g++ " id="cdt.managedbuild.tool.gnu.cpp.linker.exe.release.2142297421" name="GCC C++ Linker" superClass="cdt.managedbuild.tool.gnu.cpp.linker.exe.release">
 								<option id="gnu.cpp.link.option.libs.725466602" name="Libraries (-l)" superClass="gnu.cpp.link.option.libs" valueType="libs">
 									<listOptionValue builtIn="false" value="hdf5"/>
 									<listOptionValue builtIn="false" value="gomp"/>
@@ -127,11 +124,8 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
-					<fileInfo id="cdt.managedbuild.config.gnu.exe.release.1951905185.900645901" name="HydraulicJump1.cpp" rcbsApplicability="disable" resourcePath="HydraulicJump1.cpp" toolsToInvoke="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.1325570310.946564277">
-						<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.1325570310.946564277" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.1325570310"/>
-					</fileInfo>
 					<sourceEntries>
-						<entry excluding="HydraulicJump2.cpp|DragWinp.cpp|Drag.cpp|Hagen.cpp|Couette.cpp|Poiseuille.cpp|hydrostatic.cpp|Drag_W_inp.cpp|Dam3D.cpp|test05Periodic.cpp|test02.cpp|test03.cpp|test04.cpp" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="HydraulicJump1.cpp|HydraulicJump2.cpp|Drag.cpp|Hagen.cpp|Couette.cpp|Poiseuille.cpp|hydrostatic.cpp|Drag_W_inp.cpp|Dam3D.cpp|test05Periodic.cpp|test02.cpp|test03.cpp|test04.cpp" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>

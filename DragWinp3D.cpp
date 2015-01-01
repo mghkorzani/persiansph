@@ -47,7 +47,7 @@ int main(int argc, char **argv) try
     infile >> Kf;		infile.ignore(200,'\n');
 
     SPH::Domain		dom;
-	dom.Dimension	= 2;
+	dom.Dimension	= 3;
 
 	dom.BC.Periodic[1] = true;
 	dom.RigidBody	= true;
@@ -61,9 +61,9 @@ int main(int argc, char **argv) try
 
 //	dom.TI			= 0.05;
 
-	double xb,yb,h,rho,mass,U;
+	double xb,yb,zb,h,rho,mass,U;
 	double dx,R,Rc,Re;
-	size_t no;
+	size_t no,no1;
 
 	rho = 998.21;
 	dx = 0.002;
@@ -92,13 +92,14 @@ int main(int argc, char **argv) try
 	std::cout<<"Time Step = "<<maz<<std::endl;
 	std::cout<<"Resolution = "<<(2.0*(Rc+dx/2.0)/dx)<<std::endl;
 
-	dom.AddBoxLength(3 ,Vec3_t ( -5.0*Rc , -5.0*Rc , 0.0 ), 20.0*Rc , 10.0*Rc  ,  0 , dx/2.0 ,rho, h, 1 , 0 , false, false );
+	dom.AddBoxLength(3 ,Vec3_t ( -5.0*Rc , -5.0*Rc , -5.0*Rc ), 15.0*Rc , 10.0*Rc  ,  10.0*Rc , dx/2.0 ,rho, h, 1 , 0 , false, false );
 
 	for (size_t a=0; a<dom.Particles.Size(); a++)
 	{
 		xb=dom.Particles[a]->x(0);
 		yb=dom.Particles[a]->x(1);
-		if ((xb*xb+yb*yb)<((Rc+h/2.0)*(Rc+h/2.0)))
+		zb=dom.Particles[a]->x(2);
+		if ((xb*xb+yb*yb+zb*zb)<((Rc+h/2.0)*(Rc+h/2.0)))
 		{
 			dom.Particles[a]->ID=4;
 			dom.Particles[a]->IsFree=false;
@@ -106,18 +107,21 @@ int main(int argc, char **argv) try
 	}
 	dom.DelParticles(4);
 
-	for (size_t j=0;j<7;j++)
+	for (size_t j=0;j<6;j++)
 	{
 		R = Rc-dx*j;
 		no = ceil(2*M_PI*R/dx);
+		no1 = ceil(M_PI*R/dx);
+		for (size_t k=0; k<=no1; k++)
 		for (size_t i=0; i<no; i++)
 		{
-			xb = R*cos(2*M_PI/no*i);
-			yb = R*sin(2*M_PI/no*i);
-			dom.AddSingleParticle(4,Vec3_t ( xb ,  yb , 0.0 ), mass , rho , h , true);
+			xb = R*cos(2*M_PI/no*i)*sin(M_PI/no1*k);
+			yb = R*sin(2*M_PI/no*i)*sin(M_PI/no1*k);
+			zb = R*cos(M_PI/no1*k);
+			dom.AddSingleParticle(4,Vec3_t ( xb ,  yb , zb ), mass , rho , h , true);
 		}
 	}
-
+//	dom.WriteXDMF("maz");
 	dom.Solve(/*tf*/20000.0,/*dt*/maz,/*dtOut*/(500.0*maz),"test06");
 	return 0;
 }
