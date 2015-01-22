@@ -58,8 +58,11 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
+					<fileInfo id="cdt.managedbuild.config.gnu.exe.debug.829054585.171455914" name="HydraulicJump.cpp" rcbsApplicability="disable" resourcePath="HydraulicJump.cpp" toolsToInvoke="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.1274044068.2073739539">
+						<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.1274044068.2073739539" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.1274044068"/>
+					</fileInfo>
 					<sourceEntries>
-						<entry excluding="HydraulicJump1.cpp|HydraulicJump2.cpp|Drag.cpp|Hagen.cpp|Couette.cpp|Poiseuille.cpp|hydrostatic.cpp|Drag_W_inp.cpp|Dam3D.cpp|test05Periodic.cpp|test02.cpp|test03.cpp|test04.cpp" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="DragWinp.cpp|HydraulicJump3.cpp|DragWinp3D.cpp|HydraulicJump1.cpp|HydraulicJump2.cpp|Drag.cpp|Hagen.cpp|Couette.cpp|Poiseuille.cpp|hydrostatic.cpp|Drag_W_inp.cpp|Dam3D.cpp|test05Periodic.cpp|test02.cpp|test03.cpp|test04.cpp" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
@@ -124,8 +127,11 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
+					<fileInfo id="cdt.managedbuild.config.gnu.exe.release.1951905185.702639265" name="HydraulicJump.cpp" rcbsApplicability="disable" resourcePath="HydraulicJump.cpp" toolsToInvoke="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.1325570310.138172214">
+						<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.1325570310.138172214" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.1325570310"/>
+					</fileInfo>
 					<sourceEntries>
-						<entry excluding="HydraulicJump1.cpp|HydraulicJump2.cpp|Drag.cpp|Hagen.cpp|Couette.cpp|Poiseuille.cpp|hydrostatic.cpp|Drag_W_inp.cpp|Dam3D.cpp|test05Periodic.cpp|test02.cpp|test03.cpp|test04.cpp" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="DragWinp.cpp|HydraulicJump3.cpp|DragWinp3D.cpp|HydraulicJump1.cpp|HydraulicJump2.cpp|Drag.cpp|Hagen.cpp|Couette.cpp|Poiseuille.cpp|hydrostatic.cpp|Drag_W_inp.cpp|Dam3D.cpp|test05Periodic.cpp|test02.cpp|test03.cpp|test04.cpp" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>

@@ -50,6 +50,7 @@ int main(int argc, char **argv) try
 	dom.Dimension	= 3;
 
 	dom.BC.Periodic[1] = true;
+	dom.BC.Periodic[2] = true;
 	dom.RigidBody	= true;
 	dom.RBTag		= 4;
 
@@ -66,10 +67,10 @@ int main(int argc, char **argv) try
 	size_t no,no1;
 
 	rho = 998.21;
-	dx = 0.002;
+	dx = 0.02;
 	h = dx*1.1;
 	Rc = Rcf;
-	mass = dx*dx*rho;
+	mass = dx*dx*dx*rho;
 	Re = Ref;
 	U = Re*dom.MU/(rho*2.0*(Rc+dx/2.0));
 
@@ -92,7 +93,7 @@ int main(int argc, char **argv) try
 	std::cout<<"Time Step = "<<maz<<std::endl;
 	std::cout<<"Resolution = "<<(2.0*(Rc+dx/2.0)/dx)<<std::endl;
 
-	dom.AddBoxLength(3 ,Vec3_t ( -5.0*Rc , -5.0*Rc , -5.0*Rc ), 15.0*Rc , 10.0*Rc  ,  10.0*Rc , dx/2.0 ,rho, h, 1 , 0 , false, false );
+	dom.AddBoxLength(3 ,Vec3_t ( -5.0*Rc , -5.0*Rc , -5.0*Rc ), 10.0*Rc , 10.0*Rc  ,  10.0*Rc , dx/2.0 ,rho, h, 1 , 0 , false, false );
 
 	for (size_t a=0; a<dom.Particles.Size(); a++)
 	{
@@ -110,19 +111,21 @@ int main(int argc, char **argv) try
 	for (size_t j=0;j<6;j++)
 	{
 		R = Rc-dx*j;
-		no = ceil(2*M_PI*R/dx);
 		no1 = ceil(M_PI*R/dx);
 		for (size_t k=0; k<=no1; k++)
-		for (size_t i=0; i<no; i++)
 		{
-			xb = R*cos(2*M_PI/no*i)*sin(M_PI/no1*k);
-			yb = R*sin(2*M_PI/no*i)*sin(M_PI/no1*k);
-			zb = R*cos(M_PI/no1*k);
-			dom.AddSingleParticle(4,Vec3_t ( xb ,  yb , zb ), mass , rho , h , true);
+			no = ceil(2*M_PI*R*sin(M_PI/no1*k)/dx)+1;
+			for (size_t i=0; i<no; i++)
+			{
+				xb = R*cos(2*M_PI/no*i+M_PI/no*(j%2))*sin(M_PI/no1*k);
+				yb = R*sin(2*M_PI/no*i+M_PI/no*(j%2))*sin(M_PI/no1*k);
+				zb = R*cos(M_PI/no1*k);
+				dom.AddSingleParticle(4,Vec3_t ( xb ,  yb , zb ), mass , rho , h , true);
+			}
 		}
 	}
 //	dom.WriteXDMF("maz");
-	dom.Solve(/*tf*/20000.0,/*dt*/maz,/*dtOut*/(500.0*maz),"test06");
+	dom.Solve(/*tf*/150000.0,/*dt*/maz,/*dtOut*/(100.0*maz),"test06",100);
 	return 0;
 }
 MECHSYS_CATCH

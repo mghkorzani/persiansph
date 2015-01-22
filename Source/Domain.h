@@ -89,7 +89,7 @@ public:
     void CalcForce					(Particle * P1, Particle * P2);																		///< Calculates the contact force between particles
     void Move						(double dt);																						///< Move particles
 
-    void Solve						(double tf, double dt, double dtOut, char const * TheFileKey);										///< The solving function
+    void Solve						(double tf, double dt, double dtOut, char const * TheFileKey, size_t maxidx);						///< The solving function
 
     void CellInitiate				();																									///< Find the size of the domain as a cube, make cells and HOCs
     void ListGenerate				();																									///< Generate linked-list
@@ -1516,7 +1516,7 @@ inline void Domain::WholeVelocity()
 				Particles[i]->v  = vel;
 				Particles[i]->vb = vel;
     		}
-    		if (BC.allDensity>0.0)
+    		if (Particles[i]->IsFree && BC.allDensity>0.0)
     		{
 				Particles[i]->Density = den;
 				Particles[i]->Densityb = den;
@@ -1535,9 +1535,15 @@ inline void Domain::InitialChecks()
     	std::cout << "Please correct the dimension (2=>2D or 3=>3D) and run again" << std::endl;
 		abort();
     }
+    if (KernelType==1)
+    	if (VisEq>1)
+    	{
+        	std::cout << "Quadratic kernel can not be used with the second order viscosity equations" << std::endl;
+    		abort();
+    	}
 }
 
-inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheFileKey)
+inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheFileKey, size_t maxidx)
 {
     Util::Stopwatch stopwatch;
     std::cout << "\n--------------Solving---------------------------------------------------------------" << std::endl;
@@ -1555,7 +1561,7 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
     PrintInput(TheFileKey);
     WholeVelocity();
 
-    while (Time<tf)
+    while (Time<tf && idx_out<=maxidx)
     {
 //    	std::cout<<"1"<<std::endl;
     	StartAcceleration(Gravity);
@@ -1611,6 +1617,8 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
        ListGenerate();
 //      	std::cout<<"10"<<std::endl;
     }
+    std::cout << "\n--------------Solving is finished---------------------------------------------------" << std::endl;
+
 }
 
 inline void Domain::PrintInput(char const * FileKey)
