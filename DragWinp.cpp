@@ -38,6 +38,7 @@ int main(int argc, char **argv) try
     double Kf;
     double Visf;
     double DomSize;
+    double hf;
     infile >> Ref;		infile.ignore(200,'\n');
     infile >> Csf;		infile.ignore(200,'\n');
     infile >> P0f;		infile.ignore(200,'\n');
@@ -47,6 +48,7 @@ int main(int argc, char **argv) try
     infile >> Visf;		infile.ignore(200,'\n');
     infile >> Kf;		infile.ignore(200,'\n');
     infile >> DomSize;	infile.ignore(200,'\n');
+    infile >> hf;		infile.ignore(200,'\n');
 
     SPH::Domain		dom;
 	dom.Dimension	= 2;
@@ -69,7 +71,7 @@ int main(int argc, char **argv) try
 
 	rho = 998.21;
 	dx = 0.02;
-	h = dx*1.1;
+	h = dx*hf;
 	Rc = Rcf;
 	mass = dx*dx*rho;
 	Re = Ref;
@@ -120,7 +122,7 @@ int main(int argc, char **argv) try
 		}
 	}
 
-	dom.Solve(/*tf*/200000.0,/*dt*/maz,/*dtOut*/(500.0*maz),"test06");
+	dom.Solve(/*tf*/300000.0,/*dt*/maz,/*dtOut*/(500.0*maz),"test06",80);
 	return 0;
 }
 MECHSYS_CATCH
