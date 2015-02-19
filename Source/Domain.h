@@ -168,6 +168,7 @@ public:
     PtVel 					AllCon;
     Vec3_t					DomMax;
     Vec3_t					DomMin;
+    bool 					BCDensityUpdate;
 
 };
 /////////////////////////////////////////////////////////////////////////////////////////// Implementation /////
@@ -233,6 +234,7 @@ inline Domain::Domain ()
     VisEq	= 0;
 
     NoSlip	= false;
+    BCDensityUpdate = true;
 
     XSPH	= 0.0;
     TI		= 0.0;
@@ -1577,6 +1579,15 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
 
     size_t save_out = 1;
     double sout = AutoSaveInt;
+
+    if (BCDensityUpdate==false)
+    {
+		#pragma omp parallel for schedule (static) num_threads(Nproc)
+		for (size_t i=0 ; i<Particles.Size() ; i++)
+			if (!Particles[i]->IsFree)
+				Particles[i]->DensityUpdate = false;
+    }
+
 
     InitialChecks();
     CellInitiate();

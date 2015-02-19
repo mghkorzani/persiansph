@@ -62,6 +62,7 @@ public:
     Vec3_t 	NoSlip2;		///< Current cell No for the particle (linked-list)
 
     int		ct;				///< Correction step for the Verlet Algorithm and Shepard filter
+    bool	DensityUpdate;
 
     omp_lock_t my_lock;		///< Open MP lock
 
@@ -95,6 +96,7 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
     ZWab = 0.0;
     SumDen = 0.0;
     dDensity=0.0;
+    DensityUpdate = true;
 }
 
 inline void Particle::Move (double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3_t domainmin, bool ShepardFilter)
@@ -117,13 +119,16 @@ inline void Particle::Move (double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3
 			Density = Densityb + 2*dt*dDensity;
 			Densityb = dens;
 		}
-//		else
-//		{
-//			// Evolve density for boundary particles
-//			double dens = Density;
-//			Density = Densityb + 2*dt*dDensity;
-//			Densityb = dens;
-//		}
+		else
+		{
+			if (DensityUpdate)
+			{
+				// Evolve density for boundary particles
+				double dens = Density;
+				Density = Densityb + 2*dt*dDensity;
+				Densityb = dens;
+			}
+		}
 
 		if (Domainsize(0)>0.0)
 		{
@@ -170,22 +175,25 @@ inline void Particle::Move (double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3
 				Densityb = dens;
 			}
 		}
-//		else
-//		{
-//			// Evolve density for boundary particles
-//			if (ShepardFilter && !isnan(SumDen/ZWab))
-//			{
-//				// Shepard filter
-//				Density = SumDen/ZWab;
-//				Densityb = Density;
-//			}
-//			else
-//			{
-//				double dens = Density;
-//				Density = Density + dt*dDensity;
-//				Densityb = dens;
-//			}
-//		}
+		else
+		{
+			if (DensityUpdate)
+			{
+				// Evolve density for boundary particles
+				if (ShepardFilter && !isnan(SumDen/ZWab))
+				{
+					// Shepard filter
+					Density = SumDen/ZWab;
+					Densityb = Density;
+				}
+				else
+				{
+					double dens = Density;
+					Density = Density + dt*dDensity;
+					Densityb = dens;
+				}
+			}
+		}
 
 		if (Domainsize(0)>0.0)
 		{
