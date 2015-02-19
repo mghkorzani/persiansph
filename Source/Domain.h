@@ -25,6 +25,7 @@
 
 #include <Particle.h>
 #include <Functions.h>
+//#include <Force.hpp>
 
 
 // HDF File Output
@@ -54,6 +55,7 @@ public:
     double  InFlowLoc1;
     double  OutFlowLoc;
     double	cellfac;
+    int		inoutcounter;
 
     Array <int>				OutPart;
 	Array <int>				InPart;
@@ -167,7 +169,6 @@ public:
     Vec3_t					DomMax;
     Vec3_t					DomMin;
 
-
 };
 /////////////////////////////////////////////////////////////////////////////////////////// Implementation /////
 void InFlowCon(Vec3_t & position, Vec3_t & Vel, double & Den, Boundary & bdry)
@@ -201,6 +202,7 @@ inline Boundary::Boundary()
 	InFlowLoc1 = 0.0;
 	OutFlowLoc = 0.0;
 	cellfac = 4.0;
+	inoutcounter = 0;
 }
 
 // Constructor
@@ -374,7 +376,7 @@ inline void Domain::CalcForce(Particle * P1, Particle * P2)
     	P1->SumDen += mj*    K;
     	P1->ZWab   += mj/dj* K;
     }
-    P1->dDensity += di * (mj/dj) * dot( (vij + (P1->VXSPH-P2->VXSPH)) , GK*xij );
+    P1->dDensity += di * (mj/dj) * dot( vij , GK*xij );
     omp_unset_lock(&P1->my_lock);
 
 
@@ -386,7 +388,7 @@ inline void Domain::CalcForce(Particle * P1, Particle * P2)
     	P2->SumDen += mi*    K;
     	P2->ZWab   += mi/di* K;
     }
-    P2->dDensity += dj * (mi/di) * dot( (-vij - (P1->VXSPH-P2->VXSPH)) , -GK*xij );
+    P2->dDensity += dj * (mi/di) * dot( -vij , -GK*xij );
     omp_unset_lock(&P2->my_lock);
 }
 
@@ -1305,16 +1307,25 @@ inline void Domain::InFlowBCLeave()
 		}
 	if (BC.InOutFlow==2) Particles.DelItems(DelPart);
 
-
 	if (BC.InOutFlow==1 || BC.InOutFlow==3)
 	{
 		for (size_t i=0 ; i<BC.InPart.Size() ; i++)
 			if(Particles[BC.InPart[i]]->x(0) > BC.InFlowLoc1)
 			{
 				double temp;
-				double temp1 = Particles[BC.InPart[i]]->x(0);
-				int q2 = Particles[BC.InPart[i]]->CC[1];
-				int q3 = Particles[BC.InPart[i]]->CC[2];
+				Vec3_t temp1;
+				int a2,a3,b2,b3;
+				temp1 = Particles[BC.InPart[i]]->x;
+
+				if (Dimension==2) {a3=0;b3=0;}
+					else {	(Particles[BC.InPart[i]]->CC[2]-1)<0 			? a3=0 				: a3=(Particles[BC.InPart[i]]->CC[2]-1);
+							(Particles[BC.InPart[i]]->CC[2]+1)>=CellNo[2] 	? b3=CellNo[2]-1 	: b3=(Particles[BC.InPart[i]]->CC[2]+1);}
+
+				(Particles[BC.InPart[i]]->CC[1]-1)<0 			? a2=0 				: a2=(Particles[BC.InPart[i]]->CC[1]-1);
+				(Particles[BC.InPart[i]]->CC[1]+1)>=CellNo[1] 	? b2=CellNo[1]-1 	: b2=(Particles[BC.InPart[i]]->CC[1]+1);
+
+				for (int q3=a3; q3<=b3; q3++)
+				for (int q2=a2; q2<=b2; q2++)
 				for (int q1=0; q1<Particles[BC.InPart[i]]->CC[0]; q1++)
 				{
 					if (HOC[q1][q2][q3]!=-1)
@@ -1322,15 +1333,15 @@ inline void Domain::InFlowBCLeave()
 						temp = HOC[q1][q2][q3];
 						while (temp != -1)
 						{
-							if (Particles[temp]->IsFree && temp1>Particles[temp]->x(0) && fabs(Particles[BC.InPart[i]]->x(1)-Particles[temp]->x(1))<hmax/4.0 &&
-									fabs(Particles[BC.InPart[i]]->x(2)-Particles[temp]->x(2))<hmax/4.0) temp1=Particles[temp]->x(0);
+							if (Particles[temp]->IsFree && temp1(0)>Particles[temp]->x(0) && fabs(Particles[BC.InPart[i]]->x(1)-Particles[temp]->x(1))<(hmax/4.0) &&
+									fabs(Particles[BC.InPart[i]]->x(2)-Particles[temp]->x(2))<(hmax/4.0) && Particles[temp]->ID==-10000) temp1=Particles[temp]->x;
 							temp = Particles[temp]->LL;
 						}
 					}
 				}
-				temp1 -= 2.0*R;
+				temp1(0) -= 2.0*R;
 
-				AddPart.Push(std::make_pair(Vec3_t(temp1,Particles[BC.InPart[i]]->x(1),Particles[BC.InPart[i]]->x(2)),BC.InPart[i]));
+				AddPart.Push(std::make_pair(temp1,BC.InPart[i]));
 			}
 
 		if (AddPart.Size() > DelPart.Size())
@@ -1342,10 +1353,12 @@ inline void Domain::InFlowBCLeave()
 				Particles[DelPart[i]]->Mass = Particles[AddPart[i].second]->Mass;
 				Particles[DelPart[i]]->RefDensity = Particles[AddPart[i].second]->RefDensity;
 				Particles[DelPart[i]]->h = Particles[AddPart[i].second]->h;
+				Particles[AddPart[i].second]->ID = -9000;
 			}
 			for (size_t i=DelPart.Size() ; i<AddPart.Size() ; i++)
 			{
 				Particles.Push(new Particle(Particles[AddPart[i].second]->ID,AddPart[i].first,Particles[AddPart[i].second]->v,Particles[AddPart[i].second]->Mass,Particles[AddPart[i].second]->Density,Particles[AddPart[i].second]->h,false));
+				Particles[AddPart[i].second]->ID = -9000;
 			}
 		}
 
@@ -1358,6 +1371,7 @@ inline void Domain::InFlowBCLeave()
 				Particles[DelPart[i]]->Mass = Particles[AddPart[i].second]->Mass;
 				Particles[DelPart[i]]->RefDensity = Particles[AddPart[i].second]->RefDensity;
 				Particles[DelPart[i]]->h = Particles[AddPart[i].second]->h;
+				Particles[AddPart[i].second]->ID = -9000;
 			}
 		}
 
@@ -1371,6 +1385,7 @@ inline void Domain::InFlowBCLeave()
 				Particles[DelPart[i]]->Mass = Particles[AddPart[i].second]->Mass;
 				Particles[DelPart[i]]->RefDensity = Particles[AddPart[i].second]->RefDensity;
 				Particles[DelPart[i]]->h = Particles[AddPart[i].second]->h;
+				Particles[AddPart[i].second]->ID = -9000;
 			}
 			for (size_t i=AddPart.Size() ; i<DelPart.Size() ; i++)
 			{
@@ -1379,7 +1394,6 @@ inline void Domain::InFlowBCLeave()
 			Particles.DelItems(temp1);
 		}
 	}
-
 
 	if (DelPart.Size()>0 || AddPart.Size()>0) RigidParticles.Clear();
 	DelPart.Clear();
@@ -1393,7 +1407,7 @@ inline void Domain::InFlowBCFresh()
 	if (BC.InOutFlow==1 || BC.InOutFlow==3)
 	{
 		BC.InPart.Clear();
-		if (BC.InFlowLoc1==0.0)  BC.InFlowLoc1  = BLPF(0) + BC.cellfac*hmax;
+		if (BC.inoutcounter==0)  BC.InFlowLoc1  = BLPF(0) + BC.cellfac*hmax;
 		temp1 = (int) (floor((BC.InFlowLoc1 - BLPF(0)) / CellSize(0)));
 
 		for (q2=0;BC.Periodic[1]? (q2<(CellNo[1]-2)) : (q2<CellNo[1]) ; q2++)
@@ -1405,7 +1419,11 @@ inline void Domain::InFlowBCFresh()
 				temp = HOC[q1][q2][q3];
 				while (temp != -1)
 				{
-					if (Particles[temp]->IsFree && (Particles[temp]->x(0) < BC.InFlowLoc1 && Particles[temp]->v(0)>0.0) ) BC.InPart.Push(temp);
+					if (BC.inoutcounter == 0)
+						{if (Particles[temp]->IsFree && (Particles[temp]->x(0) < BC.InFlowLoc1) ) {BC.InPart.Push(temp);Particles[temp]->ID=-10000;}}
+					else
+						{if (Particles[temp]->IsFree && (Particles[temp]->x(0) < BC.InFlowLoc1) && (Particles[temp]->ID == -10000) ) BC.InPart.Push(temp);}
+
 					temp = Particles[temp]->LL;
 				}
 			}
@@ -1434,6 +1452,8 @@ inline void Domain::InFlowBCFresh()
 		}
 	}
 
+	// To check it is the first time that this function is running
+	BC.inoutcounter = 1;
 
 	Vec3_t vel;
 	double den;
@@ -1456,11 +1476,14 @@ inline void Domain::InFlowBCFresh()
 			}
 		}
 
+	double temp11 = BC.InPart.Size()*BC.inv(0)/BC.OutPart.Size();
+
 	if (BC.OutPart.Size()>0)
 		#pragma omp parallel for schedule(static) private(vel,den) num_threads(Nproc)
 		for (size_t i=0 ; i<BC.OutPart.Size() ; i++)
 		{
 			OutCon(Particles[BC.OutPart[i]]->x,vel,den,BC);
+			if (temp11<vel(0)) vel(0) = temp11;
 			if (norm(BC.outv)>0.0)
 			{
 				Particles[BC.OutPart[i]]->v  = vel;
@@ -1563,7 +1586,7 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
 
     while (Time<tf && idx_out<=maxidx)
     {
-//    	std::cout<<"1"<<std::endl;
+//		std::cout<<"1"<<std::endl;
     	StartAcceleration(Gravity);
 //    	std::cout<<"2"<<std::endl;
     	InFlowBCFresh();

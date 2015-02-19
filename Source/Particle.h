@@ -117,13 +117,13 @@ inline void Particle::Move (double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3
 			Density = Densityb + 2*dt*dDensity;
 			Densityb = dens;
 		}
-		else
-		{
-			// Evolve density for boundary particles
-			double dens = Density;
-			Density = Densityb + 2*dt*dDensity;
-			Densityb = dens;
-		}
+//		else
+//		{
+//			// Evolve density for boundary particles
+//			double dens = Density;
+//			Density = Densityb + 2*dt*dDensity;
+//			Densityb = dens;
+//		}
 
 		if (Domainsize(0)>0.0)
 		{
@@ -170,22 +170,22 @@ inline void Particle::Move (double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3
 				Densityb = dens;
 			}
 		}
-		else
-		{
-			// Evolve density for boundary particles
-			if (ShepardFilter && !isnan(SumDen/ZWab))
-			{
-				// Shepard filter
-				Density = SumDen/ZWab;
-				Densityb = Density;
-			}
-			else
-			{
-				double dens = Density;
-				Density = Density + dt*dDensity;
-				Densityb = dens;
-			}
-		}
+//		else
+//		{
+//			// Evolve density for boundary particles
+//			if (ShepardFilter && !isnan(SumDen/ZWab))
+//			{
+//				// Shepard filter
+//				Density = SumDen/ZWab;
+//				Densityb = Density;
+//			}
+//			else
+//			{
+//				double dens = Density;
+//				Density = Density + dt*dDensity;
+//				Densityb = dens;
+//			}
+//		}
 
 		if (Domainsize(0)>0.0)
 		{
