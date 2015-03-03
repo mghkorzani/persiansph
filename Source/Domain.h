@@ -56,6 +56,7 @@ public:
     double  OutFlowLoc;
     double	cellfac;
     int		inoutcounter;
+    bool	MassConservation;
 
     Array <int>				OutPart;
 	Array <int>				InPart;
@@ -204,6 +205,7 @@ inline Boundary::Boundary()
 	OutFlowLoc = 0.0;
 	cellfac = 4.0;
 	inoutcounter = 0;
+	MassConservation = false;
 }
 
 // Constructor
@@ -1478,14 +1480,15 @@ inline void Domain::InFlowBCFresh()
 			}
 		}
 
-	double temp11 = BC.InPart.Size()*BC.inv(0)/BC.OutPart.Size();
+	double temp11;
+	if (BC.MassConservation) temp11= BC.InPart.Size()*BC.inv(0)/BC.OutPart.Size();
 
 	if (BC.OutPart.Size()>0)
 		#pragma omp parallel for schedule(static) private(vel,den) num_threads(Nproc)
 		for (size_t i=0 ; i<BC.OutPart.Size() ; i++)
 		{
 			OutCon(Particles[BC.OutPart[i]]->x,vel,den,BC);
-			if (temp11<vel(0)) vel(0) = temp11;
+			if (temp11<vel(0) && BC.MassConservation) vel(0) = temp11;
 			if (norm(BC.outv)>0.0)
 			{
 				Particles[BC.OutPart[i]]->v  = vel;

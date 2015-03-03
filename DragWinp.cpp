@@ -37,8 +37,12 @@ int main(int argc, char **argv) try
     double Rcf;
     double Kf;
     double Visf;
-    double DomSize;
+    double DomSizex;
+    double DomSizey;
+    double ax;
     double hf;
+    double dxf;
+    double Nop;
     infile >> Ref;		infile.ignore(200,'\n');
     infile >> Csf;		infile.ignore(200,'\n');
     infile >> P0f;		infile.ignore(200,'\n');
@@ -47,8 +51,12 @@ int main(int argc, char **argv) try
     infile >> Rcf;		infile.ignore(200,'\n');
     infile >> Visf;		infile.ignore(200,'\n');
     infile >> Kf;		infile.ignore(200,'\n');
-    infile >> DomSize;	infile.ignore(200,'\n');
+    infile >> DomSizex;	infile.ignore(200,'\n');
+    infile >> DomSizey;	infile.ignore(200,'\n');
+    infile >> ax;		infile.ignore(200,'\n');
     infile >> hf;		infile.ignore(200,'\n');
+    infile >> dxf;		infile.ignore(200,'\n');
+    infile >> Nop;		infile.ignore(200,'\n');
 
     SPH::Domain		dom;
 	dom.Dimension	= 2;
@@ -70,7 +78,7 @@ int main(int argc, char **argv) try
 	size_t no;
 
 	rho = 998.21;
-	dx = 0.02;
+	dx = dxf;
 	h = dx*hf;
 	Rc = Rcf;
 	mass = dx*dx*rho;
@@ -96,7 +104,7 @@ int main(int argc, char **argv) try
 	std::cout<<"Time Step = "<<maz<<std::endl;
 	std::cout<<"Resolution = "<<(2.0*(Rc+dx/2.0)/dx)<<std::endl;
 
-	dom.AddBoxLength(3 ,Vec3_t ( -DomSize/2.0*Rc , -DomSize/2.0*Rc , 0.0 ), DomSize*Rc , DomSize*Rc  ,  0 , dx/2.0 ,rho, h, 1 , 0 , false, false );
+	dom.AddBoxLength(3 ,Vec3_t ( -ax*Rc , -DomSizey/2.0*Rc , 0.0 ), DomSizex*Rc , DomSizey*Rc  ,  0 , dx/2.0 ,rho, h, 1 , 0 , false, false );
 
 	for (size_t a=0; a<dom.Particles.Size(); a++)
 	{
@@ -122,7 +130,7 @@ int main(int argc, char **argv) try
 		}
 	}
 
-	dom.Solve(/*tf*/300000.0,/*dt*/maz,/*dtOut*/(500.0*maz),"test06",80);
+	dom.Solve(/*tf*/30000000.0,/*dt*/maz,/*dtOut*/(500.0*maz),"test06",abs(Nop));
 	return 0;
 }
 MECHSYS_CATCH
