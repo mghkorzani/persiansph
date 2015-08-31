@@ -56,11 +56,11 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
-					<fileInfo id="cdt.managedbuild.config.gnu.exe.debug.829054585.1632318246" name="HydraulicJump.cpp" rcbsApplicability="disable" resourcePath="HydraulicJump.cpp" toolsToInvoke="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.1274044068.231044670">
-						<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.1274044068.231044670" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.1274044068"/>
+					<fileInfo id="cdt.managedbuild.config.gnu.exe.debug.829054585.2055728946" name="DragWinp.cpp" rcbsApplicability="disable" resourcePath="DragWinp.cpp" toolsToInvoke="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.1274044068.629307256">
+						<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.1274044068.629307256" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.1274044068"/>
 					</fileInfo>
 					<sourceEntries>
-						<entry excluding="DragWinp.cpp|HydraulicJump3.cpp|DragWinp3D.cpp|HydraulicJump1.cpp|HydraulicJump2.cpp|Drag.cpp|Hagen.cpp|Couette.cpp|Poiseuille.cpp|hydrostatic.cpp|Drag_W_inp.cpp|Dam3D.cpp|test05Periodic.cpp|test02.cpp|test03.cpp|test04.cpp" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="DamBreak.cpp|DragWinp3D.cpp|HydraulicJump.cpp|HydraulicJump3.cpp|HydraulicJump1.cpp|HydraulicJump2.cpp|Drag.cpp|Hagen.cpp|Couette.cpp|Poiseuille.cpp|hydrostatic.cpp|Drag_W_inp.cpp|Dam3D.cpp|test05Periodic.cpp|test02.cpp|test03.cpp|test04.cpp" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
@@ -125,11 +125,11 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
-					<fileInfo id="cdt.managedbuild.config.gnu.exe.release.1951905185.689712256" name="HydraulicJump.cpp" rcbsApplicability="disable" resourcePath="HydraulicJump.cpp" toolsToInvoke="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.1325570310.2144583088">
-						<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.1325570310.2144583088" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.1325570310"/>
+					<fileInfo id="cdt.managedbuild.config.gnu.exe.release.1951905185.61377902" name="DragWinp.cpp" rcbsApplicability="disable" resourcePath="DragWinp.cpp" toolsToInvoke="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.1325570310.1635727385">
+						<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.1325570310.1635727385" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.1325570310"/>
 					</fileInfo>
 					<sourceEntries>
-						<entry excluding="DragWinp.cpp|HydraulicJump3.cpp|DragWinp3D.cpp|HydraulicJump1.cpp|HydraulicJump2.cpp|Drag.cpp|Hagen.cpp|Couette.cpp|Poiseuille.cpp|hydrostatic.cpp|Drag_W_inp.cpp|Dam3D.cpp|test05Periodic.cpp|test02.cpp|test03.cpp|test04.cpp" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="DamBreak.cpp|DragWinp3D.cpp|HydraulicJump.cpp|HydraulicJump3.cpp|HydraulicJump1.cpp|HydraulicJump2.cpp|Drag.cpp|Hagen.cpp|Couette.cpp|Poiseuille.cpp|hydrostatic.cpp|Drag_W_inp.cpp|Dam3D.cpp|test05Periodic.cpp|test02.cpp|test03.cpp|test04.cpp" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
