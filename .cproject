@@ -19,21 +19,21 @@
 							<builder autoBuildTarget="all" buildPath="${workspace_loc:/SPH}/Debug" cleanBuildTarget="clean" id="org.eclipse.cdt.build.core.internal.builder.1218679492" incrementalBuildTarget="all" keepEnvironmentInBuildfile="false" managedBuildOn="true" name="CDT Internal Builder" superClass="org.eclipse.cdt.build.core.internal.builder"/>
 							<tool id="cdt.managedbuild.tool.gnu.archiver.base.831899797" name="GCC Archiver" superClass="cdt.managedbuild.tool.gnu.archiver.base"/>
 							<tool command="g++" commandLinePattern="${COMMAND} ${FLAGS} ${OUTPUT_FLAG} ${OUTPUT_PREFIX}${OUTPUT} ${INPUTS}" id="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.1274044068" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug">
-								<option id="gnu.cpp.compiler.exe.debug.option.optimization.level.746366457" name="Optimization Level" superClass="gnu.cpp.compiler.exe.debug.option.optimization.level" value="gnu.cpp.compiler.optimization.level.none" valueType="enumerated"/>
-								<option id="gnu.cpp.compiler.exe.debug.option.debugging.level.365891630" name="Debug Level" superClass="gnu.cpp.compiler.exe.debug.option.debugging.level" value="gnu.cpp.compiler.debugging.level.max" valueType="enumerated"/>
-								<option id="gnu.cpp.compiler.option.include.paths.1336138286" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" valueType="includePath">
+								<option id="gnu.cpp.compiler.exe.debug.option.optimization.level.746366457" name="Optimization Level" superClass="gnu.cpp.compiler.exe.debug.option.optimization.level" useByScannerDiscovery="false" value="gnu.cpp.compiler.optimization.level.none" valueType="enumerated"/>
+								<option id="gnu.cpp.compiler.exe.debug.option.debugging.level.365891630" name="Debug Level" superClass="gnu.cpp.compiler.exe.debug.option.debugging.level" useByScannerDiscovery="false" value="gnu.cpp.compiler.debugging.level.max" valueType="enumerated"/>
+								<option id="gnu.cpp.compiler.option.include.paths.1336138286" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" useByScannerDiscovery="false" valueType="includePath">
 									<listOptionValue builtIn="false" value="/home/uqmghol1/mechsys"/>
-									<listOptionValue builtIn="false" value="/home/uqmghol1/sph-scouring/Source"/>
+									<listOptionValue builtIn="false" value="/home/uqmghol1/sph/Source"/>
 									<listOptionValue builtIn="false" value="/home/uqmghol1/pkg/blitz-0.9"/>
 								</option>
-								<option id="gnu.cpp.compiler.option.include.files.695372981" name="Include files (-include)" superClass="gnu.cpp.compiler.option.include.files"/>
-								<option id="gnu.cpp.compiler.option.other.other.490791709" name="Other flags" superClass="gnu.cpp.compiler.option.other.other" value="-c -fmessage-length=0 -fopenmp" valueType="string"/>
-								<option id="gnu.cpp.compiler.option.dialect.std.78635185" name="Language standard" superClass="gnu.cpp.compiler.option.dialect.std" value="gnu.cpp.compiler.dialect.default" valueType="enumerated"/>
+								<option id="gnu.cpp.compiler.option.include.files.695372981" name="Include files (-include)" superClass="gnu.cpp.compiler.option.include.files" useByScannerDiscovery="false"/>
+								<option id="gnu.cpp.compiler.option.other.other.490791709" name="Other flags" superClass="gnu.cpp.compiler.option.other.other" useByScannerDiscovery="false" value="-c -fmessage-length=0 -fopenmp" valueType="string"/>
+								<option id="gnu.cpp.compiler.option.dialect.std.78635185" name="Language standard" superClass="gnu.cpp.compiler.option.dialect.std" useByScannerDiscovery="true" value="gnu.cpp.compiler.dialect.default" valueType="enumerated"/>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.187253995" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 							</tool>
 							<tool id="cdt.managedbuild.tool.gnu.c.compiler.exe.debug.582337266" name="GCC C Compiler" superClass="cdt.managedbuild.tool.gnu.c.compiler.exe.debug">
-								<option defaultValue="gnu.c.optimization.level.none" id="gnu.c.compiler.exe.debug.option.optimization.level.541286559" name="Optimization Level" superClass="gnu.c.compiler.exe.debug.option.optimization.level" valueType="enumerated"/>
-								<option id="gnu.c.compiler.exe.debug.option.debugging.level.1134931645" name="Debug Level" superClass="gnu.c.compiler.exe.debug.option.debugging.level" value="gnu.c.debugging.level.max" valueType="enumerated"/>
+								<option defaultValue="gnu.c.optimization.level.none" id="gnu.c.compiler.exe.debug.option.optimization.level.541286559" name="Optimization Level" superClass="gnu.c.compiler.exe.debug.option.optimization.level" useByScannerDiscovery="false" valueType="enumerated"/>
+								<option id="gnu.c.compiler.exe.debug.option.debugging.level.1134931645" name="Debug Level" superClass="gnu.c.compiler.exe.debug.option.debugging.level" useByScannerDiscovery="false" value="gnu.c.debugging.level.max" valueType="enumerated"/>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.1926161405" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 							</tool>
 							<tool id="cdt.managedbuild.tool.gnu.c.linker.exe.debug.182895905" name="GCC C Linker" superClass="cdt.managedbuild.tool.gnu.c.linker.exe.debug"/>
@@ -56,9 +56,6 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
-					<fileInfo id="cdt.managedbuild.config.gnu.exe.debug.829054585.2055728946" name="DragWinp.cpp" rcbsApplicability="disable" resourcePath="DragWinp.cpp" toolsToInvoke="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.1274044068.629307256">
-						<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.1274044068.629307256" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.1274044068"/>
-					</fileInfo>
 					<sourceEntries>
 						<entry excluding="DamBreak.cpp|DragWinp3D.cpp|HydraulicJump.cpp|HydraulicJump3.cpp|HydraulicJump1.cpp|HydraulicJump2.cpp|Drag.cpp|Hagen.cpp|Couette.cpp|Poiseuille.cpp|hydrostatic.cpp|Drag_W_inp.cpp|Dam3D.cpp|test05Periodic.cpp|test02.cpp|test03.cpp|test04.cpp" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
@@ -90,7 +87,7 @@
 								<option id="gnu.cpp.compiler.exe.release.option.debugging.level.1298270231" name="Debug Level" superClass="gnu.cpp.compiler.exe.release.option.debugging.level" value="gnu.cpp.compiler.debugging.level.none" valueType="enumerated"/>
 								<option id="gnu.cpp.compiler.option.include.paths.1415930681" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" valueType="includePath">
 									<listOptionValue builtIn="false" value="/home/uqmghol1/mechsys"/>
-									<listOptionValue builtIn="false" value="/home/uqmghol1/sph-scouring/Source"/>
+									<listOptionValue builtIn="false" value="/home/uqmghol1/sph/Source"/>
 									<listOptionValue builtIn="false" value="/home/uqmghol1/pkg/blitz-0.9"/>
 								</option>
 								<option id="gnu.cpp.compiler.option.other.other.1990774116" name="Other flags" superClass="gnu.cpp.compiler.option.other.other" value="-c -fmessage-length=0 -fopenmp" valueType="string"/>
@@ -125,9 +122,6 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
-					<fileInfo id="cdt.managedbuild.config.gnu.exe.release.1951905185.61377902" name="DragWinp.cpp" rcbsApplicability="disable" resourcePath="DragWinp.cpp" toolsToInvoke="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.1325570310.1635727385">
-						<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.1325570310.1635727385" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.1325570310"/>
-					</fileInfo>
 					<sourceEntries>
 						<entry excluding="DamBreak.cpp|DragWinp3D.cpp|HydraulicJump.cpp|HydraulicJump3.cpp|HydraulicJump1.cpp|HydraulicJump2.cpp|Drag.cpp|Hagen.cpp|Couette.cpp|Poiseuille.cpp|hydrostatic.cpp|Drag_W_inp.cpp|Dam3D.cpp|test05Periodic.cpp|test02.cpp|test03.cpp|test04.cpp" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
