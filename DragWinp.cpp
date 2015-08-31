@@ -64,8 +64,10 @@ int main(int argc, char **argv) try
 	dom.BC.Periodic[1] = true;
 	dom.RigidBody	= true;
 	dom.RBTag		= 4;
+//	dom.NoSlip		= true;
 
 	dom.MU			= 1.002e-3;
+//	dom.MU			= 2.0e-5;
 	dom.PresEq		= 0;
 	dom.VisEq		= abs(Visf);
 	dom.KernelType	= abs(Kf);
@@ -91,6 +93,7 @@ int main(int argc, char **argv) try
 	dom.BC.inv = U,0.0,0.0;
 	dom.BC.outv = U,0.0,0.0;
 	dom.BC.outDensity = rho;
+	dom.BC.MassConservation = true;
 
 	dom.Cs				= U*Csf;
 	dom.P0				= dom.Cs*dom.Cs*rho*P0f;
@@ -117,6 +120,15 @@ int main(int argc, char **argv) try
 		}
 	}
 	dom.DelParticles(4);
+
+//	no = 3*ceil(2*M_PI*Rc/dx);
+//	for (size_t i=0; i<no; i++)
+//	{
+//		xb = R*cos(2*M_PI/no*i);
+//		yb = R*sin(2*M_PI/no*i);
+//		dom.AddNSSingleParticle(4,Vec3_t ( xb ,  yb , 0.0 ), true);
+//	}
+
 
 	for (size_t j=0;j<7;j++)
 	{
