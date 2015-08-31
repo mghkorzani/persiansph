@@ -129,7 +129,7 @@ int main(int argc, char **argv) try
 		}
 	}
 //	dom.WriteXDMF("maz");
-	dom.Solve(/*tf*/2500000.0,/*dt*/maz,/*dtOut*/(500.0*maz),"test06",100);
+	dom.Solve(/*tf*/2500000.0,/*dt*/maz,/*dtOut*/(500.0*maz),"test06",80);
 	return 0;
 }
 MECHSYS_CATCH
