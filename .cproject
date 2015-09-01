@@ -22,8 +22,7 @@
 								<option id="gnu.cpp.compiler.exe.debug.option.optimization.level.746366457" name="Optimization Level" superClass="gnu.cpp.compiler.exe.debug.option.optimization.level" useByScannerDiscovery="false" value="gnu.cpp.compiler.optimization.level.none" valueType="enumerated"/>
 								<option id="gnu.cpp.compiler.exe.debug.option.debugging.level.365891630" name="Debug Level" superClass="gnu.cpp.compiler.exe.debug.option.debugging.level" useByScannerDiscovery="false" value="gnu.cpp.compiler.debugging.level.max" valueType="enumerated"/>
 								<option id="gnu.cpp.compiler.option.include.paths.1336138286" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" useByScannerDiscovery="false" valueType="includePath">
-									<listOptionValue builtIn="false" value="/home/uqmghol1/mechsys"/>
-									<listOptionValue builtIn="false" value="/home/uqmghol1/sph/Source"/>
+									<listOptionValue builtIn="false" value="/home/uqmghol1/pkg/blitz-0.9/blitz"/>
 									<listOptionValue builtIn="false" value="/home/uqmghol1/pkg/blitz-0.9"/>
 								</option>
 								<option id="gnu.cpp.compiler.option.include.files.695372981" name="Include files (-include)" superClass="gnu.cpp.compiler.option.include.files" useByScannerDiscovery="false"/>
@@ -86,8 +85,7 @@
 								<option id="gnu.cpp.compiler.exe.release.option.optimization.level.1003527472" name="Optimization Level" superClass="gnu.cpp.compiler.exe.release.option.optimization.level" value="gnu.cpp.compiler.optimization.level.most" valueType="enumerated"/>
 								<option id="gnu.cpp.compiler.exe.release.option.debugging.level.1298270231" name="Debug Level" superClass="gnu.cpp.compiler.exe.release.option.debugging.level" value="gnu.cpp.compiler.debugging.level.none" valueType="enumerated"/>
 								<option id="gnu.cpp.compiler.option.include.paths.1415930681" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" valueType="includePath">
-									<listOptionValue builtIn="false" value="/home/uqmghol1/mechsys"/>
-									<listOptionValue builtIn="false" value="/home/uqmghol1/sph/Source"/>
+									<listOptionValue builtIn="false" value="/home/uqmghol1/pkg/blitz-0.9/blitz"/>
 									<listOptionValue builtIn="false" value="/home/uqmghol1/pkg/blitz-0.9"/>
 								</option>
 								<option id="gnu.cpp.compiler.option.other.other.1990774116" name="Other flags" superClass="gnu.cpp.compiler.option.other.other" value="-c -fmessage-length=0 -fopenmp" valueType="string"/>

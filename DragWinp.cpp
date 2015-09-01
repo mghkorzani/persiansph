@@ -16,7 +16,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>  *
  ************************************************************************/
 
-#include <Domain.h>
+#include "./Source/Domain.h"
 
 
 using std::cout;

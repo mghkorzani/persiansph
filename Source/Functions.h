@@ -19,7 +19,7 @@
 #define MECHSYS_SPH_SPECIAL_H
 
 // MechSys
-#include <mechsys/linalg/matvec.h>
+#include "../External//matvec.h"
 
 namespace SPH {
 

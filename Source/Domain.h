@@ -23,8 +23,8 @@
 #include <stdio.h>			/// for NULL
 #include <algorithm>		/// for min,max
 
-#include <Particle.h>
-#include <Functions.h>
+#include "Particle.h"
+#include "Functions.h"
 //#include <Force.hpp>
 
 
@@ -32,8 +32,8 @@
 #include <hdf5.h>
 #include <hdf5_hl.h>
 
-#include <mechsys/util/stopwatch.h>
-#include <mechsys/util/string.h>
+//#include <mechsys/util/stopwatch.h>
+//#include <mechsys/util/string.h>
 
 namespace SPH {
 
@@ -433,7 +433,7 @@ inline void Domain::AddBoxNo(int tag, Vec3_t const & V, size_t nx, size_t ny, si
 		abort();
     }
 
-	Util::Stopwatch stopwatch;
+//	Util::Stopwatch stopwatch;
     std::cout << "\n--------------Generating particles by AddBoxNo with defined numbers of particles--------------" << std::endl;
 
     size_t PrePS = Particles.Size();
@@ -568,7 +568,7 @@ inline void Domain::AddBoxLength(int tag, Vec3_t const & V, double Lx, double Ly
 		abort();
     }
 
-	Util::Stopwatch stopwatch;
+//	Util::Stopwatch stopwatch;
     std::cout << "\n--------------Generating particles by AddBoxLength with defined length of particles-----------" << std::endl;
 
     size_t PrePS = Particles.Size();
@@ -1573,7 +1573,7 @@ inline void Domain::InitialChecks()
 
 inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheFileKey, size_t maxidx)
 {
-    Util::Stopwatch stopwatch;
+//    Util::Stopwatch stopwatch;
     std::cout << "\n--------------Solving---------------------------------------------------------------" << std::endl;
 
     size_t idx_out = 1;

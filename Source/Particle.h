@@ -26,7 +26,7 @@
 #include <omp.h>
 
 // MechSys
-#include <mechsys/linalg/matvec.h>
+#include "../External/matvec.h"
 
 namespace SPH {
 
