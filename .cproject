@@ -55,8 +55,11 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
+					<fileInfo id="cdt.managedbuild.config.gnu.exe.debug.829054585.1742052055" name="DragWinp.cpp" rcbsApplicability="disable" resourcePath="DragWinp.cpp" toolsToInvoke="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.1274044068.474979227">
+						<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.1274044068.474979227" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.1274044068"/>
+					</fileInfo>
 					<sourceEntries>
-						<entry excluding="DamBreak.cpp|DragWinp3D.cpp|HydraulicJump.cpp|HydraulicJump3.cpp|HydraulicJump1.cpp|HydraulicJump2.cpp|Drag.cpp|Hagen.cpp|Couette.cpp|Poiseuille.cpp|hydrostatic.cpp|Drag_W_inp.cpp|Dam3D.cpp|test05Periodic.cpp|test02.cpp|test03.cpp|test04.cpp" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="DragWinp.cpp|DamBreak.cpp|DragWinp3D.cpp|HydraulicJump.cpp|HydraulicJump3.cpp|HydraulicJump1.cpp|HydraulicJump2.cpp|Drag.cpp|Hagen.cpp|Couette.cpp|Poiseuille.cpp|hydrostatic.cpp|Drag_W_inp.cpp|Dam3D.cpp|test05Periodic.cpp|test02.cpp|test03.cpp|test04.cpp" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
@@ -120,8 +123,11 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
+					<fileInfo id="cdt.managedbuild.config.gnu.exe.release.1951905185.1791023830" name="DragWinp.cpp" rcbsApplicability="disable" resourcePath="DragWinp.cpp" toolsToInvoke="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.1325570310.695601823">
+						<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.1325570310.695601823" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.1325570310"/>
+					</fileInfo>
 					<sourceEntries>
-						<entry excluding="DamBreak.cpp|DragWinp3D.cpp|HydraulicJump.cpp|HydraulicJump3.cpp|HydraulicJump1.cpp|HydraulicJump2.cpp|Drag.cpp|Hagen.cpp|Couette.cpp|Poiseuille.cpp|hydrostatic.cpp|Drag_W_inp.cpp|Dam3D.cpp|test05Periodic.cpp|test02.cpp|test03.cpp|test04.cpp" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="DragWinp.cpp|DamBreak.cpp|DragWinp3D.cpp|HydraulicJump.cpp|HydraulicJump3.cpp|HydraulicJump1.cpp|HydraulicJump2.cpp|Drag.cpp|Hagen.cpp|Couette.cpp|Poiseuille.cpp|hydrostatic.cpp|Drag_W_inp.cpp|Dam3D.cpp|test05Periodic.cpp|test02.cpp|test03.cpp|test04.cpp" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
@@ -148,6 +154,9 @@
 	</storageModule>
 	<storageModule moduleId="refreshScope" versionNumber="2">
 		<configuration configurationName="Release">
+			<resource resourceType="PROJECT" workspacePath="/SPH"/>
+		</configuration>
+		<configuration configurationName="Multiple configurations">
 			<resource resourceType="PROJECT" workspacePath="/SPH"/>
 		</configuration>
 		<configuration configurationName="Debug">

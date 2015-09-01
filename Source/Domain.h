@@ -100,7 +100,8 @@ public:
 
     void WriteXDMF					(char const * FileKey);																				///< Save a XDMF file for the visualization
     void Save						(char const * FileKey);																				///< Save the domain in a file
-    void Load						(char const * FileKey);																				///< Load the domain from a file
+    void Load						(char const * FileKey);																				///< Load the domain from the saved file
+    void LoadResults				(char const * FileKey, double density);																///< Load the domain from one of the results
 
     void PrintInput					(char const * FileKey);
     void InFlowBCLeave				();
@@ -2028,6 +2029,65 @@ inline void Domain::Load (char const * FileKey)
         		else Particles[Particles.Size()-1]->IsFree=false;
     }
 
+
+    H5Fclose(file_id);
+    printf("\n%s--- Done --------------------------------------------%s\n",TERM_CLR2,TERM_RST);
+}
+
+inline void Domain::LoadResults (char const * FileKey, double density)
+{
+
+    // Opening the file for reading
+    String fn(FileKey);
+    fn.append(".hdf5");
+    if (!Util::FileExists(fn)) throw new Fatal("File <%s> not found",fn.CStr());
+    printf("\n%s--- Loading file %s --------------------------------------------%s\n",TERM_CLR1,fn.CStr(),TERM_RST);
+    hid_t file_id;
+    file_id = H5Fopen(fn.CStr(), H5F_ACC_RDONLY, H5P_DEFAULT);
+
+    // Number of particles in the domain
+    int data[1];
+    H5LTread_dataset_int(file_id,"NP",data);
+    size_t NP = data[0];
+//    std::cout<<NP<<std::endl;
+
+    float * Posvec   = new float[3*data[0]];
+    float * Velvec   = new float[3*data[0]];
+    float * Pressure = new float[  data[0]];
+    float * Density  = new float[  data[0]];
+    float * Mass	 = new float[  data[0]];
+    float * sh	     = new float[  data[0]];
+    int   * Tag      = new int  [  data[0]];
+    int   * IsFree   = new int  [  data[0]];
+
+    H5LTread_dataset_float(file_id, "Position"	, Posvec);
+    H5LTread_dataset_float(file_id, "Velocity"	, Velvec);
+    H5LTread_dataset_float(file_id, "Pressure"	, Pressure);
+    H5LTread_dataset_float(file_id, "Density"	, Density);
+    H5LTread_dataset_float(file_id, "Mass"		, Mass);
+    H5LTread_dataset_float(file_id, "h"			, sh);
+    H5LTread_dataset_int  (file_id, "Tag"		, Tag);
+    H5LTread_dataset_int  (file_id, "IsFree"	, IsFree);
+
+    // Loading the particles
+    for (size_t i=0; i<NP; i++)
+    {
+
+        Particles.Push(new Particle(Tag[i],Vec3_t(Posvec[3*i],Posvec[3*i+1],Posvec[3*i+2]),Vec3_t(Velvec[3*i],Velvec[3*i+1],Velvec[3*i+2]),Mass[i],Density[i],sh[i],!(IsFree[i])));
+
+        Particles[Particles.Size()-1]->Pressure = Pressure[i];
+        Particles[Particles.Size()-1]->RefDensity = density;			// Because of the constructor in Particle
+
+    }
+
+    delete [] Posvec;
+    delete [] Velvec;
+    delete [] Pressure;
+    delete [] Density;
+    delete [] Mass;
+    delete [] sh;
+    delete [] Tag;
+    delete [] IsFree;
 
     H5Fclose(file_id);
     printf("\n%s--- Done --------------------------------------------%s\n",TERM_CLR2,TERM_RST);
