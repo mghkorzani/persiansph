@@ -53,6 +53,14 @@ public:
     double 	dDensity;		///< Rate of density change in time
     double 	Mass;			///< Mass of the particle
 
+    Mat3_t  StrainRate;		///< Global Shear Strain Rate Tensor
+    double  ShearRate;		///< Global Shear Rate
+
+    double 	Mu;				///< Dynamic Viscosity
+    double 	MuRef;			///< Reference Dynamic Viscosity
+    double 	T0;		  		///< Yield stress for Bingham fluids
+    double 	m;		  		///< Normalization value for Bingham fluids
+
     double 	h;				///< Smoothing length of the particle
     double 	hr;				///< Reference smoothing length of the particle
 
@@ -62,7 +70,7 @@ public:
     Vec3_t 	NoSlip2;		///< Current cell No for the particle (linked-list)
 
     int		ct;				///< Correction step for the Verlet Algorithm and Shepard filter
-    bool	DensityUpdate;
+    bool	DensityUpdate;	///< Density update for boundary particles
 
     omp_lock_t my_lock;		///< Open MP lock
 
@@ -76,7 +84,8 @@ public:
 
 inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double Mass0, double Density0, double h0,bool Fixed)
 {
-	ct =0;
+	ct = 0;
+	a = 0.0;
     x = x0;
     vb = v = v0;
     Densityb = Density = Density0;
@@ -97,11 +106,16 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
     SumDen = 0.0;
     dDensity=0.0;
     DensityUpdate = true;
+    ShearRate = 0.0;
+    StrainRate = 0.0;
+    MuRef = Mu = 0.0;
+    T0 = 0.0;
+    m = 300.0;
 }
 
 inline void Particle::Move (double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3_t domainmin, bool ShepardFilter)
 {
-	if (ct<30)
+	if (ct < 30)
 	{
 		if (IsFree)
 		{

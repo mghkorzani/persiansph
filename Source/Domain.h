@@ -123,7 +123,7 @@ public:
 
     double 					Alpha;				///< Artificial Viscosity Alpha Factor
     double					Beta;				///< Artificial Viscosity Beta Factor
-    double					MU;					///< Dynamic Viscosity
+    double					MuMax;				///< Max Dynamic viscosity for calculating the timestep
 
     Vec3_t					Gravity;       	 	///< Gravity acceleration
     double					Cs;					///< Speed of sound
@@ -219,7 +219,6 @@ inline Domain::Domain ()
     DomSize	= 0.0,0.0,0.0;
     Alpha	= 0.0;
     Beta	= 0.0;
-    MU		= 0.0;
 
     Gravity	= 0.0,0.0,0.0;
     Cs		= 0.0;
@@ -279,11 +278,6 @@ inline void Domain::CalcForce(Particle * P1, Particle * P2)
     double dj = P2->Density;
     double mi = P1->Mass;
     double mj = P2->Mass;
-    double Pi;
-    double Pj;
-
-    Pi = P1->Pressure = Pressure(PresEq, Cs, P0, di, P1->RefDensity);
-    Pj = P2->Pressure = Pressure(PresEq, Cs, P0, dj, P2->RefDensity);
 
     Vec3_t vij = P1->v - P2->v;
     Vec3_t xij = P1->x - P2->x;
@@ -309,23 +303,36 @@ inline void Domain::CalcForce(Particle * P1, Particle * P2)
 
     //Tensile Instability
     double TIij = 0.0, TIji = 0.0;
-    if ((TI > 0.0) && (Pi < 0.0) && (Pj < 0.0))
+    if ((TI > 0.0) && (P1->Pressure < 0.0) && (P2->Pressure < 0.0))
     {
-        TIij = TIji= TI*(-Pi/(di*di)-Pj/(dj*dj))*pow((K/Kernel(Dimension, KernelType, InitialDist, h)),4);
+        TIij = TIji= TI*(-P1->Pressure/(di*di)-P2->Pressure/(dj*dj))*pow((K/Kernel(Dimension, KernelType, InitialDist, h)),4);
         if (!P1->IsFree) TIij = 0.0;
         if (!P2->IsFree) TIji = 0.0;
     }
 
-    //Real Viscosity
+    //Bingham Fluid
+    Mat3_t StrainRate;
+    if ((P1->IsFree && (P1->T0 > 0.0)) || (P2->IsFree && (P2->T0 > 0.0)))
+    {
+		StrainRate = 2.0*vij(0)*xij(0)           , vij(0)*xij(1)+vij(1)*xij(0) , vij(0)*xij(2)+vij(2)*xij(0) ,
+				     vij(0)*xij(1)+vij(1)*xij(0) , 2.0*vij(1)*xij(1)           , vij(1)*xij(2)+vij(2)*xij(1) ,
+				     vij(0)*xij(2)+vij(2)*xij(0) , vij(1)*xij(2)+vij(2)*xij(1) , 2.0*vij(2)*xij(2)           ;
+		StrainRate = -GK * StrainRate;
+    }
+
+    	//Real Viscosity
     Vec3_t VI = 0.0;
     if (!NoSlip || (P1->IsFree*P2->IsFree))
     {
-    	if (MU!=0.0 && VisEq==0) VI = 2.0*MU/(di*dj)*GK*vij;																		//Morris et al 1997
-    	if (MU!=0.0 && VisEq==1) VI = 8.0*MU/((di+dj)*(di+dj))*GK*vij;																//Shao et al 2003
-    	if (MU!=0.0 && VisEq==2) VI = -MU/(di*dj)* LaplaceKernel(Dimension, KernelType, rij, h)*vij;							//Real Viscosity (considering incompressible fluid)
-    	if (MU!=0.0 && VisEq==3) VI = -MU/(di*dj)*( LaplaceKernel(Dimension, KernelType, rij, h)*vij +
+		if (!P1->IsFree) P1->Mu = P2->Mu;
+		if (!P2->IsFree) P2->Mu = P1->Mu;
+
+    	if (VisEq==0) VI = (P1->Mu+P2->Mu)/(di*dj)*GK*vij;																		//Morris et al 1997
+    	if (VisEq==1) VI = 4.0*(P1->Mu+P2->Mu)/((di+dj)*(di+dj))*GK*vij;																//Shao et al 2003
+    	if (VisEq==2) VI = -(P1->Mu+P2->Mu)/2.0/(di*dj)* LaplaceKernel(Dimension, KernelType, rij, h)*vij;							//Real Viscosity (considering incompressible fluid)
+    	if (VisEq==3) VI = -(P1->Mu+P2->Mu)/2.0/(di*dj)*( LaplaceKernel(Dimension, KernelType, rij, h)*vij +
     			1.0/3.0*(GK*vij + dot(vij,xij) * xij / (rij*rij) * (-GK+SecDerivativeKernel(Dimension, KernelType, rij, h) ) ) );	//Takeda et al 1994 (Real viscosity considering 1/3Mu for compressibility as per Navier Stokes but ignore volumetric viscosity)
-    	if (MU!=0.0 && (VisEq<0 || VisEq>3))
+    	if ((VisEq<0 || VisEq>3))
     	{
     	   	std::cout << "Viscosity Equation No is out of range. Please correct it and run again" << std::endl;
     		std::cout << "0 => Morris et al 1997" << std::endl;
@@ -344,12 +351,12 @@ inline void Domain::CalcForce(Particle * P1, Particle * P2)
    		else
     		vab = vij * std::min( 1.5 , 1.0 + fabs(dot( P1->x , P2->NoSlip1 ) + P2->NoSlip2(0) ) / P2->NoSlip2(2) );
 
-    	if (MU!=0.0 && VisEq==0) VI = 2.0*MU/(di*dj)*GK*vab;																		//Morris et al 1997
-    	if (MU!=0.0 && VisEq==1) VI = 8.0*MU/((di+dj)*(di+dj))*GK*vab;																//Shao et al 2003
-    	if (MU!=0.0 && VisEq==2) VI = -MU/(di*dj)*LaplaceKernel(Dimension, KernelType, rij, h)*vab;								//Real Viscosity (considering incompressible fluid)
-    	if (MU!=0.0 && VisEq==3) VI = -MU/(di*dj)*( LaplaceKernel(Dimension, KernelType, rij, h)*vab +
+    	if (VisEq==0) VI = (P1->Mu+P2->Mu)/(di*dj)*GK*vab;																		//Morris et al 1997
+    	if (VisEq==1) VI = 4.0*(P1->Mu+P2->Mu)/((di+dj)*(di+dj))*GK*vab;																//Shao et al 2003
+    	if (VisEq==2) VI = -(P1->Mu+P2->Mu)/2.0/(di*dj)*LaplaceKernel(Dimension, KernelType, rij, h)*vab;								//Real Viscosity (considering incompressible fluid)
+    	if (VisEq==3) VI = -(P1->Mu+P2->Mu)/2.0/(di*dj)*( LaplaceKernel(Dimension, KernelType, rij, h)*vab +
     			1.0/3.0*(GK*vij + dot(vij,xij) * xij / (rij*rij) * (-GK+SecDerivativeKernel(Dimension, KernelType, rij, h) ) ) );	//Takeda et al 1994 (Real viscosity considering 1/3Mu for compressibility as per Navier Stokes but ignore volumetric viscosity)
-    	if (MU!=0.0 && (VisEq<0 || VisEq>3))
+    	if ((VisEq<0 || VisEq>3))
     	{
     	   	std::cout << "Viscosity Equation No is out of range. Please correct it and run again" << std::endl;
     		std::cout << "0 => Morris et al 1997" << std::endl;
@@ -374,8 +381,9 @@ inline void Domain::CalcForce(Particle * P1, Particle * P2)
 
 
     omp_set_lock(&P1->my_lock);
-    P1->a   += -mj * ( Pi/(di*di) + Pj/(dj*dj) + PIij + TIij ) * GK*xij + mj*VI;
-    P1->Vis +=  mj * VI;
+    P1->a   += -mj * ( P1->Pressure/(di*di) + P2->Pressure/(dj*dj) + PIij + TIij ) * GK*xij + mj*VI;
+//    P1->Vis +=  mj * VI;
+    if (P1->IsFree && (P1->T0 > 0.0)) P1->StrainRate = P1->StrainRate + mj/dj*StrainRate; else P1->StrainRate = 0.0;
     if (P1->ct==30 && Shepard)
     {
     	P1->SumDen += mj*    K;
@@ -386,8 +394,9 @@ inline void Domain::CalcForce(Particle * P1, Particle * P2)
 
 
     omp_set_lock(&P2->my_lock);
-    P2->a   -= -mi * ( Pi/(di*di) + Pj/(dj*dj) + PIij + TIji ) * GK*xij + mi*VI;
-    P2->Vis -=  mi * VI;
+    P2->a   -= -mi * ( P1->Pressure/(di*di) + P2->Pressure/(dj*dj) + PIij + TIji ) * GK*xij + mi*VI;
+//    P2->Vis -=  mi * VI;
+    if (P2->IsFree && (P2->T0 > 0.0)) P2->StrainRate = P2->StrainRate + mi/di*StrainRate; else P2->StrainRate = 0.0;
     if (P2->ct==30 && Shepard)
     {
     	P2->SumDen += mi*    K;
@@ -811,6 +820,7 @@ inline void Domain::CellInitiate ()
 
 			if (Particles[i]->h > hmax) hmax=Particles[i]->h;
 			if (Particles[i]->Density > rhomax) rhomax=Particles[i]->Density;
+			if (Particles[i]->Mu > MuMax) MuMax=Particles[i]->Mu;
 		}
 	}
 
@@ -1180,19 +1190,32 @@ inline void Domain::StartAcceleration (Vec3_t const & a)
 	#pragma omp parallel for schedule (static) num_threads(Nproc)
 	for (size_t i=0; i<Particles.Size(); i++)
     {
-        Particles[i]->a			= a;
+        Particles[i]->Pressure = Pressure(PresEq, Cs, P0,Particles[i]->Density, Particles[i]->RefDensity);
+
+    	if (Particles[i]->IsFree && Particles[i]->T0 > 0.0)
+    	{
+    		Particles[i]->ShearRate = sqrt((Particles[i]->StrainRate(0,0)*Particles[i]->StrainRate(0,0) + 2.0*Particles[i]->StrainRate(0,1)*Particles[i]->StrainRate(1,0) + 2.0*Particles[i]->StrainRate(0,2)*Particles[i]->StrainRate(2,0) +
+    				Particles[i]->StrainRate(1,1)*Particles[i]->StrainRate(1,1) + 2.0*Particles[i]->StrainRate(1,2)*Particles[i]->StrainRate(2,1) + Particles[i]->StrainRate(2,2)*Particles[i]->StrainRate(2,2)));
+    		if (Particles[i]->ShearRate !=0.0)
+    			Particles[i]->Mu = Particles[i]->MuRef + Particles[i]->T0*(1-exp(-Particles[i]->m*Particles[i]->ShearRate))/Particles[i]->ShearRate;
+    		else
+    			Particles[i]->Mu = Particles[i]->MuRef + Particles[i]->T0*Particles[i]->m;
+    	}
+
+		Particles[i]->a			= a;
         Particles[i]->dDensity	= 0.0;
         Particles[i]->VXSPH		= 0.0;
         Particles[i]->ZWab		= 0.0;
+        Particles[i]->StrainRate= 0.0;
         Particles[i]->SumDen	= 0.0;
         Particles[i]->Vis		= 0.0;
         Particles[i]->NoSlip1	= 0.0;
         Particles[i]->NoSlip2	= 0.0,1000000.0,1000000.0;
 
-        if (isnan(Particles[i]->dDensity) || isnan(Particles[i]->Density) || isnan(norm(Particles[i]->v)) || isnan(norm(Particles[i]->x)) || isnan(norm(Particles[i]->a)))
-        {
-            std::cout<<"NaN Particle No = "<<i<<std::endl;
-        }
+//        if (isnan(Particles[i]->dDensity) || isnan(Particles[i]->Density) || isnan(norm(Particles[i]->v)) || isnan(norm(Particles[i]->x)) || isnan(norm(Particles[i]->a)))
+//        {
+//            std::cout<<"NaN Particle No = "<<i<<std::endl;
+//        }
     }
 }
 
@@ -1688,7 +1711,7 @@ inline void Domain::PrintInput(char const * FileKey)
     }
 
     oss << "Viscosity Equation = ";
-    if (MU==0.0) oss << "Artificial Viscosity by Monaghan\nAlpha = "<<Alpha<<"   Beta = "<<Beta <<"\n";
+    if (Alpha!=0.0 || Beta!=0.0) oss << "Artificial Viscosity by Monaghan\nAlpha = "<<Alpha<<"   Beta = "<<Beta <<"\n";
     else
 	{
     	switch (VisEq)
@@ -1706,7 +1729,6 @@ inline void Domain::PrintInput(char const * FileKey)
 				oss << "3 => Takeda et al 1994 (Real viscosity for compressible fluids)\n";
 				break;
 		}
-		oss << "Dynamic Viscosity => Mu = "<<MU<<" Pa.S\n" ;
 	}
 
     oss << "Equation of State = ";
@@ -1741,7 +1763,7 @@ inline void Domain::PrintInput(char const * FileKey)
     // Check the time step
     double t1,t2;
     t1 = 0.25*hmax/(Cs);
-    t2 = 0.125*hmax*hmax*rhomax/MU;
+    t2 = 0.125*hmax*hmax*rhomax/MuMax;
 
     oss << "Max time step should be less than Min value of { "<< t1 <<" , "<< t2 <<" } S\n";
     oss << "Time Step = "<<deltat << " S\n";
@@ -1780,6 +1802,7 @@ inline void Domain::WriteXDMF (char const * FileKey)
     float * Posvec   = new float[3*Particles.Size()];
     float * Velvec   = new float[3*Particles.Size()];
     float * Pressure = new float[  Particles.Size()];
+    float * ShearRate= new float[  Particles.Size()];
     float * Density  = new float[  Particles.Size()];
     float * Mass	 = new float[  Particles.Size()];
     float * sh	     = new float[  Particles.Size()];
@@ -1800,6 +1823,7 @@ inline void Domain::WriteXDMF (char const * FileKey)
 //        Velvec  [3*i+1] = float(Particles[i]->NoSlip1(1));
 //        Velvec  [3*i+2] = float(Particles[i]->NoSlip1(2));
         Pressure[i    ] = float(Particles[i]->Pressure);
+        ShearRate[i   ] = float(Particles[i]->ShearRate);
         Density [i    ] = float(Particles[i]->Density);
         Mass	[i    ] = float(Particles[i]->Mass);
         sh	    [i    ] = float(Particles[i]->h);
@@ -1831,6 +1855,8 @@ inline void Domain::WriteXDMF (char const * FileKey)
     dims[0] = Particles.Size();
     dsname.Printf("Pressure");
     H5LTmake_dataset_float(file_id,dsname.CStr(),1,dims,Pressure);
+    dsname.Printf("ShearRate");
+    H5LTmake_dataset_float(file_id,dsname.CStr(),1,dims,ShearRate);
     dsname.Printf("Density");
     H5LTmake_dataset_float(file_id,dsname.CStr(),1,dims,Density);
     dsname.Printf("Mass");
@@ -1850,6 +1876,7 @@ inline void Domain::WriteXDMF (char const * FileKey)
     delete [] Posvec;
     delete [] Velvec;
     delete [] Pressure;
+    delete [] ShearRate;
     delete [] Density;
     delete [] Mass;
     delete [] sh;
@@ -1882,6 +1909,11 @@ inline void Domain::WriteXDMF (char const * FileKey)
     oss << "     <Attribute Name=\"Pressure\" AttributeType=\"Scalar\" Center=\"Node\">\n";
     oss << "       <DataItem Dimensions=\"" << Particles.Size() << "\" NumberType=\"Float\" Precision=\"10\"  Format=\"HDF\">\n";
     oss << "        " << fn.CStr() <<":/Pressure \n";
+    oss << "       </DataItem>\n";
+    oss << "     </Attribute>\n";
+    oss << "     <Attribute Name=\"ShearRate\" AttributeType=\"Scalar\" Center=\"Node\">\n";
+    oss << "       <DataItem Dimensions=\"" << Particles.Size() << "\" NumberType=\"Float\" Precision=\"10\"  Format=\"HDF\">\n";
+    oss << "        " << fn.CStr() <<":/ShearRate \n";
     oss << "       </DataItem>\n";
     oss << "     </Attribute>\n";
     oss << "     <Attribute Name=\"Density\" AttributeType=\"Scalar\" Center=\"Node\">\n";
