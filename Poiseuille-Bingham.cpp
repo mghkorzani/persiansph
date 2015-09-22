@@ -28,8 +28,8 @@ int main(int argc, char **argv) try
 
         dom.Gravity		= 0.002,0.0,0.0;
         dom.Dimension	= 2;
-        dom.Cs			= 0.0025;
-        dom.P0			= dom.Cs*dom.Cs*998.21*0.02;
+        dom.Cs			= 0.0020;
+        dom.P0			= dom.Cs*dom.Cs*998.21*0.01;
         dom.BC.Periodic[0]	= true;
 //        dom.MU			= 1.002e-3;
         dom.Nproc		= 8;
@@ -48,7 +48,7 @@ int main(int argc, char **argv) try
     	dom.InitialDist 	= dx;
 
         double maz;
-        maz=(0.002*h/(dom.Cs));
+        maz=(0.00002*h/(dom.Cs));
         std::cout<<maz<<std::endl;
 
      	dom.AddBoxLength(3 ,Vec3_t ( 0.0 , -0.0006 , 0.0 ), 0.0005 , 0.00121 ,  0 , dx/2.0 ,rho, h, 1 , 0 , false, false );
@@ -57,6 +57,7 @@ int main(int argc, char **argv) try
     	{
     		dom.Particles[a]->Mu = 1.002e-3;
     		dom.Particles[a]->MuRef = 1.002e-3;
+    		dom.Particles[a]->T0 = 4.0e-4;
 
     		yb=dom.Particles[a]->x(1);
     		if (yb>=0.0005 || yb<=-0.0005)
@@ -69,14 +70,14 @@ int main(int argc, char **argv) try
 
     	for (size_t i=0; i<100; i++)
     	{
-    		xb = -2.0*dx+(0.0005+2.0*dx)/300.0*i;
+    		xb = -dx+(0.0005+dx)/(((0.0005/dx)+2.0)*2.0)*i;
     		dom.AddNSSingleParticle(4,Vec3_t ( xb ,  -0.0005   , 0.0 ),true);
     		dom.AddNSSingleParticle(4,Vec3_t ( xb ,   0.0005   , 0.0 ),true);
     	}
 
 
 //    	dom.WriteXDMF("maz");
-    	dom.Solve(/*tf*/100.0,/*dt*/maz,/*dtOut*/0.05,"test06",1000);
+    	dom.Solve(/*tf*/100.0,/*dt*/maz,/*dtOut*/0.005,"test06",1000);
         return 0;
 }
 MECHSYS_CATCH

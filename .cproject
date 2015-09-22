@@ -55,11 +55,11 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
-					<fileInfo id="cdt.managedbuild.config.gnu.exe.debug.829054585.2032990838" name="Poiseuille.cpp" rcbsApplicability="disable" resourcePath="Poiseuille.cpp" toolsToInvoke="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.1274044068.485197085">
-						<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.1274044068.485197085" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.1274044068"/>
+					<fileInfo id="cdt.managedbuild.config.gnu.exe.debug.829054585.736548921" name="Poiseuille-Bingham.cpp" rcbsApplicability="disable" resourcePath="Poiseuille-Bingham.cpp" toolsToInvoke="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.1274044068.1649838775">
+						<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.1274044068.1649838775" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.1274044068"/>
 					</fileInfo>
 					<sourceEntries>
-						<entry excluding="DragWinp.cpp|DragWinp2-load.cpp|DamBreak.cpp|DragWinp3D.cpp|HydraulicJump.cpp|HydraulicJump3.cpp|HydraulicJump1.cpp|HydraulicJump2.cpp|Drag.cpp|Hagen.cpp|Couette.cpp|hydrostatic.cpp|Drag_W_inp.cpp|Dam3D.cpp|test05Periodic.cpp|test02.cpp|test03.cpp|test04.cpp" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="Poiseuille-Bingham.cpp|DragWinp.cpp|DragWinp2-load.cpp|DamBreak.cpp|DragWinp3D.cpp|HydraulicJump.cpp|HydraulicJump3.cpp|HydraulicJump1.cpp|HydraulicJump2.cpp|Drag.cpp|Hagen.cpp|Couette.cpp|hydrostatic.cpp|Drag_W_inp.cpp|Dam3D.cpp|test05Periodic.cpp|test02.cpp|test03.cpp|test04.cpp" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
@@ -123,11 +123,11 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
-					<fileInfo id="cdt.managedbuild.config.gnu.exe.release.1951905185.170255024" name="Poiseuille.cpp" rcbsApplicability="disable" resourcePath="Poiseuille.cpp" toolsToInvoke="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.1325570310.2132604487">
-						<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.1325570310.2132604487" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.1325570310"/>
+					<fileInfo id="cdt.managedbuild.config.gnu.exe.release.1951905185.384751041" name="Poiseuille-Bingham.cpp" rcbsApplicability="disable" resourcePath="Poiseuille-Bingham.cpp" toolsToInvoke="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.1325570310.64554293">
+						<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.1325570310.64554293" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.1325570310"/>
 					</fileInfo>
 					<sourceEntries>
-						<entry excluding="DragWinp.cpp|DragWinp2-load.cpp|DamBreak.cpp|DragWinp3D.cpp|HydraulicJump.cpp|HydraulicJump3.cpp|HydraulicJump1.cpp|HydraulicJump2.cpp|Drag.cpp|Hagen.cpp|Couette.cpp|hydrostatic.cpp|Drag_W_inp.cpp|Dam3D.cpp|test05Periodic.cpp|test02.cpp|test03.cpp|test04.cpp" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="Poiseuille-Bingham.cpp|DragWinp.cpp|DragWinp2-load.cpp|DamBreak.cpp|DragWinp3D.cpp|HydraulicJump.cpp|HydraulicJump3.cpp|HydraulicJump1.cpp|HydraulicJump2.cpp|Drag.cpp|Hagen.cpp|Couette.cpp|hydrostatic.cpp|Drag_W_inp.cpp|Dam3D.cpp|test05Periodic.cpp|test02.cpp|test03.cpp|test04.cpp" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>

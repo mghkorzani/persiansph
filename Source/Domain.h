@@ -1812,6 +1812,7 @@ inline void Domain::WriteXDMF (char const * FileKey)
 
     float * Posvec   = new float[3*Particles.Size()];
     float * Velvec   = new float[3*Particles.Size()];
+    float * ACCvec   = new float[3*Particles.Size()];
     float * Pressure = new float[  Particles.Size()];
     float * ShearRate= new float[  Particles.Size()];
     float * Density  = new float[  Particles.Size()];
@@ -1830,9 +1831,9 @@ inline void Domain::WriteXDMF (char const * FileKey)
         Velvec  [3*i  ] = float(Particles[i]->v(0));
         Velvec  [3*i+1] = float(Particles[i]->v(1));
         Velvec  [3*i+2] = float(Particles[i]->v(2));
-//        Velvec  [3*i  ] = float(Particles[i]->NoSlip1(0));
-//        Velvec  [3*i+1] = float(Particles[i]->NoSlip1(1));
-//        Velvec  [3*i+2] = float(Particles[i]->NoSlip1(2));
+        ACCvec  [3*i  ] = float(Particles[i]->a(0));
+        ACCvec  [3*i+1] = float(Particles[i]->a(1));
+        ACCvec  [3*i+2] = float(Particles[i]->a(2));
         Pressure[i    ] = float(Particles[i]->Pressure);
         ShearRate[i   ] = float(Particles[i]->ShearRate);
         Density [i    ] = float(Particles[i]->Density);
@@ -1863,6 +1864,8 @@ inline void Domain::WriteXDMF (char const * FileKey)
     H5LTmake_dataset_float(file_id,dsname.CStr(),1,dims,Posvec);
     dsname.Printf("Velocity");
     H5LTmake_dataset_float(file_id,dsname.CStr(),1,dims,Velvec);
+    dsname.Printf("Acceleration");
+    H5LTmake_dataset_float(file_id,dsname.CStr(),1,dims,ACCvec);
     dims[0] = Particles.Size();
     dsname.Printf("Pressure");
     H5LTmake_dataset_float(file_id,dsname.CStr(),1,dims,Pressure);
@@ -1886,6 +1889,7 @@ inline void Domain::WriteXDMF (char const * FileKey)
 
     delete [] Posvec;
     delete [] Velvec;
+    delete [] ACCvec;
     delete [] Pressure;
     delete [] ShearRate;
     delete [] Density;
@@ -1915,6 +1919,11 @@ inline void Domain::WriteXDMF (char const * FileKey)
     oss << "     <Attribute Name=\"Velocity\" AttributeType=\"Vector\" Center=\"Node\">\n";
     oss << "       <DataItem Dimensions=\"" << Particles.Size() << " 3\" NumberType=\"Float\" Precision=\"10\" Format=\"HDF\">\n";
     oss << "        " << fn.CStr() <<":/Velocity \n";
+    oss << "       </DataItem>\n";
+    oss << "     </Attribute>\n";
+    oss << "     <Attribute Name=\"Acceleration\" AttributeType=\"Vector\" Center=\"Node\">\n";
+    oss << "       <DataItem Dimensions=\"" << Particles.Size() << " 3\" NumberType=\"Float\" Precision=\"10\" Format=\"HDF\">\n";
+    oss << "        " << fn.CStr() <<":/Acceleration \n";
     oss << "       </DataItem>\n";
     oss << "     </Attribute>\n";
     oss << "     <Attribute Name=\"Pressure\" AttributeType=\"Scalar\" Center=\"Node\">\n";
