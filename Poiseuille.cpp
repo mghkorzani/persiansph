@@ -29,7 +29,7 @@ int main(int argc, char **argv) try
         dom.Gravity		= 0.002,0.0,0.0;
         dom.Dimension	= 2;
         dom.Cs			= 0.0020;
-//        dom.P0			= dom.Cs*dom.Cs*998.21*0.01;
+        dom.P0			= dom.Cs*dom.Cs*998.21*0.01;
         dom.BC.Periodic[0]	= true;
 //        dom.MU			= 1.002e-3;
         dom.Nproc		= 8;
@@ -77,7 +77,7 @@ int main(int argc, char **argv) try
 
 
 //    	dom.WriteXDMF("maz");
-    	dom.Solve(/*tf*/100.0,/*dt*/maz,/*dtOut*/0.002,"test06",1500);
+    	dom.Solve(/*tf*/100.0,/*dt*/maz,/*dtOut*/0.005,"test06",1000);
         return 0;
 }
 MECHSYS_CATCH

@@ -278,6 +278,8 @@ inline void Domain::CalcForce(Particle * P1, Particle * P2)
     double dj = P2->Density;
     double mi = P1->Mass;
     double mj = P2->Mass;
+    double Mui = P1->Mu;
+    double Muj = P2->Mu;
 
     Vec3_t vij = P1->v - P2->v;
     Vec3_t xij = P1->x - P2->x;
@@ -312,25 +314,23 @@ inline void Domain::CalcForce(Particle * P1, Particle * P2)
 
     //Bingham Fluid
     Mat3_t StrainRate;
-    if ((P1->IsFree && (P1->T0 > 0.0)) || (P2->IsFree && (P2->T0 > 0.0)))
-    {
-		StrainRate = 2.0*vij(0)*xij(0)           , vij(0)*xij(1)+vij(1)*xij(0) , vij(0)*xij(2)+vij(2)*xij(0) ,
-				     vij(0)*xij(1)+vij(1)*xij(0) , 2.0*vij(1)*xij(1)           , vij(1)*xij(2)+vij(2)*xij(1) ,
-				     vij(0)*xij(2)+vij(2)*xij(0) , vij(1)*xij(2)+vij(2)*xij(1) , 2.0*vij(2)*xij(2)           ;
-		StrainRate = -GK * StrainRate;
-    }
 
     	//Real Viscosity
     Vec3_t VI = 0.0;
     if (!NoSlip || (P1->IsFree*P2->IsFree))
     {
-		if (!P1->IsFree) P1->Mu = P2->Mu;
-		if (!P2->IsFree) P2->Mu = P1->Mu;
+    	if (!P1->IsFree) Mui = Muj;
+		if (!P2->IsFree) Muj = Mui;
 
-    	if (VisEq==0) VI = (P1->Mu+P2->Mu)/(di*dj)*GK*vij;																		//Morris et al 1997
-    	if (VisEq==1) VI = 4.0*(P1->Mu+P2->Mu)/((di+dj)*(di+dj))*GK*vij;																//Shao et al 2003
-    	if (VisEq==2) VI = -(P1->Mu+P2->Mu)/2.0/(di*dj)* LaplaceKernel(Dimension, KernelType, rij, h)*vij;							//Real Viscosity (considering incompressible fluid)
-    	if (VisEq==3) VI = -(P1->Mu+P2->Mu)/2.0/(di*dj)*( LaplaceKernel(Dimension, KernelType, rij, h)*vij +
+    	StrainRate = 2.0*vij(0)*xij(0)           , vij(0)*xij(1)+vij(1)*xij(0) , vij(0)*xij(2)+vij(2)*xij(0) ,
+    				 vij(0)*xij(1)+vij(1)*xij(0) , 2.0*vij(1)*xij(1)           , vij(1)*xij(2)+vij(2)*xij(1) ,
+    				 vij(0)*xij(2)+vij(2)*xij(0) , vij(1)*xij(2)+vij(2)*xij(1) , 2.0*vij(2)*xij(2)           ;
+    	StrainRate = -GK * StrainRate;
+
+    	if (VisEq==0) VI = (Mui+Muj)/(di*dj)*GK*vij;																		//Morris et al 1997
+    	if (VisEq==1) VI = 4.0*(Mui+Muj)/((di+dj)*(di+dj))*GK*vij;																//Shao et al 2003
+    	if (VisEq==2) VI = -(Mui+Muj)/2.0/(di*dj)* LaplaceKernel(Dimension, KernelType, rij, h)*vij;							//Real Viscosity (considering incompressible fluid)
+    	if (VisEq==3) VI = -(Mui+Muj)/2.0/(di*dj)*( LaplaceKernel(Dimension, KernelType, rij, h)*vij +
     			1.0/3.0*(GK*vij + dot(vij,xij) * xij / (rij*rij) * (-GK+SecDerivativeKernel(Dimension, KernelType, rij, h) ) ) );	//Takeda et al 1994 (Real viscosity considering 1/3Mu for compressibility as per Navier Stokes but ignore volumetric viscosity)
     	if ((VisEq<0 || VisEq>3))
     	{
@@ -344,6 +344,8 @@ inline void Domain::CalcForce(Particle * P1, Particle * P2)
     }
     else
     {
+		if (!P1->IsFree) Mui = Muj;
+		if (!P2->IsFree) Muj = Mui;
     	//Corrected velocity for fixed particle as per Morris et al 1997
     	Vec3_t vab;
     	if (P1->IsFree)
@@ -351,10 +353,15 @@ inline void Domain::CalcForce(Particle * P1, Particle * P2)
    		else
     		vab = vij * std::min( 1.5 , 1.0 + fabs(dot( P1->x , P2->NoSlip1 ) + P2->NoSlip2(0) ) / P2->NoSlip2(2) );
 
-    	if (VisEq==0) VI = (P1->Mu+P2->Mu)/(di*dj)*GK*vab;																		//Morris et al 1997
-    	if (VisEq==1) VI = 4.0*(P1->Mu+P2->Mu)/((di+dj)*(di+dj))*GK*vab;																//Shao et al 2003
-    	if (VisEq==2) VI = -(P1->Mu+P2->Mu)/2.0/(di*dj)*LaplaceKernel(Dimension, KernelType, rij, h)*vab;								//Real Viscosity (considering incompressible fluid)
-    	if (VisEq==3) VI = -(P1->Mu+P2->Mu)/2.0/(di*dj)*( LaplaceKernel(Dimension, KernelType, rij, h)*vab +
+    	StrainRate = 2.0*vab(0)*xij(0)           , vab(0)*xij(1)+vab(1)*xij(0) , vab(0)*xij(2)+vab(2)*xij(0) ,
+				     vab(0)*xij(1)+vab(1)*xij(0) , 2.0*vab(1)*xij(1)           , vab(1)*xij(2)+vab(2)*xij(1) ,
+				     vab(0)*xij(2)+vab(2)*xij(0) , vab(1)*xij(2)+vab(2)*xij(1) , 2.0*vab(2)*xij(2)           ;
+		StrainRate = -GK * StrainRate;
+
+    	if (VisEq==0) VI = (Mui+Muj)/(di*dj)*GK*vab;																		//Morris et al 1997
+    	if (VisEq==1) VI = 4.0*(Mui+Muj)/((di+dj)*(di+dj))*GK*vab;																//Shao et al 2003
+    	if (VisEq==2) VI = -(Mui+Muj)/2.0/(di*dj)*LaplaceKernel(Dimension, KernelType, rij, h)*vab;								//Real Viscosity (considering incompressible fluid)
+    	if (VisEq==3) VI = -(Mui+Muj)/2.0/(di*dj)*( LaplaceKernel(Dimension, KernelType, rij, h)*vab +
     			1.0/3.0*(GK*vij + dot(vij,xij) * xij / (rij*rij) * (-GK+SecDerivativeKernel(Dimension, KernelType, rij, h) ) ) );	//Takeda et al 1994 (Real viscosity considering 1/3Mu for compressibility as per Navier Stokes but ignore volumetric viscosity)
     	if ((VisEq<0 || VisEq>3))
     	{
@@ -383,7 +390,7 @@ inline void Domain::CalcForce(Particle * P1, Particle * P2)
     omp_set_lock(&P1->my_lock);
     P1->a   += -mj * ( P1->Pressure/(di*di) + P2->Pressure/(dj*dj) + PIij + TIij ) * GK*xij + mj*VI;
 //    P1->Vis +=  mj * VI;
-    if (P1->IsFree && (P1->T0 > 0.0)) P1->StrainRate = P1->StrainRate + mj/dj*StrainRate; else P1->StrainRate = 0.0;
+    if (P1->IsFree) P1->StrainRate = P1->StrainRate + mj/dj*StrainRate; else P1->StrainRate = 0.0;
     if (P1->ct==30 && Shepard)
     {
     	P1->SumDen += mj*    K;
@@ -396,7 +403,7 @@ inline void Domain::CalcForce(Particle * P1, Particle * P2)
     omp_set_lock(&P2->my_lock);
     P2->a   -= -mi * ( P1->Pressure/(di*di) + P2->Pressure/(dj*dj) + PIij + TIji ) * GK*xij + mi*VI;
 //    P2->Vis -=  mi * VI;
-    if (P2->IsFree && (P2->T0 > 0.0)) P2->StrainRate = P2->StrainRate + mi/di*StrainRate; else P2->StrainRate = 0.0;
+    if (P2->IsFree) P2->StrainRate = P2->StrainRate + mi/di*StrainRate; else P2->StrainRate = 0.0;
     if (P2->ct==30 && Shepard)
     {
     	P2->SumDen += mi*    K;
@@ -1192,14 +1199,18 @@ inline void Domain::StartAcceleration (Vec3_t const & a)
     {
         Particles[i]->Pressure = Pressure(PresEq, Cs, P0,Particles[i]->Density, Particles[i]->RefDensity);
 
-    	if (Particles[i]->IsFree && Particles[i]->T0 > 0.0)
+    	if (Particles[i]->IsFree)
     	{
     		Particles[i]->ShearRate = sqrt((Particles[i]->StrainRate(0,0)*Particles[i]->StrainRate(0,0) + 2.0*Particles[i]->StrainRate(0,1)*Particles[i]->StrainRate(1,0) + 2.0*Particles[i]->StrainRate(0,2)*Particles[i]->StrainRate(2,0) +
     				Particles[i]->StrainRate(1,1)*Particles[i]->StrainRate(1,1) + 2.0*Particles[i]->StrainRate(1,2)*Particles[i]->StrainRate(2,1) + Particles[i]->StrainRate(2,2)*Particles[i]->StrainRate(2,2)));
-    		if (Particles[i]->ShearRate !=0.0)
-    			Particles[i]->Mu = Particles[i]->MuRef + Particles[i]->T0*(1-exp(-Particles[i]->m*Particles[i]->ShearRate))/Particles[i]->ShearRate;
-    		else
-    			Particles[i]->Mu = Particles[i]->MuRef + Particles[i]->T0*Particles[i]->m;
+    		if (Particles[i]->T0>0.0)
+			{
+    			if (Particles[i]->ShearRate !=0.0)
+					Particles[i]->Mu = Particles[i]->MuRef + Particles[i]->T0*(1-exp(-Particles[i]->m*Particles[i]->ShearRate))/Particles[i]->ShearRate;
+				else
+					Particles[i]->Mu = Particles[i]->MuRef + Particles[i]->T0*Particles[i]->m;
+
+			}
     	}
 
 		Particles[i]->a			= a;
