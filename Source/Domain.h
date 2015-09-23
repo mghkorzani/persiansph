@@ -68,6 +68,7 @@ class Domain
 {
 public:
 	typedef void (*PtVel) (Vec3_t & position, Vec3_t & Vel, double & Den, Boundary & bdry);
+	typedef void (*PtDom) (Domain & dom);
     // Constructor
     Domain();
 
@@ -171,9 +172,15 @@ public:
     Vec3_t					DomMax;
     Vec3_t					DomMin;
     bool 					BCDensityUpdate;
+    PtDom					GeneralBefore;		///< Pointer to a function: to modify particles properties before CalcForce function
+    PtDom					GeneralAfter;		///< Pointer to a function: to modify particles properties after CalcForce function
 
 };
 /////////////////////////////////////////////////////////////////////////////////////////// Implementation /////
+void General(Domain & dom)
+{
+}
+
 void InFlowCon(Vec3_t & position, Vec3_t & Vel, double & Den, Boundary & bdry)
 {
 	Vel = bdry.inv;
@@ -257,9 +264,12 @@ inline Domain::Domain ()
 
     TRPR = 0.0;
     BLPF = 0.0;
+
     InCon = & InFlowCon;
     OutCon = & OutFlowCon;
     AllCon = & AllFlowCon;
+    GeneralBefore = & General;
+    GeneralAfter = & General;
 
     DomMax = -100000000000.0;
     DomMin = 100000000000.0;
@@ -1635,17 +1645,19 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
 
     while (Time<tf && idx_out<=maxidx)
     {
-//		std::cout<<"1"<<std::endl;
     	StartAcceleration(Gravity);
-//    	std::cout<<"2"<<std::endl;
+
     	InFlowBCFresh();
-//    	std::cout<<"3"<<std::endl;
+
+    	GeneralBefore(*this);
+
     	ComputeAcceleration();
-//    	std::cout<<"4"<<std::endl;
+
+    	GeneralAfter(*this);
+
     	InFlowBCReset();
-//    	std::cout<<"5"<<std::endl;
+
     	Move(dt);
-//    	std::cout<<"6"<<std::endl;
 
         // output
         if (Time>=tout)
@@ -1680,14 +1692,12 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
 
        Time += dt;
 
-//   	std::cout<<"7"<<std::endl;
        if (BC.InOutFlow>0 && !BC.Periodic[0]) InFlowBCLeave(); else CheckParticleLeave ();
 //       if (!(BC.Periodic[0] || BC.Periodic[1] || BC.Periodic[2])) CheckParticleLeave ();
-//   	std::cout<<"8"<<std::endl;
+
        CellReset();
-//   	std::cout<<"9"<<std::endl;
+
        ListGenerate();
-//      	std::cout<<"10"<<std::endl;
     }
     std::cout << "\n--------------Solving is finished---------------------------------------------------" << std::endl;
 
