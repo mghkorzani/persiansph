@@ -24,15 +24,20 @@ using std::endl;
 
 void UserMazi(SPH::Domain & domi)
 {
+	double omega;
+	omega = 1.16e-3;
 	for (size_t a=0; a<domi.Particles.Size(); a++)
 	{
-		domi.Particles[a]->x(1);
-		if (domi.Particles[a]->x(1)<0.0005)
+		if (domi.Particles[a]->ID == 3)
 		{
-			domi.Particles[a]->IsFree=false;
+			domi.Particles[a]->translate(0.022);
+			domi.Particles[a]->v  =-domi.Particles[a]->x(1)*omega,domi.Particles[a]->x(0)*omega,0.0;
+			domi.Particles[a]->vb =-domi.Particles[a]->x(1)*omega,domi.Particles[a]->x(0)*omega,0.0;
 		}
 	}
 }
+//    	dom.GeneralBefore	= & UserMazi;
+//    	dom.GeneralAfter	= & UserMazi;
 
 
 int main(int argc, char **argv) try
@@ -40,65 +45,95 @@ int main(int argc, char **argv) try
         SPH::Domain		dom;
 
         dom.Dimension	= 2;
-        dom.Cs			= 0.0025;
+        dom.Cs			= 3.0e-4;
         dom.BC.Periodic[0]	= true;
-//        dom.MU			= 1.002e-3;
         dom.Nproc		= 8;
     	dom.PresEq		= 0;
     	dom.VisEq		= 3;
     	dom.KernelType	= 4;
     	dom.NoSlip		= true;
-
-    	dom.RigidBody	= true;
-    	dom.RBTag		= 4;
-    	dom.vel			= 2.5e-5,0.0,0.0;
-    	dom.vellim		= 2.5e-5,0.0,0.0;
+//        dom.P0			= dom.Cs*dom.Cs*998.21*0.0005;
+//    	dom.Shepard		= false;
 
         double xb,yb,h,rho;
     	double dx;
 
     	rho = 998.21;
-    	dx = 2.5e-5;
+    	dx = 5.0e-4;
     	h = dx*1.1;
     	dom.InitialDist 	= dx;
 
-        double maz;
-        maz=(0.005*h/(dom.Cs+0.00025));
-        std::cout<<maz<<std::endl;
-//    	dom.GeneralBefore	= & UserMazi;
 //    	dom.GeneralAfter	= & UserMazi;
 
-    	dom.AddBoxLength(3 ,Vec3_t ( 0.0 , -0.0000875001 , 0.0 ), 0.0005 , 0.00118  ,  0 , dx/2.0 ,rho, h, 1 , 0 , false, false );
+        double maz;
+        maz=(0.01*h/(dom.Cs));
+        std::cout<<maz<<std::endl;
+
+    	double R,Ri,Ro,no,mass;
+    	Ri = 11.0e-3-3.5*dx;
+    	Ro = 21.5e-3+3.5*dx;
+
+    	for (size_t j=0;j<=((Ro-Ri)/dx);j++)
+    	{
+    		R = Ri+dx*j;
+    		no = ceil(2*M_PI*R/dx);
+    		for (size_t i=0; i<no; i++)
+    		{
+    			xb = R*cos(2*M_PI/no*i);
+    			yb = R*sin(2*M_PI/no*i);
+    			dom.AddSingleParticle(2,Vec3_t ( xb ,  yb , 0.0 ), 0.0 , rho , h , false);
+    		}
+     	}
+		mass = M_PI*((Ro+dx/2.0)*(Ro+dx/2.0)-(Ri-dx/2.0)*(Ri-dx/2.0))*rho/dom.Particles.Size();
+
+    	double omega;
+    	omega = 1.16e-3;
 
     	for (size_t a=0; a<dom.Particles.Size(); a++)
     	{
     		dom.Particles[a]->Mu = 1.002e-3;
     		dom.Particles[a]->MuRef = 1.002e-3;
+    		dom.Particles[a]->Mass = mass;
 
+    		xb=dom.Particles[a]->x(0);
     		yb=dom.Particles[a]->x(1);
-    		if (yb>=0.0009901)
+    		if (sqrt(xb*xb+yb*yb)>21.5e-3)
     		{
-    			dom.Particles[a]->ID=4;
-    			dom.Particles[a]->IsFree=false;
-    		}
-    		if (yb<0.0)
+    			R = sqrt(xb*xb+yb*yb);
+    			dom.Particles[a]->ID		=3;
+    			dom.Particles[a]->IsFree	=false;
+    			dom.Particles[a]->v			=-yb/R*R*omega,xb/R*R*omega,0.0;
+    			dom.Particles[a]->vb		=-yb/R*R*omega,xb/R*R*omega,0.0;
+   		}
+    		if (sqrt(xb*xb+yb*yb)<11.0e-3)
     		{
-    			dom.Particles[a]->ID=5;
-    			dom.Particles[a]->IsFree=false;
+    			dom.Particles[a]->ID		=1;
+    			dom.Particles[a]->IsFree	=false;
     		}
     	}
 
-
-    	for (size_t i=0; i<100; i++)
-    	{
-    		xb = -0.0001+0.0007/100.0*i;
-    		dom.AddNSSingleParticle(5,Vec3_t ( xb ,  0.0   , 0.0 ),true);
-    		dom.AddNSSingleParticle(4,Vec3_t ( xb ,  0.001 , 0.0 ),true);
-    	}
+    	// No-Slip Particles
+    	double m=2.0;
+		R = 11.0e-3;
+		no = ceil(2*M_PI*R/(m*dx));
+		for (size_t i=0; i<no; i++)
+		{
+			xb = R*cos(2*M_PI/no*i);
+			yb = R*sin(2*M_PI/no*i);
+			dom.AddNSSingleParticle(1,Vec3_t ( xb ,  yb , 0.0 ), true);
+		}
+		R = 21.5e-3;
+		no = ceil(2*M_PI*R/(m*dx));
+		for (size_t i=0; i<no; i++)
+		{
+			xb = R*cos(2*M_PI/no*i);
+			yb = R*sin(2*M_PI/no*i);
+			dom.AddNSSingleParticle(3,Vec3_t ( xb ,  yb , 0.0 ), true);
+		}
 
 
 //    	dom.WriteXDMF("maz");
-    	dom.Solve(/*tf*/50000.0,/*dt*/maz,/*dtOut*/(1000.0*maz),"test06",1500);
+    	dom.Solve(/*tf*/50000.0,/*dt*/maz,/*dtOut*/2.0,"test06",1500);
         return 0;
 }
 MECHSYS_CATCH

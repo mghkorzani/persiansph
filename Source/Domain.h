@@ -142,15 +142,6 @@ public:
 
     int					*** HOC;				///< Array of "Head of Chain" for each cell
 
-    bool					RigidBody; 			///< If it is true, A rigid body with RTag will be considered
-    int						RBTag;				///< Tag of particles for rigid body
-    Vec3_t					RBForce;			///< Rigid body force
-    Vec3_t					RBForceVis;			///< Rigid body force viscosity
-    Vec3_t					Acc;
-    Vec3_t					vel;
-    Vec3_t					vellim;
-    Array<int> 				RigidParticles;
-
     size_t					PresEq;				///< Selecting variable to choose an equation of state
     size_t					VisEq;				///< Selecting variable to choose an equation for viscosity
     size_t					KernelType;			///< Selecting variable to choose a kernel
@@ -232,10 +223,6 @@ inline Domain::Domain ()
 
     Cellfac = 2.0;
 
-    RigidBody = false;
-    RBTag	= 0;
-    RBForce = 0.0;
-    RBForceVis = 0.0;
 
     P0		= 0.0;
     PresEq	= 0;
@@ -257,10 +244,6 @@ inline Domain::Domain ()
 
     deltat	= 0.0;
     Shepard = true;
-    Acc		= 0.0,0.0,0.0;
-    vel		= 0.0,0.0,0.0;
-    vellim		= 0.0,0.0,0.0;
-    RigidParticles.Resize(0);
 
     TRPR = 0.0;
     BLPF = 0.0;
@@ -811,7 +794,6 @@ inline void Domain::CheckParticleLeave ()
 	{
 		std::cout<< DelParticles.Size()<< " particle(s) left the Domain"<<std::endl;
 		Particles.DelItems(DelParticles);
-		RigidParticles.Clear();
 	}
 }
 
@@ -1278,66 +1260,6 @@ inline void Domain::Move (double dt)
 	#pragma omp parallel for schedule (static) num_threads(Nproc)
 	for (size_t i=0; i<Particles.Size(); i++) Particles[i]->Move(dt,DomSize,TRPR,BLPF,Shepard);
 
-	if (RigidBody && RigidParticles.Size()==0)
-	{
-		RBForce = 0.0;
-		RBForceVis = 0.0;
-		#pragma omp parallel for  schedule (static) num_threads(Nproc)
-		for (size_t i=0; i<Particles.Size(); i++)
-		{
-			if (Particles[i]->ID==RBTag)
-			{
-				omp_set_lock(&dom_lock);
-				RigidParticles.Push(i);
-				RBForce    +=Particles[i]->Mass * Particles[i]->a;
-				RBForceVis +=Particles[i]->Mass * Particles[i]->Vis;
-				omp_unset_lock(&dom_lock);
-				if (norm(Acc)!=0.0 || norm(vel)!=0.0)
-				{
-					Particles[i]->translate(Acc,vellim,dt,DomSize,TRPR,BLPF);
-					Particles[i]->vb = vel;
-					Particles[i]->v = vel;
-				}
-			}
-		}
-
-		if (NoSlip && (norm(Acc)!=0.0 || norm(vel)!=0.0))
-		{
-			for (size_t i=0; i<NSParticles.Size(); i++)
-			{
-				if (NSParticles[i]->ID==RBTag && NSParticles[i]->IsFree)
-				{
-					NSParticles[i]->translate(Acc,vellim,dt,DomSize,TRPR,BLPF);
-					NSParticles[i]->vb = vel;
-					NSParticles[i]->v = vel;
-				}
-			}
-		}
-	}
-
-	if (RigidBody && RigidParticles.Size()!=0)
-	{
-		RBForce = 0.0;
-		RBForceVis = 0.0;
-		for (size_t i=0; i<RigidParticles.Size(); i++)
-		{
-				RBForce    +=Particles[RigidParticles[i]]->Mass * Particles[RigidParticles[i]]->a;
-				RBForceVis +=Particles[RigidParticles[i]]->Mass * Particles[RigidParticles[i]]->Vis;
-
-				if (norm(Acc)!=0.0 || norm(vel)!=0.0)
-				{
-					Particles[RigidParticles[i]]->translate(Acc,vellim,dt,DomSize,TRPR,BLPF);
-				}
-		}
-	}
-
-	if (NoSlip && (norm(Acc)!=0.0 || norm(vel)!=0.0) && RigidParticles.Size()!=0)
-	{
-		for (size_t i=0; i<NSParticles.Size(); i++)
-		{
-			if (NSParticles[i]->ID==RBTag && NSParticles[i]->IsFree) NSParticles[i]->translate(Acc,vellim,dt,DomSize,TRPR,BLPF);
-		}
-	}
 }
 
 inline void Domain::InFlowBCLeave()
@@ -1444,7 +1366,7 @@ inline void Domain::InFlowBCLeave()
 		}
 	}
 
-	if (DelPart.Size()>0 || AddPart.Size()>0) RigidParticles.Clear();
+//	if (DelPart.Size()>0 || AddPart.Size()>0) RigidParticles.Clear();
 	DelPart.Clear();
 	AddPart.Clear();
 }
@@ -1830,7 +1752,6 @@ inline void Domain::WriteXDMF (char const * FileKey)
     float * sh	     = new float[  Particles.Size()];
     int   * Tag      = new int  [  Particles.Size()];
     int   * IsFree   = new int  [  Particles.Size()];
-    float * Force    = new float[6];
 
 
     for (size_t i=0;i<Particles.Size();i++)
@@ -1855,12 +1776,6 @@ inline void Domain::WriteXDMF (char const * FileKey)
         else
         	IsFree[i] = int  (0);
     }
-    Force  [0] = float(RBForce(0));
-    Force  [1] = float(RBForce(1));
-    Force  [2] = float(RBForce(2));
-    Force  [3] = float(RBForceVis(0));
-    Force  [4] = float(RBForceVis(1));
-    Force  [5] = float(RBForceVis(2));
 
     int data[1];
     String dsname;
@@ -1892,8 +1807,6 @@ inline void Domain::WriteXDMF (char const * FileKey)
     dsname.Printf("IsFree");
     H5LTmake_dataset_int(file_id,dsname.CStr(),1,dims,IsFree);
     dims[0] = 6;
-    dsname.Printf("Rigid_Body_Force");
-    H5LTmake_dataset_float(file_id,dsname.CStr(),1,dims,Force);
 
 
 
@@ -1907,7 +1820,6 @@ inline void Domain::WriteXDMF (char const * FileKey)
     delete [] sh;
     delete [] Tag;
     delete [] IsFree;
-    delete [] Force;
 
    //Closing the file
     H5Fflush(file_id,H5F_SCOPE_GLOBAL);

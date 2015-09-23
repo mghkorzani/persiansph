@@ -16,7 +16,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>  *
  ************************************************************************/
 
-#include <Domain.h>
+#include "./Source/Domain.h"
 
 
 using std::cout;
@@ -28,18 +28,12 @@ int main(int argc, char **argv) try
 
         dom.Dimension	= 2;
         dom.Cs			= 0.0025;
-        dom.PeriodicX	= true;
-        dom.MU			= 1.002e-3;
-        dom.Nproc		= 24;
+        dom.BC.Periodic[0]	= true;
+        dom.Nproc		= 8;
     	dom.PresEq		= 0;
     	dom.VisEq		= 3;
     	dom.KernelType	= 4;
     	dom.NoSlip		= true;
-
-    	dom.RigidBody	= true;
-    	dom.RBTag		= 4;
-    	dom.vel			= 2.5e-5,0.0,0.0;
-    	dom.vellim		= 2.5e-5,0.0,0.0;
 
         double xb,yb,h,rho;
     	double dx;
@@ -53,16 +47,21 @@ int main(int argc, char **argv) try
         maz=(0.005*h/(dom.Cs+0.00025));
         std::cout<<maz<<std::endl;
 
-    	dom.AddRandomBox(3 ,Vec3_t ( 0.0 , -0.0000875001 , 0.0 ), 0.0005 , 0.00118  ,  0 , dx/2.0 ,rho, h, 1 , 0 );
+    	dom.AddBoxLength(3 ,Vec3_t ( 0.0 , -0.0000875001 , 0.0 ), 0.0005 , 0.00118  ,  0 , dx/2.0 ,rho, h, 1 , 0 , false, false );
 
     	for (size_t a=0; a<dom.Particles.Size(); a++)
     	{
+    		dom.Particles[a]->Mu = 1.002e-3;
+    		dom.Particles[a]->MuRef = 1.002e-3;
+
     		yb=dom.Particles[a]->x(1);
     		if (yb>=0.0009901)
     		{
-    			dom.Particles[a]->ID=4;
-    			dom.Particles[a]->IsFree=false;
-    		}
+    			dom.Particles[a]->ID		=4;
+    			dom.Particles[a]->IsFree	=false;
+    			dom.Particles[a]->v			=2.5e-5,0.0,0.0;
+    			dom.Particles[a]->vb		=2.5e-5,0.0,0.0;
+   		}
     		if (yb<0.0)
     		{
     			dom.Particles[a]->ID=5;
@@ -71,16 +70,16 @@ int main(int argc, char **argv) try
     	}
 
 
-    	for (size_t i=0; i<50; i++)
+    	for (size_t i=0; i<200; i++)
     	{
-    		xb = -0.0001+0.0007/50.0*i;
-    		dom.AddSingleParticle(5,Vec3_t ( xb ,  0.0   , 0.0 ),true);
-    		dom.AddSingleParticle(4,Vec3_t ( xb ,  0.001 , 0.0 ),true);
+    		xb = -0.0001+0.0007/200.0*i;
+    		dom.AddNSSingleParticle(5,Vec3_t ( xb ,  0.0   , 0.0 ),true);
+    		dom.AddNSSingleParticle(4,Vec3_t ( xb ,  0.001 , 0.0 ),true);
     	}
 
 
 //    	dom.WriteXDMF("maz");
-    	dom.Solve(/*tf*/50000.0,/*dt*/maz,/*dtOut*/(100.0*maz),"test06",1500);
+    	dom.Solve(/*tf*/50000.0,/*dt*/maz,/*dtOut*/(1000.0*maz),"test06",1500);
         return 0;
 }
 MECHSYS_CATCH

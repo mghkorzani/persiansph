@@ -79,7 +79,7 @@ public:
 
     // Methods
     void Move			(double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3_t domainmin, bool ShepardFilter);	///< Update the important quantities of a particle
-    void translate		(Vec3_t acceleration, Vec3_t vellim, double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3_t domainmin);
+    void translate		(double dt);
 };
 
 inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double Mass0, double Density0, double h0,bool Fixed)
@@ -229,39 +229,16 @@ inline void Particle::Move (double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3
 	}
 }
 
-inline void Particle::translate	(Vec3_t acceleration, Vec3_t vellim, double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3_t domainmin)
+inline void Particle::translate(double dt)
 {
-	if (v(0) < vellim(0) || v(1) < vellim(1) || v(2) < vellim(2))
-	{
-		x = x + dt*vb + 0.5*dt*dt*acceleration;
+	x = x + dt*v + 0.5*dt*dt*a;
 
-		Vec3_t temp;
-		temp = v;
-		v = vb + 2*dt*acceleration;
-		vb = temp;
-	}
-	else
-	{
-		x = x + dt*v;
-	}
-
-	if (Domainsize(0)>0.0)
-	{
-		(x(0)>(domainmax(0))) ? x(0) -= Domainsize(0) : x(0);
-		(x(0)<(domainmin(0))) ? x(0) += Domainsize(0) : x(0);
-	}
-	if (Domainsize(1)>0.0)
-	{
-		(x(1)>(domainmax(1))) ? x(1) -= Domainsize(1) : x(1);
-		(x(1)<(domainmin(1))) ? x(1) += Domainsize(1) : x(1);
-	}
-	if (Domainsize(2)>0.0)
-	{
-		(x(2)>(domainmax(2))) ? x(2) -= Domainsize(2) : x(2);
-		(x(2)<(domainmin(2))) ? x(2) += Domainsize(2) : x(2);
-	}
+	// Evolve velocity
+	Vec3_t temp;
+	temp = v;
+	v = vb + 2*dt*a;
+	vb = temp;
 }
-
 }; // namespace SPH
 
 #endif // MECHSYS_SPH_PARTICLE_H
