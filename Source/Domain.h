@@ -82,8 +82,6 @@ public:
     void AddBoxNo					(int tag, Vec3_t const & V, size_t nx, size_t ny, size_t nz, double r, double Density, double h,
     									int type, int rotation, bool random, bool Fixed);												///< Add a cube of particles with a defined numbers
 
-    void AddNSSingleParticle		(int tag, Vec3_t const & x, bool Fixed);															///< No slip particles
-
     void DelParticles				(int const & Tags);																					///< Delete particles by tag
     void CheckParticleLeave			();																									///< Check if any particles leave the domain, they will be deleted
 
@@ -115,7 +113,6 @@ public:
 
     // Data
     Array <Particle*>		Particles;     	 	///< Array of particles
-    Array <Particle*>		NSParticles;     	///< Array of particles for No-Slip condition
     double					R;					///< Particle Radius in addrandombox
 
     double					Time;          	 	///< The simulation time at each step
@@ -270,15 +267,14 @@ inline Domain::~Domain ()
 inline void Domain::CalcForce(Particle * P1, Particle * P2)
 {
 	double h = (P1->h+P2->h)/2;
-	double di = P1->Density;
-    double dj = P2->Density;
+	double di,dj;
     double mi = P1->Mass;
     double mj = P2->Mass;
     double Mui = P1->Mu;
     double Muj = P2->Mu;
 
-    if (!P1->IsFree) di = (P1->Pressure-P0)/(Cs*Cs)+P2->RefDensity;
-    if (!P2->IsFree) dj = (P2->Pressure-P0)/(Cs*Cs)+P1->RefDensity;
+    if (!P1->IsFree) di = DensitySolid(PresEq, Cs, P0,P1->Pressure, P2->RefDensity); else di = P1->Density;
+    if (!P2->IsFree) dj = DensitySolid(PresEq, Cs, P0,P2->Pressure, P1->RefDensity); else dj = P2->Density;
 
     Vec3_t vij = P1->v - P2->v;
     Vec3_t xij = P1->x - P2->x;
@@ -311,13 +307,10 @@ inline void Domain::CalcForce(Particle * P1, Particle * P2)
         if (!P2->IsFree) TIji = 0.0;
     }
 
-    //Bingham Fluid
+	//Real Viscosity
     Mat3_t StrainRate;
-
-    	//Real Viscosity
     Vec3_t VI = 0.0;
-//    if (!NoSlip || (P1->IsFree*P2->IsFree))
-        if ((P1->IsFree*P2->IsFree))
+    if (!NoSlip || (P1->IsFree*P2->IsFree))
     {
     	if (!P1->IsFree) Mui = Muj;
 		if (!P2->IsFree) Muj = Mui;
@@ -350,10 +343,8 @@ inline void Domain::CalcForce(Particle * P1, Particle * P2)
     	Vec3_t vab;
     	if (P1->IsFree)
     		vab = P1->v - (2.0*P2->v-P2->vb);
-//   		vab = vij * std::min( 1.5 , 1.0 + fabs(dot( P2->x , P1->NoSlip1 ) + P1->NoSlip2(0) ) / P1->NoSlip2(2) );
    		else
    			vab = (2.0*P1->v-P1->vb) - P2->v;
-//    		vab = vij * std::min( 1.5 , 1.0 + fabs(dot( P1->x , P2->NoSlip1 ) + P2->NoSlip2(0) ) / P2->NoSlip2(2) );
 
     	StrainRate = 2.0*vab(0)*xij(0)           , vab(0)*xij(1)+vab(1)*xij(0) , vab(0)*xij(2)+vab(2)*xij(0) ,
 				     vab(0)*xij(1)+vab(1)*xij(0) , 2.0*vab(1)*xij(1)           , vab(1)*xij(2)+vab(2)*xij(1) ,
@@ -418,11 +409,6 @@ inline void Domain::CalcForce(Particle * P1, Particle * P2)
 inline void Domain::AddSingleParticle(int tag, Vec3_t const & x, double Mass, double Density, double h, bool Fixed)
 {
    	Particles.Push(new Particle(tag,x,Vec3_t(0,0,0),Mass,Density,h,Fixed));
-}
-
-inline void Domain::AddNSSingleParticle(int tag, Vec3_t const & x, bool Fixed)
-{
-   	NSParticles.Push(new Particle(tag,x,Vec3_t(0,0,0),0.0,0.0,0.0,Fixed));
 }
 
 inline void Domain::AddBoxNo(int tag, Vec3_t const & V, size_t nx, size_t ny, size_t nz, double r, double Density, double h, int type, int rotation, bool random, bool Fixed)
@@ -1185,21 +1171,12 @@ inline void Domain::StartAcceleration (Vec3_t const & a)
         Particles[i]->StrainRate= 0.0;
         Particles[i]->SumDen	= 0.0;
         Particles[i]->Vis		= 0.0;
-        Particles[i]->NoSlip1	= 0.0;
-        Particles[i]->NoSlip2	= 0.0,1000000.0,1000000.0;
         Particles[i]->SumKernel	= 0.0;
     }
 }
 
 inline void Domain::PrimaryComputeAcceleration ()
 {
-	if (NoSlip)
-		if (NSParticles.Size()<1)
-		{
-			std::cout<<"Please define the particles for No-Slip BC and run again"<<std::endl;
-			abort();
-		}
-
 	#pragma omp parallel for schedule (dynamic) num_threads(Nproc)
 	for (size_t k=0; k<Pairs.Size();k++)
 	{
@@ -1247,63 +1224,8 @@ inline void Domain::LastComputeAcceleration ()
 	{
 		for (size_t i=0; i<Pairs[k].Size();i++)
 		{
-			Vec3_t temp1 = 0.0;
-			Vec3_t temp  = 0.0;
-			double temp2 = 1000000.0;
 			if (Particles[Pairs[k][i].first]->IsFree || Particles[Pairs[k][i].second]->IsFree)
 			{
-				// No Slip BC
-				if (NoSlip)
-				{
-					if (!Particles[Pairs[k][i].first]->IsFree || !Particles[Pairs[k][i].second]->IsFree)
-					{
-						if (Particles[Pairs[k][i].first]->IsFree && int(Particles[Pairs[k][i].first]->NoSlip2(1))!=Particles[Pairs[k][i].second]->ID)
-						{
-							temp2 = 1000000.0;
-							for (size_t j=0; j<NSParticles.Size(); j++)
-							{
-								if (Particles[Pairs[k][i].second]->ID == NSParticles[j]->ID)
-								{
-									if (norm(Particles[Pairs[k][i].first]->x - NSParticles[j]->x) < temp2)
-									{
-										temp  = Particles[Pairs[k][i].first]->x - NSParticles[j]->x;
-										temp2 = norm(Particles[Pairs[k][i].first]->x - NSParticles[j]->x);
-										temp1 = NSParticles[j]->x;
-									}
-								}
-							}
-							omp_set_lock(&Particles[Pairs[k][i].first]->my_lock);
-							Particles[Pairs[k][i].first]->NoSlip2(1) = Particles[Pairs[k][i].second]->ID;
-							Particles[Pairs[k][i].first]->NoSlip2(2) =  temp2;
-							Particles[Pairs[k][i].first]->NoSlip1    =  temp / temp2;
-							Particles[Pairs[k][i].first]->NoSlip2(0) = -1.0*dot(Particles[Pairs[k][i].first]->NoSlip1 , temp1);
-							omp_unset_lock(&Particles[Pairs[k][i].first]->my_lock);
-						}
-
-						if (Particles[Pairs[k][i].second]->IsFree && int(Particles[Pairs[k][i].second]->NoSlip2(1))!=Particles[Pairs[k][i].first]->ID)
-						{
-							temp2 = 1000000.0;
-							for (size_t j=0; j<NSParticles.Size(); j++)
-							{
-								if (Particles[Pairs[k][i].first]->ID == NSParticles[j]->ID)
-								{
-									if (norm(Particles[Pairs[k][i].second]->x - NSParticles[j]->x) < temp2)
-									{
-										temp  = Particles[Pairs[k][i].second]->x - NSParticles[j]->x;
-										temp2 = norm(Particles[Pairs[k][i].second]->x - NSParticles[j]->x);
-										temp1 = NSParticles[j]->x;
-									}
-								}
-							}
-							omp_set_lock(&Particles[Pairs[k][i].second]->my_lock);
-							Particles[Pairs[k][i].second]->NoSlip2(1) = Particles[Pairs[k][i].first]->ID;
-							Particles[Pairs[k][i].second]->NoSlip2(2) = temp2;
-							Particles[Pairs[k][i].second]->NoSlip1    = temp / temp2;
-							Particles[Pairs[k][i].second]->NoSlip2(0) = -1.0*dot(Particles[Pairs[k][i].second]->NoSlip1 , temp1);
-							omp_unset_lock(&Particles[Pairs[k][i].second]->my_lock);
-						}
-					}
-				}
 				CalcForce(Particles[Pairs[k][i].first],Particles[Pairs[k][i].second]);
 			}
 		}

@@ -313,6 +313,29 @@ inline double SoundSpeed(size_t EQ, double Cs0, double Density, double Density0)
      }
 }
 
+inline double DensitySolid(size_t EQ, double Cs0, double P00, double Pressure, double Density0)
+{
+	switch (EQ)
+    {
+	case 0:
+		return (Pressure-P00)/(Cs0*Cs0) + Density0;
+		break;
+	case 1:
+		return pow( ((Pressure-P00)*(7.0/(Density0*Cs0*Cs0))+1) , 1.0/7.0 ) * Density0;
+		break;
+	case 2:
+		return Pressure/(Cs0*Cs0);
+		break;
+	default:
+		std::cout << "Please correct Pressure Equation No and run again" << std::endl;
+		std::cout << "0 => P0+(Cs*Cs)*(Density-Density0)" << std::endl;
+		std::cout << "1 => P0+(Density0*Cs*Cs/7)*(pow(Density/Density0,7)-1)" << std::endl;
+		std::cout << "2 => (Cs*Cs)*Density" << std::endl;
+		abort();
+		break;
+    }
+}
+
 }; // namespace SPH
 
 #endif // MECHSYS_SPH_SPECIAL_H

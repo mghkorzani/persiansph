@@ -36,10 +36,10 @@ int main(int argc, char **argv) try
     	dom.PresEq		= 0;
     	dom.VisEq		= 3;
     	dom.KernelType	= 4;
-//    	dom.NoSlip		= true;
+    	dom.NoSlip		= true;
 //    	dom.Shepard		= false;
 
-        double xb,yb,h,rho;
+        double yb,h,rho;
     	double dx;
 
     	rho = 998.21;
@@ -65,15 +65,6 @@ int main(int argc, char **argv) try
     			dom.Particles[a]->IsFree=false;
     		}
     	}
-
-
-    	for (size_t i=0; i<100; i++)
-    	{
-    		xb = -2.0*dx+(0.0005+2.0*dx)/300.0*i;
-    		dom.AddNSSingleParticle(4,Vec3_t ( xb ,  -0.0005   , 0.0 ),true);
-    		dom.AddNSSingleParticle(4,Vec3_t ( xb ,   0.0005   , 0.0 ),true);
-    	}
-
 
 //    	dom.WriteXDMF("maz");
     	dom.Solve(/*tf*/100.0,/*dt*/maz,/*dtOut*/0.05,"test06",1000);

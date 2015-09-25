@@ -66,8 +66,6 @@ public:
 
     int    	LL;				///< Linked-List variable to show the next particle in the list of a cell
     int    	CC[3];			///< Current cell No for the particle (linked-list)
-    Vec3_t 	NoSlip1;		///< Current cell No for the particle (linked-list)
-    Vec3_t 	NoSlip2;		///< Current cell No for the particle (linked-list)
 
     int		ct;				///< Correction step for the Verlet Algorithm and Shepard filter
     bool	DensityUpdate;	///< Density update for boundary particles
@@ -99,8 +97,6 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
     Pressure=0.0;
     ID = Tag;
     CC[0]= CC[1] = CC[2] = 0;
-    NoSlip1=0.0;
-    NoSlip2=0.0,0.0,1000000.0;
     LL=0;
     omp_init_lock(&my_lock);
     VXSPH = 0.0;
