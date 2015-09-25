@@ -87,9 +87,11 @@ public:
     void DelParticles				(int const & Tags);																					///< Delete particles by tag
     void CheckParticleLeave			();																									///< Check if any particles leave the domain, they will be deleted
 
+    void YZPlaneCellsNeighbourSearch(int q1);																							///< Create pairs of particles in cells of XZ plan
+    void MainNeighbourSearch		();																									///< Create pairs of particles in the whole domain
     void StartAcceleration			(Vec3_t const & a = Vec3_t(0.0,0.0,0.0));															///< Add a fixed acceleration such as the Gravity
-    void ComputeAcceleration		();																									///< Compute the acceleration due to the other particles
-    void YZCellsComputeAcceleration	(int q1);																							///< Create pairs of particles in XZ plan of cells and calculate the force
+    void PrimaryComputeAcceleration	();																									///< Compute the solid boundary properties
+    void LastComputeAcceleration	();																									///< Compute the acceleration due to the other particles
     void CalcForce					(Particle * P1, Particle * P2);																		///< Calculates the contact force between particles
     void Move						(double dt);																						///< Move particles
 
@@ -166,6 +168,7 @@ public:
     PtDom					GeneralBefore;		///< Pointer to a function: to modify particles properties before CalcForce function
     PtDom					GeneralAfter;		///< Pointer to a function: to modify particles properties after CalcForce function
 
+    Array<Array<std::pair<size_t,size_t> > > Pairs;
 };
 /////////////////////////////////////////////////////////////////////////////////////////// Implementation /////
 void General(Domain & dom)
@@ -274,6 +277,9 @@ inline void Domain::CalcForce(Particle * P1, Particle * P2)
     double Mui = P1->Mu;
     double Muj = P2->Mu;
 
+    if (!P1->IsFree) di = (P1->Pressure-P0)/(Cs*Cs)+P2->RefDensity;
+    if (!P2->IsFree) dj = (P2->Pressure-P0)/(Cs*Cs)+P1->RefDensity;
+
     Vec3_t vij = P1->v - P2->v;
     Vec3_t xij = P1->x - P2->x;
 
@@ -310,7 +316,8 @@ inline void Domain::CalcForce(Particle * P1, Particle * P2)
 
     	//Real Viscosity
     Vec3_t VI = 0.0;
-    if (!NoSlip || (P1->IsFree*P2->IsFree))
+//    if (!NoSlip || (P1->IsFree*P2->IsFree))
+        if ((P1->IsFree*P2->IsFree))
     {
     	if (!P1->IsFree) Mui = Muj;
 		if (!P2->IsFree) Muj = Mui;
@@ -342,9 +349,11 @@ inline void Domain::CalcForce(Particle * P1, Particle * P2)
     	//Corrected velocity for fixed particle as per Morris et al 1997
     	Vec3_t vab;
     	if (P1->IsFree)
-   			vab = vij * std::min( 1.5 , 1.0 + fabs(dot( P2->x , P1->NoSlip1 ) + P1->NoSlip2(0) ) / P1->NoSlip2(2) );
+    		vab = P1->v - (2.0*P2->v-P2->vb);
+//   		vab = vij * std::min( 1.5 , 1.0 + fabs(dot( P2->x , P1->NoSlip1 ) + P1->NoSlip2(0) ) / P1->NoSlip2(2) );
    		else
-    		vab = vij * std::min( 1.5 , 1.0 + fabs(dot( P1->x , P2->NoSlip1 ) + P2->NoSlip2(0) ) / P2->NoSlip2(2) );
+   			vab = (2.0*P1->v-P1->vb) - P2->v;
+//    		vab = vij * std::min( 1.5 , 1.0 + fabs(dot( P1->x , P2->NoSlip1 ) + P2->NoSlip2(0) ) / P2->NoSlip2(2) );
 
     	StrainRate = 2.0*vab(0)*xij(0)           , vab(0)*xij(1)+vab(1)*xij(0) , vab(0)*xij(2)+vab(2)*xij(0) ,
 				     vab(0)*xij(1)+vab(1)*xij(0) , 2.0*vab(1)*xij(1)           , vab(1)*xij(2)+vab(2)*xij(1) ,
@@ -1044,7 +1053,23 @@ inline void Domain::CellReset ()
     }
 }
 
-inline void Domain::YZCellsComputeAcceleration(int q1)
+inline void Domain::MainNeighbourSearch()
+{
+    int q1;
+
+    if (BC.Periodic[0])
+    {
+		#pragma omp parallel for schedule (dynamic) num_threads(Nproc)
+		for (q1=1;q1<(CellNo[0]-1); q1++)	YZPlaneCellsNeighbourSearch(q1);
+	}
+    else
+    {
+		#pragma omp parallel for schedule (dynamic) num_threads(Nproc)
+    	for (q1=0;q1<CellNo[0]; q1++)	YZPlaneCellsNeighbourSearch(q1);
+    }
+}
+
+inline void Domain::YZPlaneCellsNeighbourSearch(int q1)
 {
 	int q3,q2;
 	Array<std::pair<size_t,size_t> > LocalPairs;
@@ -1118,70 +1143,10 @@ inline void Domain::YZCellsComputeAcceleration(int q1)
 		}
 	}
 
-	Vec3_t temp1 = 0.0;
-	Vec3_t temp  = 0.0;
-	double temp2 = 1000000.0;
+	omp_set_lock(&dom_lock);
+	Pairs.Push(LocalPairs);
+	omp_unset_lock(&dom_lock);
 
-	for (size_t i=0; i<LocalPairs.Size();i++)
-	{
-		if (Particles[LocalPairs[i].first]->IsFree || Particles[LocalPairs[i].second]->IsFree)
-		{
-			// No Slip BC
-			if (NoSlip)
-			{
-				if (!Particles[LocalPairs[i].first]->IsFree || !Particles[LocalPairs[i].second]->IsFree)
-				{
-					if (Particles[LocalPairs[i].first]->IsFree && int(Particles[LocalPairs[i].first]->NoSlip2(1))!=Particles[LocalPairs[i].second]->ID)
-					{
-						temp2 = 1000000.0;
-						for (size_t j=0; j<NSParticles.Size(); j++)
-						{
-							if (Particles[LocalPairs[i].second]->ID == NSParticles[j]->ID)
-							{
-								if (norm(Particles[LocalPairs[i].first]->x - NSParticles[j]->x) < temp2)
-								{
-									temp  = Particles[LocalPairs[i].first]->x - NSParticles[j]->x;
-									temp2 = norm(Particles[LocalPairs[i].first]->x - NSParticles[j]->x);
-									temp1 = NSParticles[j]->x;
-								}
-							}
-						}
-						omp_set_lock(&Particles[LocalPairs[i].first]->my_lock);
-						Particles[LocalPairs[i].first]->NoSlip2(1) = Particles[LocalPairs[i].second]->ID;
-						Particles[LocalPairs[i].first]->NoSlip2(2) =  temp2;
-						Particles[LocalPairs[i].first]->NoSlip1    =  temp / temp2;
-						Particles[LocalPairs[i].first]->NoSlip2(0) = -1.0*dot(Particles[LocalPairs[i].first]->NoSlip1 , temp1);
-						omp_unset_lock(&Particles[LocalPairs[i].first]->my_lock);
-					}
-
-					if (Particles[LocalPairs[i].second]->IsFree && int(Particles[LocalPairs[i].second]->NoSlip2(1))!=Particles[LocalPairs[i].first]->ID)
-					{
-						temp2 = 1000000.0;
-						for (size_t j=0; j<NSParticles.Size(); j++)
-						{
-							if (Particles[LocalPairs[i].first]->ID == NSParticles[j]->ID)
-							{
-								if (norm(Particles[LocalPairs[i].second]->x - NSParticles[j]->x) < temp2)
-								{
-									temp  = Particles[LocalPairs[i].second]->x - NSParticles[j]->x;
-									temp2 = norm(Particles[LocalPairs[i].second]->x - NSParticles[j]->x);
-									temp1 = NSParticles[j]->x;
-								}
-							}
-						}
-						omp_set_lock(&Particles[LocalPairs[i].second]->my_lock);
-						Particles[LocalPairs[i].second]->NoSlip2(1) = Particles[LocalPairs[i].first]->ID;
-						Particles[LocalPairs[i].second]->NoSlip2(2) = temp2;
-						Particles[LocalPairs[i].second]->NoSlip1    = temp / temp2;
-						Particles[LocalPairs[i].second]->NoSlip2(0) = -1.0*dot(Particles[LocalPairs[i].second]->NoSlip1 , temp1);
-						omp_unset_lock(&Particles[LocalPairs[i].second]->my_lock);
-					}
-				}
-			}
-			CalcForce(Particles[LocalPairs[i].first],Particles[LocalPairs[i].second]);
-		}
-	}
-	LocalPairs.Clear();
 }
 
 inline void Domain::StartAcceleration (Vec3_t const & a)
@@ -1189,10 +1154,17 @@ inline void Domain::StartAcceleration (Vec3_t const & a)
 	#pragma omp parallel for schedule (static) num_threads(Nproc)
 	for (size_t i=0; i<Particles.Size(); i++)
     {
-        Particles[i]->Pressure = Pressure(PresEq, Cs, P0,Particles[i]->Density, Particles[i]->RefDensity);
+		// Reset the pressure and the induced velocity for solid boundaries
+		if (!Particles[i]->IsFree)
+    	{
+    		Particles[i]->vb = 0.0;
+    		Particles[i]->Pressure = 0.0;
+    	}
 
+    	// The Shear-Rate, the pressure and the Bingham viscosity calculation for free particles
     	if (Particles[i]->IsFree)
     	{
+            Particles[i]->Pressure = Pressure(PresEq, Cs, P0,Particles[i]->Density, Particles[i]->RefDensity);
     		Particles[i]->ShearRate = sqrt((Particles[i]->StrainRate(0,0)*Particles[i]->StrainRate(0,0) + 2.0*Particles[i]->StrainRate(0,1)*Particles[i]->StrainRate(1,0) + 2.0*Particles[i]->StrainRate(0,2)*Particles[i]->StrainRate(2,0) +
     				Particles[i]->StrainRate(1,1)*Particles[i]->StrainRate(1,1) + 2.0*Particles[i]->StrainRate(1,2)*Particles[i]->StrainRate(2,1) + Particles[i]->StrainRate(2,2)*Particles[i]->StrainRate(2,2)));
     		if (Particles[i]->T0>0.0)
@@ -1205,7 +1177,8 @@ inline void Domain::StartAcceleration (Vec3_t const & a)
 			}
     	}
 
-		Particles[i]->a			= a;
+    	//Reset to zero for all particles
+    	Particles[i]->a			= a;
         Particles[i]->dDensity	= 0.0;
         Particles[i]->VXSPH		= 0.0;
         Particles[i]->ZWab		= 0.0;
@@ -1214,15 +1187,11 @@ inline void Domain::StartAcceleration (Vec3_t const & a)
         Particles[i]->Vis		= 0.0;
         Particles[i]->NoSlip1	= 0.0;
         Particles[i]->NoSlip2	= 0.0,1000000.0,1000000.0;
-
-//        if (isnan(Particles[i]->dDensity) || isnan(Particles[i]->Density) || isnan(norm(Particles[i]->v)) || isnan(norm(Particles[i]->x)) || isnan(norm(Particles[i]->a)))
-//        {
-//            std::cout<<"NaN Particle No = "<<i<<std::endl;
-//        }
+        Particles[i]->SumKernel	= 0.0;
     }
 }
 
-inline void Domain::ComputeAcceleration ()
+inline void Domain::PrimaryComputeAcceleration ()
 {
 	if (NoSlip)
 		if (NSParticles.Size()<1)
@@ -1231,19 +1200,115 @@ inline void Domain::ComputeAcceleration ()
 			abort();
 		}
 
-	//Compute everything
-    int q1;
+	#pragma omp parallel for schedule (dynamic) num_threads(Nproc)
+	for (size_t k=0; k<Pairs.Size();k++)
+	{
+		for (size_t i=0; i<Pairs[k].Size();i++)
+		{
+			if (Particles[Pairs[k][i].first]->IsFree || Particles[Pairs[k][i].second]->IsFree)
+			{
+				if (!Particles[Pairs[k][i].first]->IsFree)
+				{
+					double K = Kernel(Dimension, KernelType, norm(Particles[Pairs[k][i].first]->x-Particles[Pairs[k][i].second]->x), Particles[Pairs[k][i].first]->h);
+				    omp_set_lock(&Particles[Pairs[k][i].first]->my_lock);
+				    Particles[Pairs[k][i].first]->SumKernel	+= K;
+				    Particles[Pairs[k][i].first]->Pressure	+= Particles[Pairs[k][i].second]->Pressure * K;
+				    Particles[Pairs[k][i].first]->vb		+= Particles[Pairs[k][i].second]->v * K;
+				    omp_unset_lock(&Particles[Pairs[k][i].first]->my_lock);
+				}
+				if (!Particles[Pairs[k][i].second]->IsFree)
+				{
+					double K = Kernel(Dimension, KernelType, norm(Particles[Pairs[k][i].first]->x-Particles[Pairs[k][i].second]->x), Particles[Pairs[k][i].first]->h);
+				    omp_set_lock(&Particles[Pairs[k][i].second]->my_lock);
+				    Particles[Pairs[k][i].second]->SumKernel+= K;
+				    Particles[Pairs[k][i].second]->Pressure	+= Particles[Pairs[k][i].first]->Pressure * K;
+				    Particles[Pairs[k][i].second]->vb		+= Particles[Pairs[k][i].first]->v * K;
+				    omp_unset_lock(&Particles[Pairs[k][i].second]->my_lock);
 
-    if (BC.Periodic[0])
-    {
-		#pragma omp parallel for schedule (dynamic) num_threads(Nproc)
-		for (q1=1;q1<(CellNo[0]-1); q1++)	YZCellsComputeAcceleration(q1);
+				}
+			}
+		}
 	}
-    else
-    {
-		#pragma omp parallel for schedule (dynamic) num_threads(Nproc)
-    	for (q1=0;q1<CellNo[0]; q1++)	YZCellsComputeAcceleration(q1);
-    }
+
+	#pragma omp parallel for schedule (static) num_threads(Nproc)
+	for (size_t i=0; i<Particles.Size(); i++)
+		if (!Particles[i]->IsFree)
+			if (Particles[i]->SumKernel!= 0.0)
+			{
+				Particles[i]->Pressure	= Particles[i]->Pressure/Particles[i]->SumKernel;
+				Particles[i]->vb		= Particles[i]->vb/Particles[i]->SumKernel;
+			}
+}
+
+inline void Domain::LastComputeAcceleration ()
+{
+    #pragma omp parallel for schedule (dynamic) num_threads(Nproc)
+	for (size_t k=0; k<Pairs.Size();k++)
+	{
+		for (size_t i=0; i<Pairs[k].Size();i++)
+		{
+			Vec3_t temp1 = 0.0;
+			Vec3_t temp  = 0.0;
+			double temp2 = 1000000.0;
+			if (Particles[Pairs[k][i].first]->IsFree || Particles[Pairs[k][i].second]->IsFree)
+			{
+				// No Slip BC
+				if (NoSlip)
+				{
+					if (!Particles[Pairs[k][i].first]->IsFree || !Particles[Pairs[k][i].second]->IsFree)
+					{
+						if (Particles[Pairs[k][i].first]->IsFree && int(Particles[Pairs[k][i].first]->NoSlip2(1))!=Particles[Pairs[k][i].second]->ID)
+						{
+							temp2 = 1000000.0;
+							for (size_t j=0; j<NSParticles.Size(); j++)
+							{
+								if (Particles[Pairs[k][i].second]->ID == NSParticles[j]->ID)
+								{
+									if (norm(Particles[Pairs[k][i].first]->x - NSParticles[j]->x) < temp2)
+									{
+										temp  = Particles[Pairs[k][i].first]->x - NSParticles[j]->x;
+										temp2 = norm(Particles[Pairs[k][i].first]->x - NSParticles[j]->x);
+										temp1 = NSParticles[j]->x;
+									}
+								}
+							}
+							omp_set_lock(&Particles[Pairs[k][i].first]->my_lock);
+							Particles[Pairs[k][i].first]->NoSlip2(1) = Particles[Pairs[k][i].second]->ID;
+							Particles[Pairs[k][i].first]->NoSlip2(2) =  temp2;
+							Particles[Pairs[k][i].first]->NoSlip1    =  temp / temp2;
+							Particles[Pairs[k][i].first]->NoSlip2(0) = -1.0*dot(Particles[Pairs[k][i].first]->NoSlip1 , temp1);
+							omp_unset_lock(&Particles[Pairs[k][i].first]->my_lock);
+						}
+
+						if (Particles[Pairs[k][i].second]->IsFree && int(Particles[Pairs[k][i].second]->NoSlip2(1))!=Particles[Pairs[k][i].first]->ID)
+						{
+							temp2 = 1000000.0;
+							for (size_t j=0; j<NSParticles.Size(); j++)
+							{
+								if (Particles[Pairs[k][i].first]->ID == NSParticles[j]->ID)
+								{
+									if (norm(Particles[Pairs[k][i].second]->x - NSParticles[j]->x) < temp2)
+									{
+										temp  = Particles[Pairs[k][i].second]->x - NSParticles[j]->x;
+										temp2 = norm(Particles[Pairs[k][i].second]->x - NSParticles[j]->x);
+										temp1 = NSParticles[j]->x;
+									}
+								}
+							}
+							omp_set_lock(&Particles[Pairs[k][i].second]->my_lock);
+							Particles[Pairs[k][i].second]->NoSlip2(1) = Particles[Pairs[k][i].first]->ID;
+							Particles[Pairs[k][i].second]->NoSlip2(2) = temp2;
+							Particles[Pairs[k][i].second]->NoSlip1    = temp / temp2;
+							Particles[Pairs[k][i].second]->NoSlip2(0) = -1.0*dot(Particles[Pairs[k][i].second]->NoSlip1 , temp1);
+							omp_unset_lock(&Particles[Pairs[k][i].second]->my_lock);
+						}
+					}
+				}
+				CalcForce(Particles[Pairs[k][i].first],Particles[Pairs[k][i].second]);
+			}
+		}
+	}
+	Pairs.Clear();
 
 	//Min time step calculation
 	#pragma omp parallel for schedule (static) num_threads(Nproc)
@@ -1571,9 +1636,13 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
 
     	InFlowBCFresh();
 
+    	MainNeighbourSearch();
+
+    	PrimaryComputeAcceleration();
+
     	GeneralBefore(*this);
 
-    	ComputeAcceleration();
+    	LastComputeAcceleration();
 
     	GeneralAfter(*this);
 

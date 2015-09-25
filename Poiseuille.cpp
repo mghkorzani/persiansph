@@ -29,15 +29,15 @@ int main(int argc, char **argv) try
         dom.Gravity		= 0.002,0.0,0.0;
         dom.Dimension	= 2;
         dom.Cs			= 0.0025;
-        dom.P0			= dom.Cs*dom.Cs*998.21*0.02;
+//        dom.P0			= dom.Cs*dom.Cs*998.21*0.02;
         dom.BC.Periodic[0]	= true;
 //        dom.MU			= 1.002e-3;
         dom.Nproc		= 8;
     	dom.PresEq		= 0;
-    	dom.VisEq		= 1;
+    	dom.VisEq		= 3;
     	dom.KernelType	= 4;
-    	dom.NoSlip		= true;
-    	dom.Shepard		= false;
+//    	dom.NoSlip		= true;
+//    	dom.Shepard		= false;
 
         double xb,yb,h,rho;
     	double dx;

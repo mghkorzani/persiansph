@@ -74,6 +74,8 @@ public:
 
     omp_lock_t my_lock;		///< Open MP lock
 
+    double SumKernel;
+
     // Constructor
     Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double Mass0, double Density0, double h0, bool Fixed=false);
 

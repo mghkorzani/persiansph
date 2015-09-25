@@ -46,7 +46,7 @@ int main(int argc, char **argv) try
 
         dom.Dimension	= 2;
         dom.Cs			= 3.0e-4;
-        dom.BC.Periodic[0]	= true;
+//        dom.BC.Periodic[0]	= true;
         dom.Nproc		= 8;
     	dom.PresEq		= 0;
     	dom.VisEq		= 3;
@@ -133,7 +133,7 @@ int main(int argc, char **argv) try
 
 
 //    	dom.WriteXDMF("maz");
-    	dom.Solve(/*tf*/50000.0,/*dt*/maz,/*dtOut*/2.0,"test06",1500);
+    	dom.Solve(/*tf*/50000.0,/*dt*/maz,/*dtOut*/2.0,"test06",1000);
         return 0;
 }
 MECHSYS_CATCH

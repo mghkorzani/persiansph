@@ -33,7 +33,7 @@ int main(int argc, char **argv) try
     	dom.PresEq		= 0;
     	dom.VisEq		= 3;
     	dom.KernelType	= 4;
-    	dom.NoSlip		= true;
+//    	dom.NoSlip		= true;
 
         double xb,yb,h,rho;
     	double dx;
