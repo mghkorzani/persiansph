@@ -64,6 +64,25 @@ public:
 	Boundary();
 };
 
+inline Boundary::Boundary()
+{
+	allv	= 0.0;
+	inv		= 0.0;
+	outv	= 0.0;
+	Periodic[0]=Periodic[1]=Periodic[2]			= false;
+	inDensity = 0.0;
+	outDensity = 0.0;
+	allDensity = 0.0;
+	InOutFlow = 0;
+	InFlowLoc1 = 0.0;
+	OutFlowLoc = 0.0;
+	cellfac = 4.0;
+	inoutcounter = 0;
+	MassConservation = false;
+}
+
+
+
 class Domain
 {
 public:
@@ -161,7 +180,6 @@ public:
     PtVel 					AllCon;
     Vec3_t					DomMax;
     Vec3_t					DomMin;
-    bool 					BCDensityUpdate;
     PtDom					GeneralBefore;		///< Pointer to a function: to modify particles properties before CalcForce function
     PtDom					GeneralAfter;		///< Pointer to a function: to modify particles properties after CalcForce function
 
@@ -190,23 +208,6 @@ void AllFlowCon(Vec3_t & position, Vec3_t & Vel, double & Den, Boundary & bdry)
 	Den = bdry.allDensity;
 }
 
-inline Boundary::Boundary()
-{
-	allv	= 0.0;
-	inv		= 0.0;
-	outv	= 0.0;
-	Periodic[0]=Periodic[1]=Periodic[2]			= false;
-	inDensity = 0.0;
-	outDensity = 0.0;
-	allDensity = 0.0;
-	InOutFlow = 0;
-	InFlowLoc1 = 0.0;
-	OutFlowLoc = 0.0;
-	cellfac = 4.0;
-	inoutcounter = 0;
-	MassConservation = false;
-}
-
 // Constructor
 inline Domain::Domain ()
 {
@@ -230,7 +231,6 @@ inline Domain::Domain ()
     VisEq	= 0;
 
     NoSlip	= false;
-    BCDensityUpdate = true;
 
     XSPH	= 0.0;
     TI		= 0.0;
@@ -1168,23 +1168,33 @@ inline void Domain::PrimaryComputeAcceleration ()
 				if (!Particles[Pairs[k][i].first]->IsFree)
 				{
 					Vec3_t xij = Particles[Pairs[k][i].first]->x-Particles[Pairs[k][i].second]->x;
+					double h = (Particles[Pairs[k][i].first]->h + Particles[Pairs[k][i].second]->h)/2.0;
+
+					if (DomSize(0)>0.0) {if (xij(0)>2*Cellfac*h || xij(0)<-2*Cellfac*h) {(Particles[Pairs[k][i].first]->CC[0]>Particles[Pairs[k][i].second]->CC[0]) ? xij(0) -= DomSize(0) : xij(0) += DomSize(0);}}
+					if (DomSize(1)>0.0) {if (xij(1)>2*Cellfac*h || xij(1)<-2*Cellfac*h) {(Particles[Pairs[k][i].first]->CC[1]>Particles[Pairs[k][i].second]->CC[1]) ? xij(1) -= DomSize(1) : xij(1) += DomSize(1);}}
+					if (DomSize(2)>0.0) {if (xij(2)>2*Cellfac*h || xij(2)<-2*Cellfac*h) {(Particles[Pairs[k][i].first]->CC[2]>Particles[Pairs[k][i].second]->CC[2]) ? xij(2) -= DomSize(2) : xij(2) += DomSize(2);}}
 
 					double K = Kernel(Dimension, KernelType, norm(xij), Particles[Pairs[k][i].first]->h);
 				    omp_set_lock(&Particles[Pairs[k][i].first]->my_lock);
 				    Particles[Pairs[k][i].first]->SumKernel	+= K;
 				    Particles[Pairs[k][i].first]->Pressure	+= Particles[Pairs[k][i].second]->Pressure * K;
-				    if (NoSlip) Particles[Pairs[k][i].first]->vb		+= Particles[Pairs[k][i].second]->v * K;
+				    if (NoSlip) Particles[Pairs[k][i].first]->vb		+= Particles[Pairs[k][i].second]->v * K + dot(Gravity,xij)*Particles[Pairs[k][i].second]->Density*K;
 				    omp_unset_lock(&Particles[Pairs[k][i].first]->my_lock);
 				}
 				if (!Particles[Pairs[k][i].second]->IsFree)
 				{
 					Vec3_t xij = Particles[Pairs[k][i].first]->x-Particles[Pairs[k][i].second]->x;
+					double h = (Particles[Pairs[k][i].first]->h + Particles[Pairs[k][i].second]->h)/2.0;
+
+					if (DomSize(0)>0.0) {if (xij(0)>2*Cellfac*h || xij(0)<-2*Cellfac*h) {(Particles[Pairs[k][i].first]->CC[0]>Particles[Pairs[k][i].second]->CC[0]) ? xij(0) -= DomSize(0) : xij(0) += DomSize(0);}}
+					if (DomSize(1)>0.0) {if (xij(1)>2*Cellfac*h || xij(1)<-2*Cellfac*h) {(Particles[Pairs[k][i].first]->CC[1]>Particles[Pairs[k][i].second]->CC[1]) ? xij(1) -= DomSize(1) : xij(1) += DomSize(1);}}
+					if (DomSize(2)>0.0) {if (xij(2)>2*Cellfac*h || xij(2)<-2*Cellfac*h) {(Particles[Pairs[k][i].first]->CC[2]>Particles[Pairs[k][i].second]->CC[2]) ? xij(2) -= DomSize(2) : xij(2) += DomSize(2);}}
 
 					double K = Kernel(Dimension, KernelType, norm(xij), Particles[Pairs[k][i].first]->h);
 				    omp_set_lock(&Particles[Pairs[k][i].second]->my_lock);
 				    Particles[Pairs[k][i].second]->SumKernel+= K;
 				    Particles[Pairs[k][i].second]->Pressure	+= Particles[Pairs[k][i].first]->Pressure * K;
-				    if (NoSlip) Particles[Pairs[k][i].second]->vb		+= Particles[Pairs[k][i].first]->v * K;
+				    if (NoSlip) Particles[Pairs[k][i].second]->vb		+= Particles[Pairs[k][i].first]->v * K + dot(Gravity,xij)*Particles[Pairs[k][i].first]->Density*K;
 				    omp_unset_lock(&Particles[Pairs[k][i].second]->my_lock);
 
 				}
@@ -1521,15 +1531,6 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
 
     size_t save_out = 1;
     double sout = AutoSaveInt;
-
-    if (BCDensityUpdate==false)
-    {
-		#pragma omp parallel for schedule (static) num_threads(Nproc)
-		for (size_t i=0 ; i<Particles.Size() ; i++)
-			if (!Particles[i]->IsFree)
-				Particles[i]->DensityUpdate = false;
-    }
-
 
     InitialChecks();
     CellInitiate();

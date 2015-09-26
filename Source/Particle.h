@@ -68,18 +68,17 @@ public:
     int    	CC[3];			///< Current cell No for the particle (linked-list)
 
     int		ct;				///< Correction step for the Verlet Algorithm and Shepard filter
-    bool	DensityUpdate;	///< Density update for boundary particles
 
     omp_lock_t my_lock;		///< Open MP lock
 
-    double SumKernel;
+    double SumKernel;		///<Summation of the kernel value for neighbour particles
 
     // Constructor
     Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double Mass0, double Density0, double h0, bool Fixed=false);
 
     // Methods
     void Move			(double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3_t domainmin, bool ShepardFilter);	///< Update the important quantities of a particle
-    void translate		(double dt);
+    void translate		(double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3_t domainmin);
 };
 
 inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double Mass0, double Density0, double h0,bool Fixed)
@@ -103,12 +102,12 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
     ZWab = 0.0;
     SumDen = 0.0;
     dDensity=0.0;
-    DensityUpdate = true;
     ShearRate = 0.0;
     StrainRate = 0.0;
     MuRef = Mu = 0.0;
     T0 = 0.0;
     m = 300.0;
+    SumKernel = 0.0;
 }
 
 inline void Particle::Move (double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3_t domainmin, bool ShepardFilter)
@@ -131,33 +130,6 @@ inline void Particle::Move (double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3
 			Density = Densityb + 2*dt*dDensity;
 			Densityb = dens;
 		}
-		else
-		{
-			if (DensityUpdate)
-			{
-				// Evolve density for boundary particles
-				double dens = Density;
-				Density = Densityb + 2*dt*dDensity;
-				Densityb = dens;
-			}
-		}
-
-		if (Domainsize(0)>0.0)
-		{
-			(x(0)>(domainmax(0))) ? x(0) -= Domainsize(0) : x(0);
-			(x(0)<(domainmin(0))) ? x(0) += Domainsize(0) : x(0);
-		}
-		if (Domainsize(1)>0.0)
-		{
-			(x(1)>(domainmax(1))) ? x(1) -= Domainsize(1) : x(1);
-			(x(1)<(domainmin(1))) ? x(1) += Domainsize(1) : x(1);
-		}
-		if (Domainsize(2)>0.0)
-		{
-			(x(2)>(domainmax(2))) ? x(2) -= Domainsize(2) : x(2);
-			(x(2)<(domainmin(2))) ? x(2) += Domainsize(2) : x(2);
-		}
-
 		ct++;
 	}
 	else
@@ -187,47 +159,28 @@ inline void Particle::Move (double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3
 				Densityb = dens;
 			}
 		}
-		else
-		{
-			if (DensityUpdate)
-			{
-				// Evolve density for boundary particles
-				if (ShepardFilter && !isnan(SumDen/ZWab))
-				{
-					// Shepard filter
-					Density = SumDen/ZWab;
-					Densityb = Density;
-				}
-				else
-				{
-					double dens = Density;
-					Density = Density + dt*dDensity;
-					Densityb = dens;
-				}
-			}
-		}
-
-		if (Domainsize(0)>0.0)
-		{
-			(x(0)>(domainmax(0))) ? x(0) -= Domainsize(0) : x(0);
-			(x(0)<(domainmin(0))) ? x(0) += Domainsize(0) : x(0);
-		}
-		if (Domainsize(1)>0.0)
-		{
-			(x(1)>(domainmax(1))) ? x(1) -= Domainsize(1) : x(1);
-			(x(1)<(domainmin(1))) ? x(1) += Domainsize(1) : x(1);
-		}
-		if (Domainsize(2)>0.0)
-		{
-			(x(2)>(domainmax(2))) ? x(2) -= Domainsize(2) : x(2);
-			(x(2)<(domainmin(2))) ? x(2) += Domainsize(2) : x(2);
-		}
-
 		ct=0;
+	}
+
+	//Periodic BC particle position update
+	if (Domainsize(0)>0.0)
+	{
+		(x(0)>(domainmax(0))) ? x(0) -= Domainsize(0) : x(0);
+		(x(0)<(domainmin(0))) ? x(0) += Domainsize(0) : x(0);
+	}
+	if (Domainsize(1)>0.0)
+	{
+		(x(1)>(domainmax(1))) ? x(1) -= Domainsize(1) : x(1);
+		(x(1)<(domainmin(1))) ? x(1) += Domainsize(1) : x(1);
+	}
+	if (Domainsize(2)>0.0)
+	{
+		(x(2)>(domainmax(2))) ? x(2) -= Domainsize(2) : x(2);
+		(x(2)<(domainmin(2))) ? x(2) += Domainsize(2) : x(2);
 	}
 }
 
-inline void Particle::translate(double dt)
+inline void Particle::translate(double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3_t domainmin)
 {
 	x = x + dt*v + 0.5*dt*dt*a;
 
@@ -236,7 +189,25 @@ inline void Particle::translate(double dt)
 	temp = v;
 	v = vb + 2*dt*a;
 	vb = temp;
+
+	//Periodic BC particle position update
+	if (Domainsize(0)>0.0)
+	{
+		(x(0)>(domainmax(0))) ? x(0) -= Domainsize(0) : x(0);
+		(x(0)<(domainmin(0))) ? x(0) += Domainsize(0) : x(0);
+	}
+	if (Domainsize(1)>0.0)
+	{
+		(x(1)>(domainmax(1))) ? x(1) -= Domainsize(1) : x(1);
+		(x(1)<(domainmin(1))) ? x(1) += Domainsize(1) : x(1);
+	}
+	if (Domainsize(2)>0.0)
+	{
+		(x(2)>(domainmax(2))) ? x(2) -= Domainsize(2) : x(2);
+		(x(2)<(domainmin(2))) ? x(2) += Domainsize(2) : x(2);
+	}
 }
+
 }; // namespace SPH
 
 #endif // MECHSYS_SPH_PARTICLE_H
