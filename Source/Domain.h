@@ -310,61 +310,41 @@ inline void Domain::CalcForce(Particle * P1, Particle * P2)
 	//Real Viscosity
     Mat3_t StrainRate;
     Vec3_t VI = 0.0;
-    if (!NoSlip || (P1->IsFree*P2->IsFree))
+    if (NoSlip || P1->IsFree*P2->IsFree)
     {
-    	if (!P1->IsFree) Mui = Muj;
-		if (!P2->IsFree) Muj = Mui;
+		Vec3_t vab;
+		if (P1->IsFree*P2->IsFree)
+		{
+			vab = vij;
+		}
+		else
+		{
+			// No-Slip velocity correction
+			if (P1->IsFree)	vab = P1->v - (2.0*P2->v-P2->vb); else vab = (2.0*P1->v-P1->vb) - P2->v;
+		}
 
-    	StrainRate = 2.0*vij(0)*xij(0)           , vij(0)*xij(1)+vij(1)*xij(0) , vij(0)*xij(2)+vij(2)*xij(0) ,
-    				 vij(0)*xij(1)+vij(1)*xij(0) , 2.0*vij(1)*xij(1)           , vij(1)*xij(2)+vij(2)*xij(1) ,
-    				 vij(0)*xij(2)+vij(2)*xij(0) , vij(1)*xij(2)+vij(2)*xij(1) , 2.0*vij(2)*xij(2)           ;
-    	StrainRate = -GK * StrainRate;
-
-    	if (VisEq==0) VI = (Mui+Muj)/(di*dj)*GK*vij;																		//Morris et al 1997
-    	if (VisEq==1) VI = 4.0*(Mui+Muj)/((di+dj)*(di+dj))*GK*vij;																//Shao et al 2003
-    	if (VisEq==2) VI = -(Mui+Muj)/2.0/(di*dj)* LaplaceKernel(Dimension, KernelType, rij, h)*vij;							//Real Viscosity (considering incompressible fluid)
-    	if (VisEq==3) VI = -(Mui+Muj)/2.0/(di*dj)*( LaplaceKernel(Dimension, KernelType, rij, h)*vij +
-    			1.0/3.0*(GK*vij + dot(vij,xij) * xij / (rij*rij) * (-GK+SecDerivativeKernel(Dimension, KernelType, rij, h) ) ) );	//Takeda et al 1994 (Real viscosity considering 1/3Mu for compressibility as per Navier Stokes but ignore volumetric viscosity)
-    	if ((VisEq<0 || VisEq>3))
-    	{
-    	   	std::cout << "Viscosity Equation No is out of range. Please correct it and run again" << std::endl;
-    		std::cout << "0 => Morris et al 1997" << std::endl;
-    		std::cout << "1 => Shao et al 2003" << std::endl;
-    		std::cout << "2 => Real viscosity for incompressible fluids" << std::endl;
-    		std::cout << "3 => Takeda et al 1994 (Real viscosity for compressible fluids)" << std::endl;
-    	    abort();
-    	}
-    }
-    else
-    {
-		if (!P1->IsFree) Mui = Muj;
-		if (!P2->IsFree) Muj = Mui;
-    	//Corrected velocity for fixed particle as per Morris et al 1997
-    	Vec3_t vab;
-    	if (P1->IsFree)
-    		vab = P1->v - (2.0*P2->v-P2->vb);
-   		else
-   			vab = (2.0*P1->v-P1->vb) - P2->v;
-
-    	StrainRate = 2.0*vab(0)*xij(0)           , vab(0)*xij(1)+vab(1)*xij(0) , vab(0)*xij(2)+vab(2)*xij(0) ,
-				     vab(0)*xij(1)+vab(1)*xij(0) , 2.0*vab(1)*xij(1)           , vab(1)*xij(2)+vab(2)*xij(1) ,
-				     vab(0)*xij(2)+vab(2)*xij(0) , vab(1)*xij(2)+vab(2)*xij(1) , 2.0*vab(2)*xij(2)           ;
+		StrainRate = 2.0*vab(0)*xij(0)           , vab(0)*xij(1)+vab(1)*xij(0) , vab(0)*xij(2)+vab(2)*xij(0) ,
+					 vab(0)*xij(1)+vab(1)*xij(0) , 2.0*vab(1)*xij(1)           , vab(1)*xij(2)+vab(2)*xij(1) ,
+					 vab(0)*xij(2)+vab(2)*xij(0) , vab(1)*xij(2)+vab(2)*xij(1) , 2.0*vab(2)*xij(2)           ;
 		StrainRate = -GK * StrainRate;
 
-    	if (VisEq==0) VI = (Mui+Muj)/(di*dj)*GK*vab;																		//Morris et al 1997
-    	if (VisEq==1) VI = 4.0*(Mui+Muj)/((di+dj)*(di+dj))*GK*vab;																//Shao et al 2003
-    	if (VisEq==2) VI = -(Mui+Muj)/2.0/(di*dj)*LaplaceKernel(Dimension, KernelType, rij, h)*vab;								//Real Viscosity (considering incompressible fluid)
-    	if (VisEq==3) VI = -(Mui+Muj)/2.0/(di*dj)*( LaplaceKernel(Dimension, KernelType, rij, h)*vab +
-    			1.0/3.0*(GK*vij + dot(vij,xij) * xij / (rij*rij) * (-GK+SecDerivativeKernel(Dimension, KernelType, rij, h) ) ) );	//Takeda et al 1994 (Real viscosity considering 1/3Mu for compressibility as per Navier Stokes but ignore volumetric viscosity)
-    	if ((VisEq<0 || VisEq>3))
-    	{
-    	   	std::cout << "Viscosity Equation No is out of range. Please correct it and run again" << std::endl;
-    		std::cout << "0 => Morris et al 1997" << std::endl;
-    		std::cout << "1 => Shao et al 2003" << std::endl;
-    		std::cout << "2 => Real viscosity for incompressible fluids" << std::endl;
-    		std::cout << "3 => Takeda et al 1994 (Real viscosity for compressible fluids)" << std::endl;
-    	    abort();
-    	}
+		if (!P1->IsFree) Mui = Muj;
+		if (!P2->IsFree) Muj = Mui;
+
+		if (VisEq==0) VI = (Mui+Muj)/(di*dj)*GK*vab;																		//Morris et al 1997
+		if (VisEq==1) VI = 4.0*(Mui+Muj)/((di+dj)*(di+dj))*GK*vab;																//Shao et al 2003
+		if (VisEq==2) VI = -(Mui+Muj)/2.0/(di*dj)*LaplaceKernel(Dimension, KernelType, rij, h)*vab;								//Real Viscosity (considering incompressible fluid)
+		if (VisEq==3) VI = -(Mui+Muj)/2.0/(di*dj)*( LaplaceKernel(Dimension, KernelType, rij, h)*vab +
+				1.0/3.0*(GK*vij + dot(vij,xij) * xij / (rij*rij) * (-GK+SecDerivativeKernel(Dimension, KernelType, rij, h) ) ) );	//Takeda et al 1994 (Real viscosity considering 1/3Mu for compressibility as per Navier Stokes but ignore volumetric viscosity)
+		if ((VisEq<0 || VisEq>3))
+		{
+			std::cout << "Viscosity Equation No is out of range. Please correct it and run again" << std::endl;
+			std::cout << "0 => Morris et al 1997" << std::endl;
+			std::cout << "1 => Shao et al 2003" << std::endl;
+			std::cout << "2 => Real viscosity for incompressible fluids" << std::endl;
+			std::cout << "3 => Takeda et al 1994 (Real viscosity for compressible fluids)" << std::endl;
+			abort();
+		}
     }
 
     // XSPH Monaghan
@@ -1129,6 +1109,7 @@ inline void Domain::YZPlaneCellsNeighbourSearch(int q1)
 		}
 	}
 
+	//Transferring LocalPairs array in each thread to Pairs (a global array)
 	omp_set_lock(&dom_lock);
 	Pairs.Push(LocalPairs);
 	omp_unset_lock(&dom_lock);
@@ -1140,16 +1121,9 @@ inline void Domain::StartAcceleration (Vec3_t const & a)
 	#pragma omp parallel for schedule (static) num_threads(Nproc)
 	for (size_t i=0; i<Particles.Size(); i++)
     {
-		// Reset the pressure and the induced velocity for solid boundaries
-		if (!Particles[i]->IsFree)
-    	{
-    		Particles[i]->vb = 0.0;
-    		Particles[i]->Pressure = 0.0;
-    	}
-
-    	// The Shear-Rate, the pressure and the Bingham viscosity calculation for free particles
     	if (Particles[i]->IsFree)
     	{
+        	// The Shear-Rate, the pressure and the Bingham viscosity calculation for free particles
             Particles[i]->Pressure = Pressure(PresEq, Cs, P0,Particles[i]->Density, Particles[i]->RefDensity);
     		Particles[i]->ShearRate = sqrt((Particles[i]->StrainRate(0,0)*Particles[i]->StrainRate(0,0) + 2.0*Particles[i]->StrainRate(0,1)*Particles[i]->StrainRate(1,0) + 2.0*Particles[i]->StrainRate(0,2)*Particles[i]->StrainRate(2,0) +
     				Particles[i]->StrainRate(1,1)*Particles[i]->StrainRate(1,1) + 2.0*Particles[i]->StrainRate(1,2)*Particles[i]->StrainRate(2,1) + Particles[i]->StrainRate(2,2)*Particles[i]->StrainRate(2,2)));
@@ -1162,6 +1136,13 @@ inline void Domain::StartAcceleration (Vec3_t const & a)
 
 			}
     	}
+    	else
+    	{
+       		// Reset the pressure and the induced velocity for solid boundaries
+    		Particles[i]->vb = 0.0;
+    		Particles[i]->Pressure = 0.0;
+    	}
+
 
     	//Reset to zero for all particles
     	Particles[i]->a			= a;
@@ -1186,20 +1167,24 @@ inline void Domain::PrimaryComputeAcceleration ()
 			{
 				if (!Particles[Pairs[k][i].first]->IsFree)
 				{
-					double K = Kernel(Dimension, KernelType, norm(Particles[Pairs[k][i].first]->x-Particles[Pairs[k][i].second]->x), Particles[Pairs[k][i].first]->h);
+					Vec3_t xij = Particles[Pairs[k][i].first]->x-Particles[Pairs[k][i].second]->x;
+
+					double K = Kernel(Dimension, KernelType, norm(xij), Particles[Pairs[k][i].first]->h);
 				    omp_set_lock(&Particles[Pairs[k][i].first]->my_lock);
 				    Particles[Pairs[k][i].first]->SumKernel	+= K;
 				    Particles[Pairs[k][i].first]->Pressure	+= Particles[Pairs[k][i].second]->Pressure * K;
-				    Particles[Pairs[k][i].first]->vb		+= Particles[Pairs[k][i].second]->v * K;
+				    if (NoSlip) Particles[Pairs[k][i].first]->vb		+= Particles[Pairs[k][i].second]->v * K;
 				    omp_unset_lock(&Particles[Pairs[k][i].first]->my_lock);
 				}
 				if (!Particles[Pairs[k][i].second]->IsFree)
 				{
-					double K = Kernel(Dimension, KernelType, norm(Particles[Pairs[k][i].first]->x-Particles[Pairs[k][i].second]->x), Particles[Pairs[k][i].first]->h);
+					Vec3_t xij = Particles[Pairs[k][i].first]->x-Particles[Pairs[k][i].second]->x;
+
+					double K = Kernel(Dimension, KernelType, norm(xij), Particles[Pairs[k][i].first]->h);
 				    omp_set_lock(&Particles[Pairs[k][i].second]->my_lock);
 				    Particles[Pairs[k][i].second]->SumKernel+= K;
 				    Particles[Pairs[k][i].second]->Pressure	+= Particles[Pairs[k][i].first]->Pressure * K;
-				    Particles[Pairs[k][i].second]->vb		+= Particles[Pairs[k][i].first]->v * K;
+				    if (NoSlip) Particles[Pairs[k][i].second]->vb		+= Particles[Pairs[k][i].first]->v * K;
 				    omp_unset_lock(&Particles[Pairs[k][i].second]->my_lock);
 
 				}
@@ -1213,7 +1198,7 @@ inline void Domain::PrimaryComputeAcceleration ()
 			if (Particles[i]->SumKernel!= 0.0)
 			{
 				Particles[i]->Pressure	= Particles[i]->Pressure/Particles[i]->SumKernel;
-				Particles[i]->vb		= Particles[i]->vb/Particles[i]->SumKernel;
+				if (NoSlip) Particles[i]->vb		= Particles[i]->vb/Particles[i]->SumKernel;
 			}
 }
 
@@ -1232,7 +1217,7 @@ inline void Domain::LastComputeAcceleration ()
 	}
 	Pairs.Clear();
 
-	//Min time step calculation
+	//Min time step check based on the acceleration
 	#pragma omp parallel for schedule (static) num_threads(Nproc)
 	for (size_t i=0; i<Particles.Size(); i++)
 		if (deltat > (0.25*sqrt(Particles[i]->h/norm(Particles[i]->a))) )
