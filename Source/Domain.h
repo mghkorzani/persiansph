@@ -1176,7 +1176,8 @@ inline void Domain::PrimaryComputeAcceleration ()
 					double K = Kernel(Dimension, KernelType, norm(xij), h);
 				    omp_set_lock(&Particles[Pairs[k][i].first]->my_lock);
 				    Particles[Pairs[k][i].first]->SumKernel	+= K;
-				    Particles[Pairs[k][i].first]->Pressure	+= Particles[Pairs[k][i].second]->Pressure * K + dot(Gravity,xij)*Particles[Pairs[k][i].first]->Density*K;
+				    Particles[Pairs[k][i].first]->Pressure	+= Particles[Pairs[k][i].second]->Pressure * K;
+//				    + dot(Gravity,xij)*Particles[Pairs[k][i].first]->Density*K;
 				    if (NoSlip) Particles[Pairs[k][i].first]->vb += Particles[Pairs[k][i].second]->v * K;
 				    omp_unset_lock(&Particles[Pairs[k][i].first]->my_lock);
 				}
@@ -1193,7 +1194,8 @@ inline void Domain::PrimaryComputeAcceleration ()
 					double K = Kernel(Dimension, KernelType, norm(xij), h);
 				    omp_set_lock(&Particles[Pairs[k][i].second]->my_lock);
 				    Particles[Pairs[k][i].second]->SumKernel+= K;
-				    Particles[Pairs[k][i].second]->Pressure	+= Particles[Pairs[k][i].first]->Pressure * K + dot(Gravity,xij)*Particles[Pairs[k][i].first]->Density*K;
+				    Particles[Pairs[k][i].second]->Pressure	+= Particles[Pairs[k][i].first]->Pressure * K;
+//				    + dot(Gravity,xij)*Particles[Pairs[k][i].first]->Density*K;
 				    if (NoSlip) Particles[Pairs[k][i].second]->vb += Particles[Pairs[k][i].first]->v * K;
 				    omp_unset_lock(&Particles[Pairs[k][i].second]->my_lock);
 
@@ -1556,6 +1558,8 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
 
     	InFlowBCReset();
 
+    	Move(dt);
+
         // output
         if (Time>=tout)
         {
@@ -1569,8 +1573,6 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
             idx_out++;
             tout += dtOut;
         }
-
-    	Move(dt);
 
         // Auto Save
        if (AutoSaveInt>0)
