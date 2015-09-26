@@ -1167,9 +1167,15 @@ inline void Domain::PrimaryComputeAcceleration ()
 			{
 				if (!Particles[Pairs[k][i].first]->IsFree)
 				{
-					Vec3_t xij = Particles[Pairs[k][i].first]->x-Particles[Pairs[k][i].second]->x;
+					Vec3_t xij	= Particles[Pairs[k][i].first]->x-Particles[Pairs[k][i].second]->x;
+					double h	= (Particles[Pairs[k][i].first]->h+Particles[Pairs[k][i].second]->h)/2.0;
 
-					double K = Kernel(Dimension, KernelType, norm(xij), Particles[Pairs[k][i].first]->h);
+					// Correction of xij for Periodic BC
+				    if (DomSize(0)>0.0) {if (xij(0)>2*Cellfac*h || xij(0)<-2*Cellfac*h) {(Particles[Pairs[k][i].first]->CC[0]>Particles[Pairs[k][i].second]->CC[0]) ? xij(0) -= DomSize(0) : xij(0) += DomSize(0);}}
+					if (DomSize(1)>0.0) {if (xij(1)>2*Cellfac*h || xij(1)<-2*Cellfac*h) {(Particles[Pairs[k][i].first]->CC[1]>Particles[Pairs[k][i].second]->CC[1]) ? xij(1) -= DomSize(1) : xij(1) += DomSize(1);}}
+					if (DomSize(2)>0.0) {if (xij(2)>2*Cellfac*h || xij(2)<-2*Cellfac*h) {(Particles[Pairs[k][i].first]->CC[2]>Particles[Pairs[k][i].second]->CC[2]) ? xij(2) -= DomSize(2) : xij(2) += DomSize(2);}}
+
+					double K = Kernel(Dimension, KernelType, norm(xij), h);
 				    omp_set_lock(&Particles[Pairs[k][i].first]->my_lock);
 				    Particles[Pairs[k][i].first]->SumKernel	+= K;
 				    Particles[Pairs[k][i].first]->Pressure	+= Particles[Pairs[k][i].second]->Pressure * K;
@@ -1179,8 +1185,14 @@ inline void Domain::PrimaryComputeAcceleration ()
 				if (!Particles[Pairs[k][i].second]->IsFree)
 				{
 					Vec3_t xij = Particles[Pairs[k][i].first]->x-Particles[Pairs[k][i].second]->x;
+					double h	= (Particles[Pairs[k][i].first]->h+Particles[Pairs[k][i].second]->h)/2.0;
 
-					double K = Kernel(Dimension, KernelType, norm(xij), Particles[Pairs[k][i].first]->h);
+					// Correction of xij for Periodic BC
+				    if (DomSize(0)>0.0) {if (xij(0)>2*Cellfac*h || xij(0)<-2*Cellfac*h) {(Particles[Pairs[k][i].first]->CC[0]>Particles[Pairs[k][i].second]->CC[0]) ? xij(0) -= DomSize(0) : xij(0) += DomSize(0);}}
+					if (DomSize(1)>0.0) {if (xij(1)>2*Cellfac*h || xij(1)<-2*Cellfac*h) {(Particles[Pairs[k][i].first]->CC[1]>Particles[Pairs[k][i].second]->CC[1]) ? xij(1) -= DomSize(1) : xij(1) += DomSize(1);}}
+					if (DomSize(2)>0.0) {if (xij(2)>2*Cellfac*h || xij(2)<-2*Cellfac*h) {(Particles[Pairs[k][i].first]->CC[2]>Particles[Pairs[k][i].second]->CC[2]) ? xij(2) -= DomSize(2) : xij(2) += DomSize(2);}}
+
+					double K = Kernel(Dimension, KernelType, norm(xij), h);
 				    omp_set_lock(&Particles[Pairs[k][i].second]->my_lock);
 				    Particles[Pairs[k][i].second]->SumKernel+= K;
 				    Particles[Pairs[k][i].second]->Pressure	+= Particles[Pairs[k][i].first]->Pressure * K;
