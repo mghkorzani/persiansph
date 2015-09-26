@@ -161,7 +161,6 @@ public:
     PtVel 					AllCon;
     Vec3_t					DomMax;
     Vec3_t					DomMin;
-    bool 					BCDensityUpdate;
     PtDom					GeneralBefore;		///< Pointer to a function: to modify particles properties before CalcForce function
     PtDom					GeneralAfter;		///< Pointer to a function: to modify particles properties after CalcForce function
 
@@ -230,7 +229,6 @@ inline Domain::Domain ()
     VisEq	= 0;
 
     NoSlip	= false;
-    BCDensityUpdate = true;
 
     XSPH	= 0.0;
     TI		= 0.0;
@@ -1167,24 +1165,26 @@ inline void Domain::PrimaryComputeAcceleration ()
 			{
 				if (!Particles[Pairs[k][i].first]->IsFree)
 				{
-					Vec3_t xij = Particles[Pairs[k][i].first]->x-Particles[Pairs[k][i].second]->x;
+					Vec3_t xij	= Particles[Pairs[k][i].first]->x - Particles[Pairs[k][i].second]->x;
+					double h	= (Particles[Pairs[k][i].first]->h + Particles[Pairs[k][i].second]->h)/2.0;
 
-					double K = Kernel(Dimension, KernelType, norm(xij), Particles[Pairs[k][i].first]->h);
+					double K = Kernel(Dimension, KernelType, norm(xij), h);
 				    omp_set_lock(&Particles[Pairs[k][i].first]->my_lock);
 				    Particles[Pairs[k][i].first]->SumKernel	+= K;
-				    Particles[Pairs[k][i].first]->Pressure	+= Particles[Pairs[k][i].second]->Pressure * K;
-				    if (NoSlip) Particles[Pairs[k][i].first]->vb		+= Particles[Pairs[k][i].second]->v * K;
+				    Particles[Pairs[k][i].first]->Pressure	+= Particles[Pairs[k][i].second]->Pressure * K + dot(Gravity,xij)*Particles[Pairs[k][i].first]->Density*K;
+				    if (NoSlip) Particles[Pairs[k][i].first]->vb += Particles[Pairs[k][i].second]->v * K;
 				    omp_unset_lock(&Particles[Pairs[k][i].first]->my_lock);
 				}
 				if (!Particles[Pairs[k][i].second]->IsFree)
 				{
-					Vec3_t xij = Particles[Pairs[k][i].first]->x-Particles[Pairs[k][i].second]->x;
+					Vec3_t xij	= Particles[Pairs[k][i].first]->x - Particles[Pairs[k][i].second]->x;
+					double h	= (Particles[Pairs[k][i].first]->h + Particles[Pairs[k][i].second]->h)/2.0;
 
-					double K = Kernel(Dimension, KernelType, norm(xij), Particles[Pairs[k][i].first]->h);
+					double K = Kernel(Dimension, KernelType, norm(xij), h);
 				    omp_set_lock(&Particles[Pairs[k][i].second]->my_lock);
 				    Particles[Pairs[k][i].second]->SumKernel+= K;
-				    Particles[Pairs[k][i].second]->Pressure	+= Particles[Pairs[k][i].first]->Pressure * K;
-				    if (NoSlip) Particles[Pairs[k][i].second]->vb		+= Particles[Pairs[k][i].first]->v * K;
+				    Particles[Pairs[k][i].second]->Pressure	+= Particles[Pairs[k][i].first]->Pressure * K + dot(Gravity,xij)*Particles[Pairs[k][i].first]->Density*K;
+				    if (NoSlip) Particles[Pairs[k][i].second]->vb += Particles[Pairs[k][i].first]->v * K;
 				    omp_unset_lock(&Particles[Pairs[k][i].second]->my_lock);
 
 				}
@@ -1522,15 +1522,6 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
     size_t save_out = 1;
     double sout = AutoSaveInt;
 
-    if (BCDensityUpdate==false)
-    {
-		#pragma omp parallel for schedule (static) num_threads(Nproc)
-		for (size_t i=0 ; i<Particles.Size() ; i++)
-			if (!Particles[i]->IsFree)
-				Particles[i]->DensityUpdate = false;
-    }
-
-
     InitialChecks();
     CellInitiate();
     ListGenerate();
@@ -1555,8 +1546,6 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
 
     	InFlowBCReset();
 
-    	Move(dt);
-
         // output
         if (Time>=tout)
         {
@@ -1570,6 +1559,8 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
             idx_out++;
             tout += dtOut;
         }
+
+    	Move(dt);
 
         // Auto Save
        if (AutoSaveInt>0)
