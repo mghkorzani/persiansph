@@ -31,13 +31,11 @@ int main(int argc, char **argv) try
         dom.Cs			= 0.0025;
 //        dom.P0			= dom.Cs*dom.Cs*998.21*0.02;
         dom.BC.Periodic[0]	= true;
-//        dom.MU			= 1.002e-3;
         dom.Nproc		= 8;
     	dom.PresEq		= 0;
     	dom.VisEq		= 3;
     	dom.KernelType	= 4;
     	dom.NoSlip		= true;
-//    	dom.Shepard		= false;
 
         double yb,h,rho;
     	double dx;

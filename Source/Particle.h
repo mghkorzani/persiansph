@@ -71,7 +71,7 @@ public:
 
     omp_lock_t my_lock;		///< Open MP lock
 
-    double SumKernel;
+    double SumKernel;		///<Summation of the kernel value for neighbour particles
 
     // Constructor
     Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double Mass0, double Density0, double h0, bool Fixed=false);
@@ -207,6 +207,7 @@ inline void Particle::translate(double dt, Vec3_t Domainsize, Vec3_t domainmax, 
 		(x(2)<(domainmin(2))) ? x(2) += Domainsize(2) : x(2);
 	}
 }
+
 }; // namespace SPH
 
 #endif // MECHSYS_SPH_PARTICLE_H
