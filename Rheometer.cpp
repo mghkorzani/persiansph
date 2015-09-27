@@ -22,23 +22,6 @@
 using std::cout;
 using std::endl;
 
-void UserMazi(SPH::Domain & domi)
-{
-	double omega;
-	omega = 1.16e-3;
-	for (size_t a=0; a<domi.Particles.Size(); a++)
-	{
-		if (domi.Particles[a]->ID == 3)
-		{
-			domi.Particles[a]->translate(0.022);
-			domi.Particles[a]->v  =-domi.Particles[a]->x(1)*omega,domi.Particles[a]->x(0)*omega,0.0;
-			domi.Particles[a]->vb =-domi.Particles[a]->x(1)*omega,domi.Particles[a]->x(0)*omega,0.0;
-		}
-	}
-}
-//    	dom.GeneralBefore	= & UserMazi;
-//    	dom.GeneralAfter	= & UserMazi;
-
 
 int main(int argc, char **argv) try
 {
@@ -46,14 +29,11 @@ int main(int argc, char **argv) try
 
         dom.Dimension	= 2;
         dom.Cs			= 3.0e-4;
-//        dom.BC.Periodic[0]	= true;
         dom.Nproc		= 8;
     	dom.PresEq		= 0;
     	dom.VisEq		= 3;
     	dom.KernelType	= 4;
     	dom.NoSlip		= true;
-//        dom.P0			= dom.Cs*dom.Cs*998.21*0.0005;
-//    	dom.Shepard		= false;
 
         double xb,yb,h,rho;
     	double dx;
@@ -62,8 +42,6 @@ int main(int argc, char **argv) try
     	dx = 5.0e-4;
     	h = dx*1.1;
     	dom.InitialDist 	= dx;
-
-//    	dom.GeneralAfter	= & UserMazi;
 
         double maz;
         maz=(0.01*h/(dom.Cs));
@@ -103,7 +81,7 @@ int main(int argc, char **argv) try
     			dom.Particles[a]->ID		=3;
     			dom.Particles[a]->IsFree	=false;
     			dom.Particles[a]->v			=-yb/R*R*omega,xb/R*R*omega,0.0;
-    			dom.Particles[a]->vb		=-yb/R*R*omega,xb/R*R*omega,0.0;
+//    			dom.Particles[a]->vb		=-yb/R*R*omega,xb/R*R*omega,0.0;
    		}
     		if (sqrt(xb*xb+yb*yb)<11.0e-3)
     		{
@@ -111,25 +89,6 @@ int main(int argc, char **argv) try
     			dom.Particles[a]->IsFree	=false;
     		}
     	}
-
-    	// No-Slip Particles
-    	double m=2.0;
-		R = 11.0e-3;
-		no = ceil(2*M_PI*R/(m*dx));
-		for (size_t i=0; i<no; i++)
-		{
-			xb = R*cos(2*M_PI/no*i);
-			yb = R*sin(2*M_PI/no*i);
-			dom.AddNSSingleParticle(1,Vec3_t ( xb ,  yb , 0.0 ), true);
-		}
-		R = 21.5e-3;
-		no = ceil(2*M_PI*R/(m*dx));
-		for (size_t i=0; i<no; i++)
-		{
-			xb = R*cos(2*M_PI/no*i);
-			yb = R*sin(2*M_PI/no*i);
-			dom.AddNSSingleParticle(3,Vec3_t ( xb ,  yb , 0.0 ), true);
-		}
 
 
 //    	dom.WriteXDMF("maz");

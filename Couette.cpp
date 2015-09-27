@@ -33,9 +33,9 @@ int main(int argc, char **argv) try
     	dom.PresEq		= 0;
     	dom.VisEq		= 3;
     	dom.KernelType	= 4;
-//    	dom.NoSlip		= true;
+    	dom.NoSlip		= true;
 
-        double xb,yb,h,rho;
+        double yb,h,rho;
     	double dx;
 
     	rho = 998.21;
@@ -69,16 +69,7 @@ int main(int argc, char **argv) try
     		}
     	}
 
-
-    	for (size_t i=0; i<200; i++)
-    	{
-    		xb = -0.0001+0.0007/200.0*i;
-    		dom.AddNSSingleParticle(5,Vec3_t ( xb ,  0.0   , 0.0 ),true);
-    		dom.AddNSSingleParticle(4,Vec3_t ( xb ,  0.001 , 0.0 ),true);
-    	}
-
-
-//    	dom.WriteXDMF("maz");
+    	//    	dom.WriteXDMF("maz");
     	dom.Solve(/*tf*/50000.0,/*dt*/maz,/*dtOut*/(1000.0*maz),"test06",1500);
         return 0;
 }

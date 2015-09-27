@@ -18,6 +18,14 @@
 
 #include "./Source/Domain.h"
 
+void UserAcc(SPH::Domain & domi)
+{
+	#pragma omp parallel for schedule (static) num_threads(domi.Nproc)
+	for (size_t i=0; i<domi.Particles.Size(); i++)
+		if (domi.Particles[i]->IsFree)
+			domi.Particles[i]->a += Vec3_t(0.002,0.0,0.0);
+}
+
 
 using std::cout;
 using std::endl;
@@ -26,10 +34,9 @@ int main(int argc, char **argv) try
 {
         SPH::Domain		dom;
 
-        dom.Gravity		= 0.002,0.0,0.0;
+//        dom.Gravity		= 0.002,0.0,0.0;
         dom.Dimension	= 2;
         dom.Cs			= 0.0025;
-//        dom.P0			= dom.Cs*dom.Cs*998.21*0.02;
         dom.BC.Periodic[0]	= true;
         dom.Nproc		= 8;
     	dom.PresEq		= 0;
@@ -48,6 +55,7 @@ int main(int argc, char **argv) try
         double maz;
         maz=(0.002*h/(dom.Cs));
         std::cout<<maz<<std::endl;
+    	dom.GeneralBefore	= & UserAcc;
 
      	dom.AddBoxLength(3 ,Vec3_t ( 0.0 , -0.0006 , 0.0 ), 0.0005 , 0.00121 ,  0 , dx/2.0 ,rho, h, 1 , 0 , false, false );
 
