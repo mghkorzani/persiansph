@@ -183,7 +183,9 @@ public:
     PtDom					GeneralBefore;		///< Pointer to a function: to modify particles properties before CalcForce function
     PtDom					GeneralAfter;		///< Pointer to a function: to modify particles properties after CalcForce function
 
-    Array<Array<std::pair<size_t,size_t> > > Pairs;
+    Array<Array<std::pair<size_t,size_t> > >	Pairs;
+    Array< size_t > 							FixedParticles;
+    Array<std::pair<size_t,size_t> >			FixedPairs;
 };
 /////////////////////////////////////////////////////////////////////////////////////////// Implementation /////
 void General(Domain & dom)
@@ -914,6 +916,7 @@ inline void Domain::ListGenerate ()
 			Particles[a]->CC[0] = i;
 			Particles[a]->CC[1] = j;
 			Particles[a]->CC[2] = 0;
+			if (!Particles[a]->IsFree) FixedParticles.Push(a);
 		}
 		break;
 
@@ -961,6 +964,7 @@ inline void Domain::ListGenerate ()
 			Particles[a]->CC[0] = i;
 			Particles[a]->CC[1] = j;
 			Particles[a]->CC[2] = k;
+			if (!Particles[a]->IsFree) FixedParticles.Push(a);
 		}
 		break;
 
@@ -1017,6 +1021,8 @@ inline void Domain::CellReset ()
     {
     	Particles[a]->LL = -1;
     }
+
+    FixedParticles.Clear();
 }
 
 inline void Domain::MainNeighbourSearch()
@@ -1181,6 +1187,11 @@ inline void Domain::PrimaryComputeAcceleration ()
 				    Particles[Pairs[k][i].first]->Pressure	+= Particles[Pairs[k][i].second]->Pressure * K + dot(Gravity,xij)*Particles[Pairs[k][i].second]->Density*K;
 				    if (NoSlip) Particles[Pairs[k][i].first]->vb += Particles[Pairs[k][i].second]->v * K;
 				    omp_unset_lock(&Particles[Pairs[k][i].first]->my_lock);
+
+					omp_set_lock(&dom_lock);
+		        	FixedPairs.Push(std::make_pair(Pairs[k][i].first,Pairs[k][i].second));
+					omp_unset_lock(&dom_lock);
+
 				}
 				if (!Particles[Pairs[k][i].second]->IsFree)
 				{
@@ -1199,18 +1210,21 @@ inline void Domain::PrimaryComputeAcceleration ()
 				    if (NoSlip) Particles[Pairs[k][i].second]->vb += Particles[Pairs[k][i].first]->v * K;
 				    omp_unset_lock(&Particles[Pairs[k][i].second]->my_lock);
 
+					omp_set_lock(&dom_lock);
+		        	FixedPairs.Push(std::make_pair(Pairs[k][i].first,Pairs[k][i].second));
+					omp_unset_lock(&dom_lock);
 				}
 			}
 		}
 	}
 
 	#pragma omp parallel for schedule (static) num_threads(Nproc)
-	for (size_t i=0; i<Particles.Size(); i++)
-		if (!Particles[i]->IsFree)
-			if (Particles[i]->SumKernel!= 0.0)
+	for (size_t i=0; i<FixedParticles.Size(); i++)
+		if (!Particles[FixedParticles[i]]->IsFree)
+			if (Particles[FixedParticles[i]]->SumKernel!= 0.0)
 			{
-				Particles[i]->Pressure	= Particles[i]->Pressure/Particles[i]->SumKernel;
-				if (NoSlip) Particles[i]->vb		= Particles[i]->vb/Particles[i]->SumKernel;
+				Particles[FixedParticles[i]]->Pressure	= Particles[FixedParticles[i]]->Pressure/Particles[FixedParticles[i]]->SumKernel;
+				if (NoSlip) Particles[FixedParticles[i]]->vb		= Particles[FixedParticles[i]]->vb/Particles[FixedParticles[i]]->SumKernel;
 			}
 }
 
@@ -1228,6 +1242,8 @@ inline void Domain::LastComputeAcceleration ()
 		}
 	}
 	Pairs.Clear();
+	FixedPairs.Clear();
+
 
 	//Min time step check based on the acceleration
 	#pragma omp parallel for schedule (static) num_threads(Nproc)
