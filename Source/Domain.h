@@ -1131,16 +1131,22 @@ inline void Domain::StartAcceleration (Vec3_t const & a)
     	{
         	// The Shear-Rate, the pressure and the Bingham viscosity calculation for free particles
             Particles[i]->Pressure = Pressure(PresEq, Cs, P0,Particles[i]->Density, Particles[i]->RefDensity);
-    		Particles[i]->ShearRate = sqrt((Particles[i]->StrainRate(0,0)*Particles[i]->StrainRate(0,0) + 2.0*Particles[i]->StrainRate(0,1)*Particles[i]->StrainRate(1,0) + 2.0*Particles[i]->StrainRate(0,2)*Particles[i]->StrainRate(2,0) +
-    				Particles[i]->StrainRate(1,1)*Particles[i]->StrainRate(1,1) + 2.0*Particles[i]->StrainRate(1,2)*Particles[i]->StrainRate(2,1) + Particles[i]->StrainRate(2,2)*Particles[i]->StrainRate(2,2)));
+    		Particles[i]->ShearRate = sqrt(0.5*(Particles[i]->StrainRate(0,0)*Particles[i]->StrainRate(0,0) + 2.0*Particles[i]->StrainRate(0,1)*Particles[i]->StrainRate(1,0) +
+    				2.0*Particles[i]->StrainRate(0,2)*Particles[i]->StrainRate(2,0) + Particles[i]->StrainRate(1,1)*Particles[i]->StrainRate(1,1) +
+					2.0*Particles[i]->StrainRate(1,2)*Particles[i]->StrainRate(2,1) + Particles[i]->StrainRate(2,2)*Particles[i]->StrainRate(2,2)));
     		if (Particles[i]->T0>0.0)
 			{
     			if (Particles[i]->ShearRate !=0.0)
 					Particles[i]->Mu = Particles[i]->MuRef + Particles[i]->T0*(1-exp(-Particles[i]->m*Particles[i]->ShearRate))/Particles[i]->ShearRate;
 				else
 					Particles[i]->Mu = Particles[i]->MuRef + Particles[i]->T0*Particles[i]->m;
-
 			}
+				if (Particles[i]->StrainRate(0,2)!= 0.0 || Particles[i]->StrainRate(1,2)!= 0.0 || Particles[i]->StrainRate(2,2)!= 0.0 || Particles[i]->StrainRate(2,0)!= 0.0 || Particles[i]->StrainRate(2,1)!= 0.0)
+				{
+					std::cout<<Particles[i]->StrainRate<<std::endl;
+					abort();
+				}
+
     	}
     	else
     	{
@@ -1155,7 +1161,7 @@ inline void Domain::StartAcceleration (Vec3_t const & a)
         Particles[i]->dDensity	= 0.0;
         Particles[i]->VXSPH		= 0.0;
         Particles[i]->ZWab		= 0.0;
-        Particles[i]->StrainRate= 0.0;
+        set_to_zero(Particles[i]->StrainRate);
         Particles[i]->SumDen	= 0.0;
         Particles[i]->Vis		= 0.0;
         Particles[i]->SumKernel	= 0.0;
@@ -1177,7 +1183,7 @@ inline void Domain::PrimaryComputeAcceleration ()
 					double h	= (Particles[Pairs[k][i].first]->h+Particles[Pairs[k][i].second]->h)/2.0;
 
 					// Correction of xij for Periodic BC
-				    if (DomSize(0)>0.0) {if (xij(0)>2*Cellfac*h || xij(0)<-2*Cellfac*h) {(Particles[Pairs[k][i].first]->CC[0]>Particles[Pairs[k][i].second]->CC[0]) ? xij(0) -= DomSize(0) : xij(0) += DomSize(0);}}
+					if (DomSize(0)>0.0) {if (xij(0)>2*Cellfac*h || xij(0)<-2*Cellfac*h) {(Particles[Pairs[k][i].first]->CC[0]>Particles[Pairs[k][i].second]->CC[0]) ? xij(0) -= DomSize(0) : xij(0) += DomSize(0);}}
 					if (DomSize(1)>0.0) {if (xij(1)>2*Cellfac*h || xij(1)<-2*Cellfac*h) {(Particles[Pairs[k][i].first]->CC[1]>Particles[Pairs[k][i].second]->CC[1]) ? xij(1) -= DomSize(1) : xij(1) += DomSize(1);}}
 					if (DomSize(2)>0.0) {if (xij(2)>2*Cellfac*h || xij(2)<-2*Cellfac*h) {(Particles[Pairs[k][i].first]->CC[2]>Particles[Pairs[k][i].second]->CC[2]) ? xij(2) -= DomSize(2) : xij(2) += DomSize(2);}}
 
@@ -1188,10 +1194,9 @@ inline void Domain::PrimaryComputeAcceleration ()
 				    if (NoSlip) Particles[Pairs[k][i].first]->vb += Particles[Pairs[k][i].second]->v * K;
 				    omp_unset_lock(&Particles[Pairs[k][i].first]->my_lock);
 
-					omp_set_lock(&dom_lock);
-		        	FixedPairs.Push(std::make_pair(Pairs[k][i].first,Pairs[k][i].second));
-					omp_unset_lock(&dom_lock);
-
+//					omp_set_lock(&dom_lock);
+//		        	FixedPairs.Push(Pairs[k][i]);
+//					omp_unset_lock(&dom_lock);
 				}
 				if (!Particles[Pairs[k][i].second]->IsFree)
 				{
@@ -1199,7 +1204,7 @@ inline void Domain::PrimaryComputeAcceleration ()
 					double h	= (Particles[Pairs[k][i].first]->h+Particles[Pairs[k][i].second]->h)/2.0;
 
 					// Correction of xij for Periodic BC
-				    if (DomSize(0)>0.0) {if (xij(0)>2*Cellfac*h || xij(0)<-2*Cellfac*h) {(Particles[Pairs[k][i].first]->CC[0]>Particles[Pairs[k][i].second]->CC[0]) ? xij(0) -= DomSize(0) : xij(0) += DomSize(0);}}
+					if (DomSize(0)>0.0) {if (xij(0)>2*Cellfac*h || xij(0)<-2*Cellfac*h) {(Particles[Pairs[k][i].first]->CC[0]>Particles[Pairs[k][i].second]->CC[0]) ? xij(0) -= DomSize(0) : xij(0) += DomSize(0);}}
 					if (DomSize(1)>0.0) {if (xij(1)>2*Cellfac*h || xij(1)<-2*Cellfac*h) {(Particles[Pairs[k][i].first]->CC[1]>Particles[Pairs[k][i].second]->CC[1]) ? xij(1) -= DomSize(1) : xij(1) += DomSize(1);}}
 					if (DomSize(2)>0.0) {if (xij(2)>2*Cellfac*h || xij(2)<-2*Cellfac*h) {(Particles[Pairs[k][i].first]->CC[2]>Particles[Pairs[k][i].second]->CC[2]) ? xij(2) -= DomSize(2) : xij(2) += DomSize(2);}}
 
@@ -1210,9 +1215,9 @@ inline void Domain::PrimaryComputeAcceleration ()
 				    if (NoSlip) Particles[Pairs[k][i].second]->vb += Particles[Pairs[k][i].first]->v * K;
 				    omp_unset_lock(&Particles[Pairs[k][i].second]->my_lock);
 
-					omp_set_lock(&dom_lock);
-		        	FixedPairs.Push(std::make_pair(Pairs[k][i].first,Pairs[k][i].second));
-					omp_unset_lock(&dom_lock);
+//					omp_set_lock(&dom_lock);
+//		        	FixedPairs.Push(Pairs[k][i]);
+//					omp_unset_lock(&dom_lock);
 				}
 			}
 		}
@@ -1242,7 +1247,7 @@ inline void Domain::LastComputeAcceleration ()
 		}
 	}
 	Pairs.Clear();
-	FixedPairs.Clear();
+//	FixedPairs.Clear();
 
 
 	//Min time step check based on the acceleration
