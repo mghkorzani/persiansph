@@ -441,34 +441,65 @@ inline void Domain::CalcForce(Particle * P1, Particle * P2)
         Mat3_t Ri, Rj;
         set_to_zero(Ri);
         set_to_zero(Rj);
-    	double teta, Sigmaxx, Sigmayy, C, S;
-    	if (P1->IsFree)
-    	{
-			teta = 0.5*atan(2*Sigmai(0,1)/(Sigmai(0,0)-Sigmai(1,1)+1.0e-6*P1->RefDensity*Cs*Cs));
-			C = cos(teta);
-			S = sin(teta);
-			Sigmaxx = C*C*Sigmai(0,0) + 2.0*C*S*Sigmai(0,1) + S*S*Sigmai(1,1);
-			Sigmayy = S*S*Sigmai(0,0) - 2.0*C*S*Sigmai(0,1) + C*C*Sigmai(1,1);
-			if (Sigmaxx>0) Sigmaxx = -TI * Sigmaxx/(di*di); else Sigmaxx = 0.0;
-			if (Sigmayy>0) Sigmayy = -TI * Sigmayy/(di*di); else Sigmayy = 0.0;
-			Ri(0,0) = C*C*Sigmaxx + S*S*Sigmayy;
-			Ri(1,1) = S*S*Sigmaxx + C*C*Sigmayy;
-			Ri(0,1) = Ri(1,0) = S*C*(Sigmaxx-Sigmayy);
-    	}
+        if (Dimension == 2)
+        {
+			double teta, Sigmaxx, Sigmayy, C, S;
+			if (P1->IsFree)
+			{
+				teta = 0.5*atan(2*Sigmai(0,1)/(Sigmai(0,0)-Sigmai(1,1)+1.0e-6*P1->RefDensity*Cs*Cs));
+				C = cos(teta);
+				S = sin(teta);
+				Sigmaxx = C*C*Sigmai(0,0) + 2.0*C*S*Sigmai(0,1) + S*S*Sigmai(1,1);
+				Sigmayy = S*S*Sigmai(0,0) - 2.0*C*S*Sigmai(0,1) + C*C*Sigmai(1,1);
+				if (Sigmaxx>0) Sigmaxx = -TI * Sigmaxx/(di*di); else Sigmaxx = 0.0;
+				if (Sigmayy>0) Sigmayy = -TI * Sigmayy/(di*di); else Sigmayy = 0.0;
+				Ri(0,0) = C*C*Sigmaxx + S*S*Sigmayy;
+				Ri(1,1) = S*S*Sigmaxx + C*C*Sigmayy;
+				Ri(0,1) = Ri(1,0) = S*C*(Sigmaxx-Sigmayy);
+			}
 
-    	if (P2->IsFree)
-    	{
-			teta = 0.5*atan(2*Sigmaj(0,1)/(Sigmaj(0,0)-Sigmaj(1,1)+1.0e-6*P2->RefDensity*Cs*Cs));
-			C = cos(teta);
-			S = sin(teta);
-			Sigmaxx = C*C*Sigmaj(0,0) + 2.0*C*S*Sigmaj(0,1) + S*S*Sigmaj(1,1);
-			Sigmayy = S*S*Sigmaj(0,0) - 2.0*C*S*Sigmaj(0,1) + C*C*Sigmaj(1,1);
-			if (Sigmaxx>0) Sigmaxx = -TI * Sigmaxx/(dj*dj); else Sigmaxx = 0.0;
-			if (Sigmayy>0) Sigmayy = -TI * Sigmayy/(dj*dj); else Sigmayy = 0.0;
-			Rj(0,0) = C*C*Sigmaxx + S*S*Sigmayy;
-			Rj(1,1) = S*S*Sigmaxx + C*C*Sigmayy;
-			Rj(0,1) = Rj(1,0) = S*C*(Sigmaxx-Sigmayy);
-    	}
+			if (P2->IsFree)
+			{
+				teta = 0.5*atan(2*Sigmaj(0,1)/(Sigmaj(0,0)-Sigmaj(1,1)+1.0e-6*P2->RefDensity*Cs*Cs));
+				C = cos(teta);
+				S = sin(teta);
+				Sigmaxx = C*C*Sigmaj(0,0) + 2.0*C*S*Sigmaj(0,1) + S*S*Sigmaj(1,1);
+				Sigmayy = S*S*Sigmaj(0,0) - 2.0*C*S*Sigmaj(0,1) + C*C*Sigmaj(1,1);
+				if (Sigmaxx>0) Sigmaxx = -TI * Sigmaxx/(dj*dj); else Sigmaxx = 0.0;
+				if (Sigmayy>0) Sigmayy = -TI * Sigmayy/(dj*dj); else Sigmayy = 0.0;
+				Rj(0,0) = C*C*Sigmaxx + S*S*Sigmayy;
+				Rj(1,1) = S*S*Sigmaxx + C*C*Sigmayy;
+				Rj(0,1) = Rj(1,0) = S*C*(Sigmaxx-Sigmayy);
+			}
+        }
+        else
+        {
+        	Mat3_t Vec,Val,VecT,temp;
+        	if (P1->IsFree)
+        	{
+    	    	Rotation(Sigmai,Vec,VecT,Val);
+
+    			if (Val(0,0)>0) Val(0,0) = -TI * Val(0,0)/(di*di); else Val(0,0) = 0.0;
+    			if (Val(1,1)>0) Val(1,1) = -TI * Val(1,1)/(di*di); else Val(1,1) = 0.0;
+    			if (Val(2,2)>0) Val(2,2) = -TI * Val(2,2)/(di*di); else Val(2,2) = 0.0;
+
+    	    	Mult(Vec,Val,temp);
+    	    	Mult(temp,VecT,Ri);
+        	}
+
+        	if (P2->IsFree)
+        	{
+    	    	Rotation(Sigmaj,Vec,VecT,Val);
+
+    			if (Val(0,0)>0) Val(0,0) = -TI * Val(0,0)/(di*di); else Val(0,0) = 0.0;
+    			if (Val(1,1)>0) Val(1,1) = -TI * Val(1,1)/(di*di); else Val(1,1) = 0.0;
+    			if (Val(2,2)>0) Val(2,2) = -TI * Val(2,2)/(di*di); else Val(2,2) = 0.0;
+
+    	    	Mult(Vec,Val,temp);
+    	    	Mult(temp,VecT,Rj);
+        	}
+
+        }
 
         TIij = pow((K/Kernel(Dimension, KernelType, InitialDist, h)),4)*(Ri+Rj);
     }

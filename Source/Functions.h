@@ -23,6 +23,22 @@
 
 namespace SPH {
 
+void Rotation (Mat3_t Input, Mat3_t & Vectors, Mat3_t & VectorsT, Mat3_t & Values)
+{
+	Vec3_t Val,V0,V1,V2;
+	Eig(Input,Val,V0,V1,V2,true,false);
+
+	Mat3_t V;
+	Vectors	=	V0(0), V1(0), V2(0),
+				V0(1), V1(1), V2(1),
+				V0(2), V1(2), V2(2);
+	Trans(Vectors,VectorsT);
+	Values	= 	Val(0), 0.0   , 0.0   ,
+				0.0   , Val(1), 0.0   ,
+				0.0   , 0.0   , Val(2);
+}
+
+
 inline double Kernel(size_t Dim, size_t KT, double r, double h)
 {
 	double C;
