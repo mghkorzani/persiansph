@@ -53,10 +53,13 @@ public:
     double 	dDensity;		///< Rate of density change in time
     double 	Mass;			///< Mass of the particle
 
-    Mat3_t  StrainRate;		///< Global Shear Strain Rate Tensor
+    Mat3_t  StrainRate;		///< Global Shear Strain Rate Tensor n
+    Mat3_t  Rotation;		///< Global Rotation Rate Tensor n
     double  ShearRate;		///< Global Shear Rate
+    Mat3_t  ShearStress;
 
     double 	Mu;				///< Dynamic Viscosity
+    double 	G;				///< Shear modulus
     double 	MuRef;			///< Reference Dynamic Viscosity
     double 	T0;		  		///< Yield stress for Bingham fluids
     double 	m;		  		///< Normalization value for Bingham fluids
@@ -77,7 +80,7 @@ public:
     Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double Mass0, double Density0, double h0, bool Fixed=false);
 
     // Methods
-    void Move			(double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3_t domainmin, bool ShepardFilter);	///< Update the important quantities of a particle
+    void Move			(double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3_t domainmin, bool ShepardFilter, Mat3_t I);	///< Update the important quantities of a particle
     void translate		(double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3_t domainmin);
 };
 
@@ -104,13 +107,15 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
     dDensity=0.0;
     ShearRate = 0.0;
     StrainRate = 0.0;
+    Rotation = 0.0;
     MuRef = Mu = 0.0;
     T0 = 0.0;
     m = 300.0;
     SumKernel = 0.0;
+    G = 0.0;
 }
 
-inline void Particle::Move (double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3_t domainmin, bool ShepardFilter)
+inline void Particle::Move (double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3_t domainmin, bool ShepardFilter, Mat3_t I)
 {
 	if (ct < 30)
 	{
@@ -129,6 +134,14 @@ inline void Particle::Move (double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3
 			double dens = Density;
 			Density = Densityb + 2*dt*dDensity;
 			Densityb = dens;
+
+			// Evolve shear stress
+			Mat3_t RotationRateT;
+			Mat3_t SRT,RS;
+			Trans(Rotation,RotationRateT);
+			Mult(ShearStress,RotationRateT,SRT);
+			Mult(Rotation,ShearStress,RS);
+			ShearStress = dt*(2.0*G*(StrainRate-1.0/3.0*(StrainRate(1,1)+StrainRate(2,2)+StrainRate(3,3))*I)+SRT+RS) + ShearStress;
 		}
 		ct++;
 	}
@@ -158,6 +171,14 @@ inline void Particle::Move (double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3
 				Density = Density + dt*dDensity;
 				Densityb = dens;
 			}
+			// Evolve shear stress
+			Mat3_t RotationRateT;
+			Mat3_t SRT,RS;
+			Trans(Rotation,RotationRateT);
+			Mult(ShearStress,RotationRateT,SRT);
+			Mult(Rotation,ShearStress,RS);
+			ShearStress = dt*(2.0*G*(StrainRate-1.0/3.0*(StrainRate(1,1)+StrainRate(2,2)+StrainRate(3,3))*I)+SRT+RS) + ShearStress;
+
 		}
 		ct=0;
 	}
