@@ -38,7 +38,7 @@ int main(int argc, char **argv) try
         dom.Dimension	= 2;
         dom.Nproc		= 8;
     	dom.PresEq		= 0;
-    	dom.KernelType	= 4;
+    	dom.KernelType	= 0;
     	dom.Shepard		= false;
 
     	dom.TI			= 0.3;
@@ -50,18 +50,18 @@ int main(int argc, char **argv) try
 
     	H	= 0.02;
     	L	= 0.2;
-    	n	= 30.0;
+    	n	= 20.0;
 
     	rho	= 1000.0;
     	K	= 3.25e6;
     	G	= 7.15e5;
     	dx	= H / n;
-    	h	= dx*1.1;
+    	h	= dx*1.5;
         dom.Cs			= sqrt(K/rho);
     	dom.InitialDist	= dx;
 
         double timestep;
-        timestep = (0.2*h/(dom.Cs));
+        timestep = (0.15*h/(dom.Cs));
         cout<<timestep<<endl;
         cout<<dom.Cs<<endl;
 //    	dom.GeneralBefore	= & UserAcc;
@@ -97,6 +97,7 @@ int main(int argc, char **argv) try
     	for (size_t a=0; a<dom.Particles.Size(); a++)
     	{
     		dom.Particles[a]->G = G;
+    		dom.Particles[a]->Material = 2;
     		x = dom.Particles[a]->x(0);
     		if (x>0.0)
     		{
@@ -107,7 +108,7 @@ int main(int argc, char **argv) try
     	}
 
 //    	dom.WriteXDMF("maz");
-    	dom.Solve(/*tf*/1000.0,/*dt*/timestep,/*dtOut*/100.0*timestep,"test06",1000);
+    	dom.Solve(/*tf*/1000.0,/*dt*/timestep,/*dtOut*/200.0*timestep,"test06",2000);
         return 0;
 }
 MECHSYS_CATCH

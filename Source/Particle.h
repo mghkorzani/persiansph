@@ -35,34 +35,42 @@ class Particle
 public:
     // Data
     bool   	IsFree;			///< Check the particle if it is free to move or not
-    int    	ID;				///< an Integer value to identify type of the particles
+    int    	ID;				///< an Integer value to identify the particle set
+    int    	Material;		///< an Integer value to identify the particle material type
+    						///< 1 = Fluid, 2 = Solid
 
     Vec3_t  x;				///< Position of the particle n
-    Vec3_t  vb;				///< Velocity of the particle n-1
-    Vec3_t  v;				///< Velocity of the particle n+1,
-    Vec3_t	VXSPH;			///< Mean Velocity of neighbor particles
+    Vec3_t  vb;				///< Velocity of the particle n-2
+    Vec3_t  v;				///< Velocity of the particle n,
+    Vec3_t	VXSPH;			///< Mean Velocity of neighbor particles for updating the particle position (XSPH)
     Vec3_t  a;				///< Acceleration of the particle
-    Vec3_t  Vis;			///< To check viscosity force
+    Vec3_t  Vis;			///< Acceleration of the particle due to viscosity effect
 
-    double	ZWab;			///< Summation of the mb/db*Wab
-    double	SumDen;			///< Summation of neighbor particle density
-    double 	Pressure;		///< Pressure at the position of the particle
-    double	Density;		///< Density at the position of the particle n+1
-    double 	Densityb;		///< Density at the position of the particle n-1
+    double	ZWab;			///< Summation of mb/db*Wab for neighbour particles of the particle a (for Shepard filter)
+    double	SumDen;			///< Summation of mb*Wab for neighbour particles of the particle a (for Shepard filter)
+
+    double 	Pressure;		///< Pressure at position of the particle
+
+    double	Density;		///< Density at the position of the particle n
+    double 	Densityb;		///< Density at the position of the particle n-2
     double 	RefDensity;		///< Reference Density of Particle
-    double 	dDensity;		///< Rate of density change in time
+    double 	dDensity;		///< Rate of density change in time based on state equations
+
     double 	Mass;			///< Mass of the particle
 
-    Mat3_t  StrainRate;		///< Global Shear Strain Rate Tensor n
-    Mat3_t  Rotation;		///< Global Rotation Rate Tensor n
-    double  ShearRate;		///< Global Shear Rate
-    Mat3_t  ShearStress;
+    Mat3_t  StrainRate;		///< Global shear Strain rate tensor
+    Mat3_t  Rotation;		///< Global rotation tensor
 
-    double 	Mu;				///< Dynamic Viscosity
-    double 	G;				///< Shear modulus
-    double 	MuRef;			///< Reference Dynamic Viscosity
+    double  ShearRate;		///< Global shear rate
+
+    Mat3_t  ShearStress;	///< Global shear stress tensor
+
+    double 	Mu;				///< Dynamic viscosity coefficient of the fluid particle
+    double 	MuRef;			///< Reference Dynamic viscosity coefficient
     double 	T0;		  		///< Yield stress for Bingham fluids
     double 	m;		  		///< Normalization value for Bingham fluids
+
+    double 	G;				///< Shear modulus
 
     double 	h;				///< Smoothing length of the particle
     double 	hr;				///< Reference smoothing length of the particle
@@ -113,6 +121,7 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
     m = 300.0;
     SumKernel = 0.0;
     G = 0.0;
+    Material = 0;
 }
 
 inline void Particle::Move (double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3_t domainmin, bool ShepardFilter, Mat3_t I)
@@ -136,12 +145,15 @@ inline void Particle::Move (double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3
 			Densityb = dens;
 
 			// Evolve shear stress
-			Mat3_t RotationRateT;
-			Mat3_t SRT,RS;
-			Trans(Rotation,RotationRateT);
-			Mult(ShearStress,RotationRateT,SRT);
-			Mult(Rotation,ShearStress,RS);
-			ShearStress = dt*(2.0*G*(StrainRate-1.0/3.0*(StrainRate(1,1)+StrainRate(2,2)+StrainRate(3,3))*I)+SRT+RS) + ShearStress;
+			if (Material == 2)
+			{
+				Mat3_t RotationRateT;
+				Mat3_t SRT,RS;
+				Trans(Rotation,RotationRateT);
+				Mult(ShearStress,RotationRateT,SRT);
+				Mult(Rotation,ShearStress,RS);
+				ShearStress = dt*(2.0*G*(StrainRate-1.0/3.0*(StrainRate(1,1)+StrainRate(2,2)+StrainRate(3,3))*I)+SRT+RS) + ShearStress;
+			}
 		}
 		ct++;
 	}
@@ -171,13 +183,17 @@ inline void Particle::Move (double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3
 				Density = Density + dt*dDensity;
 				Densityb = dens;
 			}
+
 			// Evolve shear stress
-			Mat3_t RotationRateT;
-			Mat3_t SRT,RS;
-			Trans(Rotation,RotationRateT);
-			Mult(ShearStress,RotationRateT,SRT);
-			Mult(Rotation,ShearStress,RS);
-			ShearStress = dt*(2.0*G*(StrainRate-1.0/3.0*(StrainRate(1,1)+StrainRate(2,2)+StrainRate(3,3))*I)+SRT+RS) + ShearStress;
+			if (Material == 2)
+			{
+				Mat3_t RotationRateT;
+				Mat3_t SRT,RS;
+				Trans(Rotation,RotationRateT);
+				Mult(ShearStress,RotationRateT,SRT);
+				Mult(Rotation,ShearStress,RS);
+				ShearStress = dt*(2.0*G*(StrainRate-1.0/3.0*(StrainRate(1,1)+StrainRate(2,2)+StrainRate(3,3))*I)+SRT+RS) + ShearStress;
+			}
 
 		}
 		ct=0;

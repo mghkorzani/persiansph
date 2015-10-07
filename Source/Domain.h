@@ -109,7 +109,10 @@ public:
     void StartAcceleration			(Vec3_t const & a = Vec3_t(0.0,0.0,0.0));															///< Add a fixed acceleration such as the Gravity
     void PrimaryComputeAcceleration	();																									///< Compute the solid boundary properties
     void LastComputeAcceleration	();																									///< Compute the acceleration due to the other particles
-    void CalcForce					(Particle * P1, Particle * P2);																		///< Calculates the contact force between particles
+//    void CalcForce					(Particle * P1, Particle * P2);																		///< Calculates the contact force between particles
+    void CalcForceFF				(Particle * P1, Particle * P2);																		///< Calculates the contact force between particles
+    void CalcForceSS				(Particle * P1, Particle * P2);																		///< Calculates the contact force between particles
+//    void CalcForceFS				(Particle * P1, Particle * P2);																		///< Calculates the contact force between particles
     void Move						(double dt);																						///< Move particles
 
     void Solve						(double tf, double dt, double dtOut, char const * TheFileKey, size_t maxidx);						///< The solving function
@@ -1009,33 +1012,25 @@ inline void Domain::StartAcceleration (Vec3_t const & a)
     {
     	if (Particles[i]->IsFree)
     	{
-        	// The Shear-Rate, the pressure and the Bingham viscosity calculation for free particles
+        	// The pressure for all material types
             Particles[i]->Pressure = Pressure(PresEq, Cs, P0,Particles[i]->Density, Particles[i]->RefDensity);
-    		Particles[i]->ShearRate = sqrt(0.5*(Particles[i]->StrainRate(0,0)*Particles[i]->StrainRate(0,0) + 2.0*Particles[i]->StrainRate(0,1)*Particles[i]->StrainRate(1,0) +
-    				2.0*Particles[i]->StrainRate(0,2)*Particles[i]->StrainRate(2,0) + Particles[i]->StrainRate(1,1)*Particles[i]->StrainRate(1,1) +
-					2.0*Particles[i]->StrainRate(1,2)*Particles[i]->StrainRate(2,1) + Particles[i]->StrainRate(2,2)*Particles[i]->StrainRate(2,2)));
-    		if (Particles[i]->T0>0.0)
-			{
-    			if (Particles[i]->ShearRate !=0.0)
-					Particles[i]->Mu = Particles[i]->MuRef + Particles[i]->T0*(1-exp(-Particles[i]->m*Particles[i]->ShearRate))/Particles[i]->ShearRate;
-				else
-					Particles[i]->Mu = Particles[i]->MuRef + Particles[i]->T0*Particles[i]->m;
-			}
-				if (Particles[i]->StrainRate(0,2)!= 0.0 || Particles[i]->StrainRate(1,2)!= 0.0 || Particles[i]->StrainRate(2,2)!= 0.0 || Particles[i]->StrainRate(2,0)!= 0.0 || Particles[i]->StrainRate(2,1)!= 0.0)
+
+            // Fluid particles
+            if (Particles[i]->Material == 1)
+            {
+				Particles[i]->ShearRate = sqrt(0.5*(Particles[i]->StrainRate(0,0)*Particles[i]->StrainRate(0,0) + 2.0*Particles[i]->StrainRate(0,1)*Particles[i]->StrainRate(1,0) +
+						2.0*Particles[i]->StrainRate(0,2)*Particles[i]->StrainRate(2,0) + Particles[i]->StrainRate(1,1)*Particles[i]->StrainRate(1,1) +
+						2.0*Particles[i]->StrainRate(1,2)*Particles[i]->StrainRate(2,1) + Particles[i]->StrainRate(2,2)*Particles[i]->StrainRate(2,2)));
+
+				// Bingham viscosity calculation
+				if (Particles[i]->T0>0.0)
 				{
-					std::cout<<"Strain Rate tensor= "<<Particles[i]->StrainRate<<std::endl;
-					abort();
+					if (Particles[i]->ShearRate !=0.0)
+						Particles[i]->Mu = Particles[i]->MuRef + Particles[i]->T0*(1-exp(-Particles[i]->m*Particles[i]->ShearRate))/Particles[i]->ShearRate;
+					else
+						Particles[i]->Mu = Particles[i]->MuRef + Particles[i]->T0*Particles[i]->m;
 				}
-				if (Particles[i]->Rotation(0,2)!= 0.0 || Particles[i]->Rotation(1,2)!= 0.0 || Particles[i]->Rotation(2,2)!= 0.0 || Particles[i]->Rotation(2,0)!= 0.0 || Particles[i]->Rotation(2,1)!= 0.0)
-				{
-					std::cout<<"Rotation tensor = "<<Particles[i]->Rotation<<std::endl;
-					abort();
-				}
-//				if (Particles[i]->ShearStress(0,2)!= 0.0 || Particles[i]->ShearStress(1,2)!= 0.0 || Particles[i]->ShearStress(2,2)!= 0.0 || Particles[i]->ShearStress(2,0)!= 0.0 || Particles[i]->ShearStress(2,1)!= 0.0)
-//				{
-//					std::cout<<"ShearStress tensor = "<<Particles[i]->ShearStress<<std::endl;
-//					abort();
-//				}
+            }
 
     	}
     	else
@@ -1138,7 +1133,22 @@ inline void Domain::LastComputeAcceleration ()
 		{
 			if (Particles[Pairs[k][i].first]->IsFree || Particles[Pairs[k][i].second]->IsFree)
 			{
-				CalcForce(Particles[Pairs[k][i].first],Particles[Pairs[k][i].second]);
+				switch (Particles[Pairs[k][i].first]->Material*Particles[Pairs[k][i].second]->Material)
+			    {case 1:
+			    	CalcForceFF(Particles[Pairs[k][i].first],Particles[Pairs[k][i].second]);
+					break;
+			    case 4:
+			    	CalcForceSS(Particles[Pairs[k][i].first],Particles[Pairs[k][i].second]);
+			    	break;
+			    case 2:
+			    	std::cout<<"Please define the Interaction"<<std::endl;
+			    	abort();
+			    	break;
+			   default:
+			    	std::cout<<"Out of Interaction types"<<std::endl;
+				    abort();
+				    break;
+			    }
 			}
 		}
 	}
@@ -1603,8 +1613,7 @@ inline void Domain::PrintInput(char const * FileKey)
     // Check the time step
     double t1,t2;
     t1 = 0.25*hmax/(Cs);
-//    t2 = 0.125*hmax*hmax*rhomax/MuMax;
-    t2 =1000000.0;
+    if (MuMax>0.0) t2 = 0.125*hmax*hmax*rhomax/MuMax; else t2 =1000000.0;
 
     oss << "Max time step should be less than Min value of { "<< t1 <<" , "<< t2 <<" } S\n";
     oss << "Time Step = "<<deltat << " S\n";
@@ -1744,6 +1753,11 @@ inline void Domain::WriteXDMF (char const * FileKey)
     oss << "     <Attribute Name=\"Acceleration\" AttributeType=\"Vector\" Center=\"Node\">\n";
     oss << "       <DataItem Dimensions=\"" << Particles.Size() << " 3\" NumberType=\"Float\" Precision=\"10\" Format=\"HDF\">\n";
     oss << "        " << fn.CStr() <<":/Acceleration \n";
+    oss << "       </DataItem>\n";
+    oss << "     </Attribute>\n";
+    oss << "     <Attribute Name=\"Position\" AttributeType=\"Vector\" Center=\"Node\">\n";
+    oss << "       <DataItem Dimensions=\"" << Particles.Size() << " 3\" NumberType=\"Float\" Precision=\"10\" Format=\"HDF\">\n";
+    oss << "        " << fn.CStr() <<":/Position \n";
     oss << "       </DataItem>\n";
     oss << "     </Attribute>\n";
     oss << "     <Attribute Name=\"Pressure\" AttributeType=\"Scalar\" Center=\"Node\">\n";

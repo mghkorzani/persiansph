@@ -17,6 +17,7 @@
  ************************************************************************/
 
 #include "./Source/Domain.h"
+#include "./Source/Interaction.h"
 
 
 using std::cout;
@@ -53,6 +54,7 @@ int main(int argc, char **argv) try
     	{
     		dom.Particles[a]->Mu = 1.002e-3;
     		dom.Particles[a]->MuRef = 1.002e-3;
+    		dom.Particles[a]->Material = 1;
 
     		yb=dom.Particles[a]->x(1);
     		if (yb>=0.0009901)

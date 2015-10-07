@@ -17,6 +17,7 @@
  ************************************************************************/
 
 #include "./Source/Domain.h"
+#include "./Source/Interaction.h"
 
 void UserAcc(SPH::Domain & domi)
 {
@@ -34,7 +35,6 @@ int main(int argc, char **argv) try
 {
         SPH::Domain		dom;
 
-//        dom.Gravity		= 0.002,0.0,0.0;
         dom.Dimension	= 2;
         dom.Cs			= 0.0025;
         dom.BC.Periodic[0]	= true;
@@ -57,17 +57,18 @@ int main(int argc, char **argv) try
         std::cout<<maz<<std::endl;
     	dom.GeneralBefore	= & UserAcc;
 
-     	dom.AddBoxLength(3 ,Vec3_t ( 0.0 , -0.0006 , 0.0 ), 0.0005 , 0.00121 ,  0 , dx/2.0 ,rho, h, 1 , 0 , false, false );
+     	dom.AddBoxLength(1 ,Vec3_t ( 0.0 , -0.0006 , 0.0 ), 0.0005 , 0.00121 ,  0 , dx/2.0 ,rho, h, 1 , 0 , false, false );
 
     	for (size_t a=0; a<dom.Particles.Size(); a++)
     	{
     		dom.Particles[a]->Mu = 1.002e-3;
     		dom.Particles[a]->MuRef = 1.002e-3;
+    		dom.Particles[a]->Material = 1;
 
     		yb=dom.Particles[a]->x(1);
     		if (yb>=0.0005 || yb<=-0.0005)
     		{
-    			dom.Particles[a]->ID=4;
+    			dom.Particles[a]->ID=2;
     			dom.Particles[a]->IsFree=false;
     		}
     	}
