@@ -1006,7 +1006,7 @@ inline void Domain::YZPlaneCellsNeighbourSearch(int q1)
 
 inline void Domain::StartAcceleration (Vec3_t const & a)
 {
-//	#pragma omp parallel for schedule (static) num_threads(Nproc)
+	#pragma omp parallel for schedule (static) num_threads(Nproc)
 	for (size_t i=0; i<Particles.Size(); i++)
     {
     	if (Particles[i]->IsFree)
@@ -1017,26 +1017,25 @@ inline void Domain::StartAcceleration (Vec3_t const & a)
 
             if (Particles[i]->Material == 2)
             {
-            	if (Particles[i]->Rotation(1,0) != -Particles[i]->Rotation(0,1)) std::cout<<(Particles[i]->Rotation(1,0)+Particles[i]->Rotation(0,1))<<std::endl;
-//				if (Particles[i]->Fail >0)
-//				{
-//					double J2 = 0.5*(Particles[i]->ShearStress(0,0)*Particles[i]->ShearStress(0,0) + 2.0*Particles[i]->ShearStress(0,1)*Particles[i]->ShearStress(1,0) +
-//								2.0*Particles[i]->ShearStress(0,2)*Particles[i]->ShearStress(2,0) + Particles[i]->ShearStress(1,1)*Particles[i]->ShearStress(1,1) +
-//								2.0*Particles[i]->ShearStress(1,2)*Particles[i]->ShearStress(2,1) + Particles[i]->ShearStress(2,2)*Particles[i]->ShearStress(2,2));
-//					if (Particles[i]->Fail == 1)
-//					{
-//						Particles[i]->ShearStress = std::min((Particles[i]->Sigmay/sqrt(3.0*J2)),1.0)*Particles[i]->ShearStress;
-//					}
-//					if (Particles[i]->Fail == 2)
-//					{
-//						double A,B,I1;
-//						A = 3.0 * Particles[i]->c * cos(Particles[i]->phi)/sqrt(9+3*sin(Particles[i]->phi)*sin(Particles[i]->phi));
-//						B = sin(Particles[i]->phi)/sqrt(9+3*sin(Particles[i]->phi)*sin(Particles[i]->phi));
-//						I1 = Particles[i]->ShearStress(0,0) + Particles[i]->ShearStress(1,1) + Particles[i]->ShearStress(2,2) + 3.0*Particles[i]->Pressure;
-//						double Drucker = A + B * I1;
-//						Particles[i]->ShearStress = std::min((Drucker/sqrt(J2)),1.0)*Particles[i]->ShearStress;
-//					}
-//				}
+				if (Particles[i]->Fail >0)
+				{
+					double J2 = 0.5*(Particles[i]->ShearStress(0,0)*Particles[i]->ShearStress(0,0) + 2.0*Particles[i]->ShearStress(0,1)*Particles[i]->ShearStress(1,0) +
+								2.0*Particles[i]->ShearStress(0,2)*Particles[i]->ShearStress(2,0) + Particles[i]->ShearStress(1,1)*Particles[i]->ShearStress(1,1) +
+								2.0*Particles[i]->ShearStress(1,2)*Particles[i]->ShearStress(2,1) + Particles[i]->ShearStress(2,2)*Particles[i]->ShearStress(2,2));
+					if (Particles[i]->Fail == 1)
+					{
+						Particles[i]->ShearStress = std::min((Particles[i]->Sigmay/sqrt(3.0*J2)),1.0)*Particles[i]->ShearStress;
+					}
+					if (Particles[i]->Fail == 2)
+					{
+						double A,B,I1;
+						A = 3.0 * Particles[i]->c * cos(Particles[i]->phi)/sqrt(9+3*sin(Particles[i]->phi)*sin(Particles[i]->phi));
+						B = sin(Particles[i]->phi)/sqrt(9+3*sin(Particles[i]->phi)*sin(Particles[i]->phi));
+						I1 = Particles[i]->ShearStress(0,0) + Particles[i]->ShearStress(1,1) + Particles[i]->ShearStress(2,2) + 3.0*Particles[i]->Pressure;
+						double Drucker = A + B * I1;
+						Particles[i]->ShearStress = std::min((Drucker/sqrt(J2)),1.0)*Particles[i]->ShearStress;
+					}
+				}
 				Particles[i]->Sigma = -Particles[i]->Pressure * I + Particles[i]->ShearStress;
             }
 

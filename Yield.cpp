@@ -26,7 +26,7 @@ void UserAcc(SPH::Domain & domi)
 	{
 		if (domi.Particles[i]->ID == 3)
 		{
-			domi.Particles[i]->a += Vec3_t(250*domi.Time*domi.Time,0.0,0.0);
+			domi.Particles[i]->a = Vec3_t(2.5,0.0,0.0);
 //			domi.Particles[i]->v = Vec3_t(0.02,0.0,0.0);
 //			domi.Particles[i]->vb = Vec3_t(0.02,0.0,0.0);
 //			domi.Particles[i]->translate(domi.deltat,domi.DomSize,domi.DomMax,domi.DomMin);
@@ -34,7 +34,7 @@ void UserAcc(SPH::Domain & domi)
 		}
 		if (domi.Particles[i]->ID == 2)
 		{
-			domi.Particles[i]->a += Vec3_t(-250*domi.Time*domi.Time,0.0,0.0);
+			domi.Particles[i]->a = Vec3_t(-2.5,0.0,0.0);
 //			domi.Particles[i]->v = Vec3_t(-0.02,0.0,0.0);
 //			domi.Particles[i]->vb = Vec3_t(-0.02,0.0,0.0);
 //			domi.Particles[i]->translate(domi.deltat,domi.DomSize,domi.DomMax,domi.DomMin);
@@ -57,7 +57,7 @@ int main(int argc, char **argv) try
     	dom.KernelType	= 0;
     	dom.Shepard		= false;
 
-    	dom.TI			= 0.15;
+    	dom.TI			= 0.3;
     	dom.Alpha		= 1.0;
     	dom.XSPH		= 0.5;
 
@@ -93,7 +93,7 @@ int main(int argc, char **argv) try
     		dom.Particles[a]->G = G;
     		dom.Particles[a]->Material = 2;
     		dom.Particles[a]->Fail = 1;
-    		dom.Particles[a]->Sigmay = 1000.0;
+    		dom.Particles[a]->Sigmay = 3000.0;
     		x = dom.Particles[a]->x(0);
     		if (x<-L/2.0)
     		{
