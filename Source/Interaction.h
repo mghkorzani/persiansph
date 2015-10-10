@@ -185,9 +185,6 @@ inline void Domain::CalcForceSS(Particle * P1, Particle * P2)
     //Tensile Instability
     Mat3_t TIij;
     set_to_zero(TIij);
-    Mat3_t Sigmai, Sigmaj;
-    Sigmai = -P1->Pressure * I + P1->ShearStress;
-    Sigmaj = -P2->Pressure * I + P2->ShearStress;
 
     if (TI > 0.0)
     {
@@ -201,11 +198,11 @@ inline void Domain::CalcForceSS(Particle * P1, Particle * P2)
 			double teta, Sigmaxx, Sigmayy, C, S;
 			if (P1->IsFree)
 			{
-				teta = 0.5*atan(2*Sigmai(0,1)/(Sigmai(0,0)-Sigmai(1,1)+1.0e-6*P1->RefDensity*Cs*Cs));
+				if ((P1->Sigma(0,0)-P1->Sigma(1,1))!=0.0) teta = 0.5*atan(2.0*P1->Sigma(0,1)/(P1->Sigma(0,0)-P1->Sigma(1,1))); else teta = M_PI/4.0;
 				C = cos(teta);
 				S = sin(teta);
-				Sigmaxx = C*C*Sigmai(0,0) + 2.0*C*S*Sigmai(0,1) + S*S*Sigmai(1,1);
-				Sigmayy = S*S*Sigmai(0,0) - 2.0*C*S*Sigmai(0,1) + C*C*Sigmai(1,1);
+				Sigmaxx = C*C*P1->Sigma(0,0) + 2.0*C*S*P1->Sigma(0,1) + S*S*P1->Sigma(1,1);
+				Sigmayy = S*S*P1->Sigma(0,0) - 2.0*C*S*P1->Sigma(0,1) + C*C*P1->Sigma(1,1);
 				if (Sigmaxx>0) Sigmaxx = -TI * Sigmaxx/(di*di); else Sigmaxx = 0.0;
 				if (Sigmayy>0) Sigmayy = -TI * Sigmayy/(di*di); else Sigmayy = 0.0;
 				Ri(0,0) = C*C*Sigmaxx + S*S*Sigmayy;
@@ -215,11 +212,11 @@ inline void Domain::CalcForceSS(Particle * P1, Particle * P2)
 
 			if (P2->IsFree)
 			{
-				teta = 0.5*atan(2*Sigmaj(0,1)/(Sigmaj(0,0)-Sigmaj(1,1)+1.0e-6*P2->RefDensity*Cs*Cs));
+				if ((P2->Sigma(0,0)-P2->Sigma(1,1))!=0.0) teta = 0.5*atan(2.0*P2->Sigma(0,1)/(P2->Sigma(0,0)-P2->Sigma(1,1))); else teta = M_PI/4.0;
 				C = cos(teta);
 				S = sin(teta);
-				Sigmaxx = C*C*Sigmaj(0,0) + 2.0*C*S*Sigmaj(0,1) + S*S*Sigmaj(1,1);
-				Sigmayy = S*S*Sigmaj(0,0) - 2.0*C*S*Sigmaj(0,1) + C*C*Sigmaj(1,1);
+				Sigmaxx = C*C*P2->Sigma(0,0) + 2.0*C*S*P2->Sigma(0,1) + S*S*P2->Sigma(1,1);
+				Sigmayy = S*S*P2->Sigma(0,0) - 2.0*C*S*P2->Sigma(0,1) + C*C*P2->Sigma(1,1);
 				if (Sigmaxx>0) Sigmaxx = -TI * Sigmaxx/(dj*dj); else Sigmaxx = 0.0;
 				if (Sigmayy>0) Sigmayy = -TI * Sigmayy/(dj*dj); else Sigmayy = 0.0;
 				Rj(0,0) = C*C*Sigmaxx + S*S*Sigmayy;
@@ -232,7 +229,7 @@ inline void Domain::CalcForceSS(Particle * P1, Particle * P2)
         	Mat3_t Vec,Val,VecT,temp;
         	if (P1->IsFree)
         	{
-    	    	Rotation(Sigmai,Vec,VecT,Val);
+    	    	Rotation(P1->Sigma,Vec,VecT,Val);
 
     			if (Val(0,0)>0) Val(0,0) = -TI * Val(0,0)/(di*di); else Val(0,0) = 0.0;
     			if (Val(1,1)>0) Val(1,1) = -TI * Val(1,1)/(di*di); else Val(1,1) = 0.0;
@@ -244,7 +241,7 @@ inline void Domain::CalcForceSS(Particle * P1, Particle * P2)
 
         	if (P2->IsFree)
         	{
-    	    	Rotation(Sigmaj,Vec,VecT,Val);
+    	    	Rotation(P2->Sigma,Vec,VecT,Val);
 
     			if (Val(0,0)>0) Val(0,0) = -TI * Val(0,0)/(di*di); else Val(0,0) = 0.0;
     			if (Val(1,1)>0) Val(1,1) = -TI * Val(1,1)/(di*di); else Val(1,1) = 0.0;
@@ -262,14 +259,32 @@ inline void Domain::CalcForceSS(Particle * P1, Particle * P2)
     Mat3_t StrainRate,Rotation;
     set_to_zero(StrainRate);
     set_to_zero(Rotation);
-	StrainRate = 2.0*vij(0)*xij(0)           , vij(0)*xij(1)+vij(1)*xij(0) , vij(0)*xij(2)+vij(2)*xij(0) ,
-				 vij(0)*xij(1)+vij(1)*xij(0) , 2.0*vij(1)*xij(1)           , vij(1)*xij(2)+vij(2)*xij(1) ,
-				 vij(0)*xij(2)+vij(2)*xij(0) , vij(1)*xij(2)+vij(2)*xij(1) , 2.0*vij(2)*xij(2)           ;
+
+    // Strain Rate Pattern
+//	StrainRate = 2.0*vij(0)*xij(0)           , vij(0)*xij(1)+vij(1)*xij(0) , vij(0)*xij(2)+vij(2)*xij(0) ,
+//				 vij(0)*xij(1)+vij(1)*xij(0) , 2.0*vij(1)*xij(1)           , vij(1)*xij(2)+vij(2)*xij(1) ,
+//				 vij(0)*xij(2)+vij(2)*xij(0) , vij(1)*xij(2)+vij(2)*xij(1) , 2.0*vij(2)*xij(2)           ;
+	StrainRate(0,0) = 2.0*vij(0)*xij(0);
+	StrainRate(0,1) = vij(0)*xij(1)+vij(1)*xij(0);
+	StrainRate(0,2) = vij(0)*xij(2)+vij(2)*xij(0);
+	StrainRate(1,0) = StrainRate(0,1);
+	StrainRate(1,1) = 2.0*vij(1)*xij(1);
+	StrainRate(1,2) = vij(1)*xij(2)+vij(2)*xij(1);
+	StrainRate(2,0) = StrainRate(0,2);
+	StrainRate(2,1) = StrainRate(1,2);
+	StrainRate(2,2) = 2.0*vij(2)*xij(2);
 	StrainRate = -0.5 * GK * StrainRate;
 
-	Rotation = 0.0                        , vij(0)*xij(1)-vij(1)*xij(0) , vij(0)*xij(2)-vij(2)*xij(0) ,
-				  vij(1)*xij(0)-vij(0)*xij(1) , 0.0                         , vij(1)*xij(2)-vij(2)*xij(1) ,
-				  vij(2)*xij(0)-vij(0)*xij(2) , vij(2)*xij(1)-vij(1)*xij(2) , 0.0                         ;
+	// Rotation Pattern
+//	Rotation   =   0.0                        , vij(0)*xij(1)-vij(1)*xij(0) , vij(0)*xij(2)-vij(2)*xij(0) ,
+//				  vij(1)*xij(0)-vij(0)*xij(1) , 0.0                         , vij(1)*xij(2)-vij(2)*xij(1) ,
+//				  vij(2)*xij(0)-vij(0)*xij(2) , vij(2)*xij(1)-vij(1)*xij(2) , 0.0                         ;
+	Rotation(0,1) = vij(0)*xij(1)-vij(1)*xij(0);
+	Rotation(0,2) = vij(0)*xij(2)-vij(2)*xij(0);
+	Rotation(1,2) = vij(1)*xij(2)-vij(2)*xij(1);
+	Rotation(1,0) = -Rotation(0,1);
+	Rotation(2,0) = -Rotation(0,2);
+	Rotation(2,1) = -Rotation(1,2);
 	Rotation = -0.5 * GK * Rotation;
 
     // XSPH Monaghan
@@ -285,7 +300,7 @@ inline void Domain::CalcForceSS(Particle * P1, Particle * P2)
     }
 
     Vec3_t temp;
-    Mult( GK*xij , mj * ( 1.0/(di*di)*Sigmai + 1.0/(dj*dj)*Sigmaj + PIij + TIij ) , temp);
+    Mult( GK*xij , mj * ( 1.0/(di*di)*P1->Sigma + 1.0/(dj*dj)*P2->Sigma + PIij + TIij ) , temp);
     omp_set_lock(&P1->my_lock);
     P1->a   += temp;
     if (P1->IsFree) P1->StrainRate = P1->StrainRate + mj/dj*StrainRate;
@@ -298,7 +313,7 @@ inline void Domain::CalcForceSS(Particle * P1, Particle * P2)
     P1->dDensity += di * (mj/dj) * dot( vij , GK*xij );
     omp_unset_lock(&P1->my_lock);
 
-    Mult( GK*xij , mi * ( 1.0/(di*di)*Sigmai + 1.0/(dj*dj)*Sigmaj + PIij + TIij ) ,temp);
+    Mult( GK*xij , mi * ( 1.0/(di*di)*P1->Sigma + 1.0/(dj*dj)*P2->Sigma + PIij + TIij ) ,temp);
     omp_set_lock(&P2->my_lock);
     P2->a   -= temp;
     if (P2->IsFree) P2->StrainRate = P2->StrainRate + mi/di*StrainRate;

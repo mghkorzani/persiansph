@@ -63,7 +63,8 @@ public:
 
     double  ShearRate;		///< Global shear rate
 
-    Mat3_t  ShearStress;	///< Global shear stress tensor
+    Mat3_t  ShearStress;	///< Deviatoric shear stress tensor (deviatoric part of the Cauchy stress tensor)
+    Mat3_t  Sigma;			///< Cauchy stress tensor
 
     double 	Mu;				///< Dynamic viscosity coefficient of the fluid particle
     double 	MuRef;			///< Reference Dynamic viscosity coefficient
@@ -71,6 +72,12 @@ public:
     double 	m;		  		///< Normalization value for Bingham fluids
 
     double 	G;				///< Shear modulus
+
+    size_t	Fail;			///< Failure criteria
+    double	c;				///< Cohesion
+    double	phi;			///< Friction angel
+    double	Sigmay;			///< Tensile yield stress
+
 
     double 	h;				///< Smoothing length of the particle
     double 	hr;				///< Reference smoothing length of the particle
@@ -122,6 +129,10 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
     SumKernel = 0.0;
     G = 0.0;
     Material = 0;
+    Fail = 0;
+    c = 0.0;
+    phi = 0.0;
+    Sigmay = 0.0;
 }
 
 inline void Particle::Move (double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3_t domainmin, bool ShepardFilter, Mat3_t I)
@@ -152,7 +163,7 @@ inline void Particle::Move (double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3
 				Trans(Rotation,RotationRateT);
 				Mult(ShearStress,RotationRateT,SRT);
 				Mult(Rotation,ShearStress,RS);
-				ShearStress = dt*(2.0*G*(StrainRate-1.0/3.0*(StrainRate(1,1)+StrainRate(2,2)+StrainRate(3,3))*I)+SRT+RS) + ShearStress;
+				ShearStress = dt*(2.0*G*(StrainRate-1.0/(2.0+I(2,2))*(StrainRate(0,0)+StrainRate(1,1)+StrainRate(2,2))*I)+SRT+RS) + ShearStress;
 			}
 		}
 		ct++;
@@ -185,6 +196,7 @@ inline void Particle::Move (double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3
 			}
 
 			// Evolve shear stress
+			// Evolve shear stress
 			if (Material == 2)
 			{
 				Mat3_t RotationRateT;
@@ -192,9 +204,8 @@ inline void Particle::Move (double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3
 				Trans(Rotation,RotationRateT);
 				Mult(ShearStress,RotationRateT,SRT);
 				Mult(Rotation,ShearStress,RS);
-				ShearStress = dt*(2.0*G*(StrainRate-1.0/3.0*(StrainRate(1,1)+StrainRate(2,2)+StrainRate(3,3))*I)+SRT+RS) + ShearStress;
+				ShearStress = dt*(2.0*G*(StrainRate-1.0/(2.0+I(2,2))*(StrainRate(0,0)+StrainRate(1,1)+StrainRate(2,2))*I)+SRT+RS) + ShearStress;
 			}
-
 		}
 		ct=0;
 	}
