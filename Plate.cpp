@@ -19,15 +19,6 @@
 #include "./Source/Domain.h"
 #include "./Source/Interaction.h"
 
-void UserAcc(SPH::Domain & domi)
-{
-	#pragma omp parallel for schedule (static) num_threads(domi.Nproc)
-	for (size_t i=0; i<domi.Particles.Size(); i++)
-		if (domi.Particles[i]->IsFree)
-			domi.Particles[i]->a += Vec3_t(0.002,0.0,0.0);
-}
-
-
 using std::cout;
 using std::endl;
 
@@ -39,7 +30,7 @@ int main(int argc, char **argv) try
         dom.Nproc		= 8;
     	dom.PresEq		= 0;
     	dom.KernelType	= 0;
-    	dom.Shepard		= false;
+//    	dom.Shepard		= false;
 
     	dom.TI			= 0.3;
     	dom.Alpha		= 1.0;
@@ -50,7 +41,7 @@ int main(int argc, char **argv) try
 
     	H	= 0.02;
     	L	= 0.2;
-    	n	= 20.0;
+    	n	= 30.0;
 
     	rho	= 1000.0;
     	K	= 3.25e6;
@@ -64,12 +55,11 @@ int main(int argc, char **argv) try
         timestep = (0.15*h/(dom.Cs));
         cout<<timestep<<endl;
         cout<<dom.Cs<<endl;
-//    	dom.GeneralBefore	= & UserAcc;
         dom.DomMax(1) = 0.10;
         dom.DomMin(1) =-0.10;
         dom.DomMax(0) = 0.22;
 
-     	dom.AddBoxLength(1 ,Vec3_t ( -L/2.0 , -H/2.0-3.0*dx , 0.0 ), 1.5*L + dx/10.0 , H + 6.0*dx + dx/10.0 ,  0 , dx/2.0 ,rho, h, 1 , 0 , false, false );
+     	dom.AddBoxLength(1 ,Vec3_t ( -L , -H/2.0-3.0*dx , 0.0 ), 2.0*L + dx/10.0 , H + 6.0*dx + dx/10.0 ,  0 , dx/2.0 ,rho, h, 1 , 0 , false, false );
 
      	double Vy, Vf, k, x, y;
      	Vf = 0.01;

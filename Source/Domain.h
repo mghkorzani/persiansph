@@ -1683,6 +1683,7 @@ inline void Domain::WriteXDMF (char const * FileKey)
     float * sh	     = new float[  Particles.Size()];
     int   * Tag      = new int  [  Particles.Size()];
     int   * IsFree   = new int  [  Particles.Size()];
+    float * Sigma    = new float[6*Particles.Size()];
 
 
     for (size_t i=0;i<Particles.Size();i++)
@@ -1696,9 +1697,9 @@ inline void Domain::WriteXDMF (char const * FileKey)
         ACCvec  [3*i  ] = float(Particles[i]->a(0));
         ACCvec  [3*i+1] = float(Particles[i]->a(1));
         ACCvec  [3*i+2] = float(Particles[i]->a(2));
-        Pressure[i    ] = float(Particles[i]->Sigma(0,0));
-        ShearRate[i   ] = float(Particles[i]->Sigma(1,1));
-        Density [i    ] = float(Particles[i]->Sigma(0,1));
+        Pressure[i    ] = float(Particles[i]->Pressure);
+        ShearRate[i   ] = float(Particles[i]->ShearRate);
+        Density [i    ] = float(Particles[i]->Density);
         Mass	[i    ] = float(Particles[i]->Mass);
         sh	    [i    ] = float(Particles[i]->h);
         Tag     [i    ] = int  (Particles[i]->ID);
@@ -1706,6 +1707,12 @@ inline void Domain::WriteXDMF (char const * FileKey)
         	IsFree[i] = int  (1);
         else
         	IsFree[i] = int  (0);
+        Sigma  [6*i  ] = float(Particles[i]->Sigma(0,0));
+        Sigma  [6*i+1] = float(Particles[i]->Sigma(0,1));
+        Sigma  [6*i+2] = float(Particles[i]->Sigma(0,2));
+        Sigma  [6*i+3] = float(Particles[i]->Sigma(1,1));
+        Sigma  [6*i+4] = float(Particles[i]->Sigma(1,2));
+        Sigma  [6*i+5] = float(Particles[i]->Sigma(2,2));
     }
 
     int data[1];
@@ -1737,7 +1744,9 @@ inline void Domain::WriteXDMF (char const * FileKey)
     H5LTmake_dataset_int(file_id,dsname.CStr(),1,dims,Tag);
     dsname.Printf("IsFree");
     H5LTmake_dataset_int(file_id,dsname.CStr(),1,dims,IsFree);
-    dims[0] = 6;
+    dims[0] = 6*Particles.Size();
+    dsname.Printf("Sigma");
+    H5LTmake_dataset_float(file_id,dsname.CStr(),1,dims,Sigma);
 
 
 
@@ -1777,6 +1786,11 @@ inline void Domain::WriteXDMF (char const * FileKey)
     oss << "     <Attribute Name=\"Acceleration\" AttributeType=\"Vector\" Center=\"Node\">\n";
     oss << "       <DataItem Dimensions=\"" << Particles.Size() << " 3\" NumberType=\"Float\" Precision=\"10\" Format=\"HDF\">\n";
     oss << "        " << fn.CStr() <<":/Acceleration \n";
+    oss << "       </DataItem>\n";
+    oss << "     </Attribute>\n";
+    oss << "     <Attribute Name=\"Sigma\" AttributeType=\"Tensor6\" Center=\"Node\">\n";
+    oss << "       <DataItem Dimensions=\"" << Particles.Size() << " 6\" NumberType=\"Float\" Precision=\"10\" Format=\"HDF\">\n";
+    oss << "        " << fn.CStr() <<":/Sigma \n";
     oss << "       </DataItem>\n";
     oss << "     </Attribute>\n";
     oss << "     <Attribute Name=\"Position\" AttributeType=\"Vector\" Center=\"Node\">\n";
