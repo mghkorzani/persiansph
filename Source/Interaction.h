@@ -66,8 +66,8 @@ inline void Domain::CalcForceFF(Particle * P1, Particle * P2)
     	double Ri,Rj;
     	Ri = 0.0;
     	Rj = 0.0;
-    	if (P1->IsFree && P1->Pressure < 0.0) Ri = -P1->Pressure/(di*di);
-    	if (P2->IsFree && P2->Pressure < 0.0) Rj = -P2->Pressure/(dj*dj);
+    	if (P1->Pressure < 0.0) Ri = -P1->Pressure/(di*di);
+    	if (P2->Pressure < 0.0) Rj = -P2->Pressure/(dj*dj);
         TIij = TI*(Ri + Rj)*pow((K/Kernel(Dimension, KernelType, InitialDist, h)),4);
     }
 
@@ -196,60 +196,46 @@ inline void Domain::CalcForceSS(Particle * P1, Particle * P2)
         if (Dimension == 2)
         {
 			double teta, Sigmaxx, Sigmayy, C, S;
-			if (P1->IsFree)
-			{
-				if ((P1->Sigma(0,0)-P1->Sigma(1,1))!=0.0) teta = 0.5*atan(2.0*P1->Sigma(0,1)/(P1->Sigma(0,0)-P1->Sigma(1,1))); else teta = M_PI/4.0;
-				C = cos(teta);
-				S = sin(teta);
-				Sigmaxx = C*C*P1->Sigma(0,0) + 2.0*C*S*P1->Sigma(0,1) + S*S*P1->Sigma(1,1);
-				Sigmayy = S*S*P1->Sigma(0,0) - 2.0*C*S*P1->Sigma(0,1) + C*C*P1->Sigma(1,1);
-				if (Sigmaxx>0) Sigmaxx = -TI * Sigmaxx/(di*di); else Sigmaxx = 0.0;
-				if (Sigmayy>0) Sigmayy = -TI * Sigmayy/(di*di); else Sigmayy = 0.0;
-				Ri(0,0) = C*C*Sigmaxx + S*S*Sigmayy;
-				Ri(1,1) = S*S*Sigmaxx + C*C*Sigmayy;
-				Ri(0,1) = Ri(1,0) = S*C*(Sigmaxx-Sigmayy);
-			}
 
-			if (P2->IsFree)
-			{
-				if ((P2->Sigma(0,0)-P2->Sigma(1,1))!=0.0) teta = 0.5*atan(2.0*P2->Sigma(0,1)/(P2->Sigma(0,0)-P2->Sigma(1,1))); else teta = M_PI/4.0;
-				C = cos(teta);
-				S = sin(teta);
-				Sigmaxx = C*C*P2->Sigma(0,0) + 2.0*C*S*P2->Sigma(0,1) + S*S*P2->Sigma(1,1);
-				Sigmayy = S*S*P2->Sigma(0,0) - 2.0*C*S*P2->Sigma(0,1) + C*C*P2->Sigma(1,1);
-				if (Sigmaxx>0) Sigmaxx = -TI * Sigmaxx/(dj*dj); else Sigmaxx = 0.0;
-				if (Sigmayy>0) Sigmayy = -TI * Sigmayy/(dj*dj); else Sigmayy = 0.0;
-				Rj(0,0) = C*C*Sigmaxx + S*S*Sigmayy;
-				Rj(1,1) = S*S*Sigmaxx + C*C*Sigmayy;
-				Rj(0,1) = Rj(1,0) = S*C*(Sigmaxx-Sigmayy);
-			}
+			if ((P1->Sigma(0,0)-P1->Sigma(1,1))!=0.0) teta = 0.5*atan(2.0*P1->Sigma(0,1)/(P1->Sigma(0,0)-P1->Sigma(1,1))); else teta = M_PI/4.0;
+			C = cos(teta);
+			S = sin(teta);
+			Sigmaxx = C*C*P1->Sigma(0,0) + 2.0*C*S*P1->Sigma(0,1) + S*S*P1->Sigma(1,1);
+			Sigmayy = S*S*P1->Sigma(0,0) - 2.0*C*S*P1->Sigma(0,1) + C*C*P1->Sigma(1,1);
+			if (Sigmaxx>0) Sigmaxx = -TI * Sigmaxx/(di*di); else Sigmaxx = 0.0;
+			if (Sigmayy>0) Sigmayy = -TI * Sigmayy/(di*di); else Sigmayy = 0.0;
+			Ri(0,0) = C*C*Sigmaxx + S*S*Sigmayy;
+			Ri(1,1) = S*S*Sigmaxx + C*C*Sigmayy;
+			Ri(0,1) = Ri(1,0) = S*C*(Sigmaxx-Sigmayy);
+
+			if ((P2->Sigma(0,0)-P2->Sigma(1,1))!=0.0) teta = 0.5*atan(2.0*P2->Sigma(0,1)/(P2->Sigma(0,0)-P2->Sigma(1,1))); else teta = M_PI/4.0;
+			C = cos(teta);
+			S = sin(teta);
+			Sigmaxx = C*C*P2->Sigma(0,0) + 2.0*C*S*P2->Sigma(0,1) + S*S*P2->Sigma(1,1);
+			Sigmayy = S*S*P2->Sigma(0,0) - 2.0*C*S*P2->Sigma(0,1) + C*C*P2->Sigma(1,1);
+			if (Sigmaxx>0) Sigmaxx = -TI * Sigmaxx/(dj*dj); else Sigmaxx = 0.0;
+			if (Sigmayy>0) Sigmayy = -TI * Sigmayy/(dj*dj); else Sigmayy = 0.0;
+			Rj(0,0) = C*C*Sigmaxx + S*S*Sigmayy;
+			Rj(1,1) = S*S*Sigmaxx + C*C*Sigmayy;
+			Rj(0,1) = Rj(1,0) = S*C*(Sigmaxx-Sigmayy);
         }
         else
         {
         	Mat3_t Vec,Val,VecT,temp;
-        	if (P1->IsFree)
-        	{
-    	    	Rotation(P1->Sigma,Vec,VecT,Val);
 
-    			if (Val(0,0)>0) Val(0,0) = -TI * Val(0,0)/(di*di); else Val(0,0) = 0.0;
-    			if (Val(1,1)>0) Val(1,1) = -TI * Val(1,1)/(di*di); else Val(1,1) = 0.0;
-    			if (Val(2,2)>0) Val(2,2) = -TI * Val(2,2)/(di*di); else Val(2,2) = 0.0;
+        	Rotation(P1->Sigma,Vec,VecT,Val);
+			if (Val(0,0)>0) Val(0,0) = -TI * Val(0,0)/(di*di); else Val(0,0) = 0.0;
+			if (Val(1,1)>0) Val(1,1) = -TI * Val(1,1)/(di*di); else Val(1,1) = 0.0;
+			if (Val(2,2)>0) Val(2,2) = -TI * Val(2,2)/(di*di); else Val(2,2) = 0.0;
+			Mult(Vec,Val,temp);
+			Mult(temp,VecT,Ri);
 
-    	    	Mult(Vec,Val,temp);
-    	    	Mult(temp,VecT,Ri);
-        	}
-
-        	if (P2->IsFree)
-        	{
-    	    	Rotation(P2->Sigma,Vec,VecT,Val);
-
-    			if (Val(0,0)>0) Val(0,0) = -TI * Val(0,0)/(di*di); else Val(0,0) = 0.0;
-    			if (Val(1,1)>0) Val(1,1) = -TI * Val(1,1)/(di*di); else Val(1,1) = 0.0;
-    			if (Val(2,2)>0) Val(2,2) = -TI * Val(2,2)/(di*di); else Val(2,2) = 0.0;
-
-    	    	Mult(Vec,Val,temp);
-    	    	Mult(temp,VecT,Rj);
-        	}
+			Rotation(P2->Sigma,Vec,VecT,Val);
+			if (Val(0,0)>0) Val(0,0) = -TI * Val(0,0)/(di*di); else Val(0,0) = 0.0;
+			if (Val(1,1)>0) Val(1,1) = -TI * Val(1,1)/(di*di); else Val(1,1) = 0.0;
+			if (Val(2,2)>0) Val(2,2) = -TI * Val(2,2)/(di*di); else Val(2,2) = 0.0;
+			Mult(Vec,Val,temp);
+			Mult(temp,VecT,Rj);
 
         }
 
@@ -260,28 +246,43 @@ inline void Domain::CalcForceSS(Particle * P1, Particle * P2)
     set_to_zero(StrainRate);
     set_to_zero(Rotation);
 
+    Vec3_t vab;
+	if (P1->IsFree*P2->IsFree)
+	{
+		vab = vij;
+	}
+	else
+	{
+		if (NoSlip)
+		{
+			// No-Slip velocity correction
+			if (P1->IsFree)	vab = P1->v - (2.0*P2->v-P2->vb); else vab = (2.0*P1->v-P1->vb) - P2->v;
+		}
+		else vab = vij;
+	}
+
     // Strain Rate Pattern
-//	StrainRate = 2.0*vij(0)*xij(0)           , vij(0)*xij(1)+vij(1)*xij(0) , vij(0)*xij(2)+vij(2)*xij(0) ,
-//				 vij(0)*xij(1)+vij(1)*xij(0) , 2.0*vij(1)*xij(1)           , vij(1)*xij(2)+vij(2)*xij(1) ,
-//				 vij(0)*xij(2)+vij(2)*xij(0) , vij(1)*xij(2)+vij(2)*xij(1) , 2.0*vij(2)*xij(2)           ;
-	StrainRate(0,0) = 2.0*vij(0)*xij(0);
-	StrainRate(0,1) = vij(0)*xij(1)+vij(1)*xij(0);
-	StrainRate(0,2) = vij(0)*xij(2)+vij(2)*xij(0);
+//	StrainRate = 2.0*vab(0)*xij(0)           , vab(0)*xij(1)+vab(1)*xij(0) , vab(0)*xij(2)+vab(2)*xij(0) ,
+//				 vab(0)*xij(1)+vab(1)*xij(0) , 2.0*vab(1)*xij(1)           , vab(1)*xij(2)+vab(2)*xij(1) ,
+//				 vab(0)*xij(2)+vab(2)*xij(0) , vab(1)*xij(2)+vab(2)*xij(1) , 2.0*vab(2)*xij(2)           ;
+	StrainRate(0,0) = 2.0*vab(0)*xij(0);
+	StrainRate(0,1) = vab(0)*xij(1)+vab(1)*xij(0);
+	StrainRate(0,2) = vab(0)*xij(2)+vab(2)*xij(0);
 	StrainRate(1,0) = StrainRate(0,1);
-	StrainRate(1,1) = 2.0*vij(1)*xij(1);
-	StrainRate(1,2) = vij(1)*xij(2)+vij(2)*xij(1);
+	StrainRate(1,1) = 2.0*vab(1)*xij(1);
+	StrainRate(1,2) = vab(1)*xij(2)+vab(2)*xij(1);
 	StrainRate(2,0) = StrainRate(0,2);
 	StrainRate(2,1) = StrainRate(1,2);
-	StrainRate(2,2) = 2.0*vij(2)*xij(2);
+	StrainRate(2,2) = 2.0*vab(2)*xij(2);
 	StrainRate = -0.5 * GK * StrainRate;
 
 	// Rotation Pattern
-//	Rotation   =   0.0                        , vij(0)*xij(1)-vij(1)*xij(0) , vij(0)*xij(2)-vij(2)*xij(0) ,
-//				  vij(1)*xij(0)-vij(0)*xij(1) , 0.0                         , vij(1)*xij(2)-vij(2)*xij(1) ,
-//				  vij(2)*xij(0)-vij(0)*xij(2) , vij(2)*xij(1)-vij(1)*xij(2) , 0.0                         ;
-	Rotation(0,1) = vij(0)*xij(1)-vij(1)*xij(0);
-	Rotation(0,2) = vij(0)*xij(2)-vij(2)*xij(0);
-	Rotation(1,2) = vij(1)*xij(2)-vij(2)*xij(1);
+//	Rotation   =   0.0                        , vab(0)*xij(1)-vab(1)*xij(0) , vab(0)*xij(2)-vab(2)*xij(0) ,
+//				  vab(1)*xij(0)-vab(0)*xij(1) , 0.0                         , vab(1)*xij(2)-vab(2)*xij(1) ,
+//				  vab(2)*xij(0)-vab(0)*xij(2) , vab(2)*xij(1)-vab(1)*xij(2) , 0.0                         ;
+	Rotation(0,1) = vab(0)*xij(1)-vab(1)*xij(0);
+	Rotation(0,2) = vab(0)*xij(2)-vab(2)*xij(0);
+	Rotation(1,2) = vab(1)*xij(2)-vab(2)*xij(1);
 	Rotation(1,0) = -Rotation(0,1);
 	Rotation(2,0) = -Rotation(0,2);
 	Rotation(2,1) = -Rotation(1,2);

@@ -1062,6 +1062,7 @@ inline void Domain::StartAcceleration (Vec3_t const & a)
        		// Reset the pressure and the induced velocity for solid boundaries
     		Particles[i]->vb = 0.0;
     		Particles[i]->Pressure = 0.0;
+            set_to_zero(Particles[i]->Sigma);
     	}
 
 
@@ -1102,6 +1103,7 @@ inline void Domain::PrimaryComputeAcceleration ()
 				    Particles[Pairs[k][i].first]->SumKernel	+= K;
 				    Particles[Pairs[k][i].first]->Pressure	+= Particles[Pairs[k][i].second]->Pressure * K + dot(Gravity,xij)*Particles[Pairs[k][i].second]->Density*K;
 				    if (NoSlip) Particles[Pairs[k][i].first]->vb += Particles[Pairs[k][i].second]->v * K;
+				    Particles[Pairs[k][i].first]->Sigma = Particles[Pairs[k][i].first]->Sigma + K * Particles[Pairs[k][i].second]->Sigma;
 				    omp_unset_lock(&Particles[Pairs[k][i].first]->my_lock);
 
 //					omp_set_lock(&dom_lock);
@@ -1123,6 +1125,7 @@ inline void Domain::PrimaryComputeAcceleration ()
 				    Particles[Pairs[k][i].second]->SumKernel+= K;
 				    Particles[Pairs[k][i].second]->Pressure	+= Particles[Pairs[k][i].first]->Pressure * K + dot(Gravity,xij)*Particles[Pairs[k][i].first]->Density*K;
 				    if (NoSlip) Particles[Pairs[k][i].second]->vb += Particles[Pairs[k][i].first]->v * K;
+				    Particles[Pairs[k][i].second]->Sigma = Particles[Pairs[k][i].second]->Sigma + K * Particles[Pairs[k][i].first]->Sigma;
 				    omp_unset_lock(&Particles[Pairs[k][i].second]->my_lock);
 
 //					omp_set_lock(&dom_lock);
@@ -1145,6 +1148,7 @@ inline void Domain::PrimaryComputeAcceleration ()
 			{
 				Particles[FixedParticles[i]]->Pressure	= Particles[FixedParticles[i]]->Pressure/Particles[FixedParticles[i]]->SumKernel;
 				if (NoSlip) Particles[FixedParticles[i]]->vb		= Particles[FixedParticles[i]]->vb/Particles[FixedParticles[i]]->SumKernel;
+				Particles[FixedParticles[i]]->Sigma	= 1.0/Particles[FixedParticles[i]]->SumKernel*Particles[FixedParticles[i]]->Sigma;
 			}
 }
 
