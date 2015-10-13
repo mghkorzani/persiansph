@@ -183,7 +183,7 @@ inline void Domain::CalcForceSS(Particle * P1, Particle * P2)
     	if (dot(vij,xij)<0) PIij = (Alpha*Cij*MUij+Beta*MUij*MUij)/(0.5*(di+dj)) * I;                          ///<(2.74) Li, Liu Book
     }
 
-	if (NoSlip)
+	if (NoSlip || P1->IsFree*P2->IsFree)
 	{
 		Sigmai = P1->Sigma;
 		Sigmaj = P2->Sigma;

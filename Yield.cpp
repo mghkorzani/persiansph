@@ -25,21 +25,9 @@ void UserAcc(SPH::Domain & domi)
 	for (size_t i=0; i<domi.Particles.Size(); i++)
 	{
 		if (domi.Particles[i]->ID == 3)
-		{
-			domi.Particles[i]->a = Vec3_t(2.5,0.0,0.0);
-//			domi.Particles[i]->v = Vec3_t(0.02,0.0,0.0);
-//			domi.Particles[i]->vb = Vec3_t(0.02,0.0,0.0);
-//			domi.Particles[i]->translate(domi.deltat,domi.DomSize,domi.DomMax,domi.DomMin);
-//			domi.Particles[i]->a = Vec3_t(0.0,0.0,0.0);
-		}
+			domi.Particles[i]->a = Vec3_t(1.0,0.0,0.0);
 		if (domi.Particles[i]->ID == 2)
-		{
-			domi.Particles[i]->a = Vec3_t(-2.5,0.0,0.0);
-//			domi.Particles[i]->v = Vec3_t(-0.02,0.0,0.0);
-//			domi.Particles[i]->vb = Vec3_t(-0.02,0.0,0.0);
-//			domi.Particles[i]->translate(domi.deltat,domi.DomSize,domi.DomMax,domi.DomMin);
-//			domi.Particles[i]->a = Vec3_t(0.0,0.0,0.0);
-		}
+			domi.Particles[i]->a = Vec3_t(-1.0,0.0,0.0);
 	}
 }
 
@@ -96,15 +84,9 @@ int main(int argc, char **argv) try
     		dom.Particles[a]->Sigmay = 3000.0;
     		x = dom.Particles[a]->x(0);
     		if (x<-L/2.0)
-    		{
     			dom.Particles[a]->ID=2;
-//    			dom.Particles[a]->IsFree=false;
-    		}
     		if (x>L/2.0)
-    		{
     			dom.Particles[a]->ID=3;
-//    			dom.Particles[a]->IsFree=false;
-    		}
     	}
 
 //    	dom.WriteXDMF("maz");
