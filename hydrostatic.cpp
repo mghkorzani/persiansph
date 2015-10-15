@@ -16,7 +16,8 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>  *
  ************************************************************************/
 
-#include <Domain.h>
+#include "./Source/Domain.h"
+#include "./Source/Interaction.h"
 
 
 using std::cout;
@@ -28,76 +29,61 @@ int main(int argc, char **argv) try
     SPH::Domain		dom;
 	dom.Dimension	= 2;
 
-	dom.MU			= 1.002e-3;
-	dom.VisEq		= 0;
 	dom.PresEq		= 0;
 	dom.KernelType	= 0;
-	dom.Nproc		= 24;
-
-	dom.TI			= 0.05;
+	dom.Nproc		= 8;
+	dom.Alpha		= 1.0;
+	dom.NoSlip		= true;
+//	dom.Shepard		= false;
+//	dom.TI			= 0.3;
+	dom.XSPH		= 0.5;
 
 	double xb,yb,h,rho;
 	double dx;
 
 	rho = 998.21;
-	dx = 0.002;
-	h = dx*1.1;
+	dx = 0.02;
+	h = dx*1.5;
 
 	dom.Gravity			= 0.0,-9.81,0.0;
 	dom.Cs				= 10.0*sqrt(2.0*9.81*1.5);
 	dom.InitialDist 	= dx;
 	double maz;
-	maz=(0.2*h/dom.Cs);
+	maz=(0.1*h/dom.Cs);
 
-
-	dom.AddRandomBox(3 ,Vec3_t ( 0.0   , 0.0 , 0.0 ), 1.1 , 1.5  ,  0 , dx/2.0 ,rho, h);
-	dom.AddRandomBox(3 ,Vec3_t ( 1.098 , 0.0 , 0.0 ), 4.8 , 0.01 ,  0 , dx/2.0 ,rho, h);
-	dom.AddRandomBox(3 ,Vec3_t ( 5.897 , 0.0 , 0.0 ), 0.103 , 1.5  ,  0 , dx/2.0 ,rho, h);
+	dom.AddBoxLength(1 ,Vec3_t ( -0.4 , -3.0*dx , 0.0 ), 0.8 , 1.2 + 3.0*dx + dx/10.0  ,  0 , dx/2.0 ,rho, h,1 , 0 , false,false);
 
 	for (size_t a=0; a<dom.Particles.Size(); a++)
 	{
+		dom.Particles[a]->Material = 1;
 		xb=dom.Particles[a]->x(0);
 		yb=dom.Particles[a]->x(1);
-		if (xb<0.007)
+		if (xb<(-0.4+3.0*dx))
 		{
-			dom.Particles[a]->ID=4;
+			dom.Particles[a]->ID=2;
 			dom.Particles[a]->IsFree=false;
 		}
-		if (xb>5.991)
+		if (xb>(0.4-3.0*dx))
 		{
-			dom.Particles[a]->ID=4;
+			dom.Particles[a]->ID=2;
 			dom.Particles[a]->IsFree=false;
 		}
-		if (yb<0.007)
+		if (yb<0.0)
 		{
-			dom.Particles[a]->ID=4;
+			dom.Particles[a]->ID=2;
 			dom.Particles[a]->IsFree=false;
 		}
-//		if (yb>1.492)
-//		{
-//			dom.Particles[a]->ID=4;
-//			dom.Particles[a]->IsFree=false;
-//		}
-		if (xb<1.007 && xb>1.0 && yb>0.107)
-		{
-			dom.Particles[a]->ID=4;
-			dom.Particles[a]->IsFree=false;
-		}
-		if (xb>1.007 && dom.Particles[a]->ID==3)
-		{
-			dom.Particles[a]->ID=5;
-		}
-		if (dom.Particles[a]->ID==3)
+		if (dom.Particles[a]->ID==1)
 		{
 //			dom.Particles[a]->Density  = rho*pow((1+rho*9.81*(1.5-dom.Particles[a]->x(1))/(rho*dom.Cs*dom.Cs/7.0)),(1.0/7.0));
 //			dom.Particles[a]->Densityb = rho*pow((1+rho*9.81*(1.5-dom.Particles[a]->x(1))/(rho*dom.Cs*dom.Cs/7.0)),(1.0/7.0));
 			dom.Particles[a]->Density  = rho*((1+9.81*(1.5-dom.Particles[a]->x(1))/(dom.Cs*dom.Cs)));
 			dom.Particles[a]->Densityb = rho*((1+9.81*(1.5-dom.Particles[a]->x(1))/(dom.Cs*dom.Cs)));
+
 		}
 	}
-	dom.DelParticles(5);
 
-	dom.Solve(/*tf*/50000.0,/*dt*/maz,/*dtOut*/(100.0*maz),"test06",10000);
+	dom.Solve(/*tf*/50000.0,/*dt*/maz,/*dtOut*/(400.0*maz),"test06",10000);
 	return 0;
 }
 MECHSYS_CATCH

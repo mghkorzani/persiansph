@@ -1029,31 +1029,37 @@ inline void Domain::StartAcceleration (Vec3_t const & a)
 					}
 					if (Particles[i]->Fail == 2)
 					{
-						Particles[i]->Sigma = -Particles[i]->Pressure * I + Particles[i]->ShearStress;
+//						Particles[i]->Sigma = -Particles[i]->Pressure * I + Particles[i]->ShearStress;
 						double A,B,I1;
-						A = 3.0 * Particles[i]->c /sqrt(9.0+12.0*tan(Particles[i]->phi)*tan(Particles[i]->phi));
-						B = tan(Particles[i]->phi)/sqrt(9.0+12.0*tan(Particles[i]->phi)*tan(Particles[i]->phi));
-						I1 = Particles[i]->Sigma(0,0) + Particles[i]->Sigma(1,1) + Particles[i]->Sigma(2,2);
-						double Drucker = A - B * I1;
-						if (Drucker<0.0)
-						{
-							double temp;
-							if (B != 0.0) temp = A/B; else temp = 0.0;
-							Particles[i]->Sigma(0,0) = Particles[i]->Sigma(0,0) - 1.0/(2.0+I(2,2))*(I1-temp);
-							Particles[i]->Sigma(1,1) = Particles[i]->Sigma(1,1) - 1.0/(2.0+I(2,2))*(I1-temp);
-							Particles[i]->Sigma(2,2) = Particles[i]->Sigma(2,2) - 1.0/(2.0+I(2,2))*(I1-temp);
-						}
-						else
-						{
+//						A = 3.0 * Particles[i]->c /sqrt(9.0+12.0*tan(Particles[i]->phi)*tan(Particles[i]->phi));
+//						B = tan(Particles[i]->phi)/sqrt(9.0+12.0*tan(Particles[i]->phi)*tan(Particles[i]->phi));
+						A = Particles[i]->c;
+						B = tan(Particles[i]->phi);
+//						I1 = Particles[i]->Sigma(0,0) + Particles[i]->Sigma(1,1) + Particles[i]->Sigma(2,2);
+						double Drucker = A + B * Particles[i]->Pressure;
+//						double Drucker = A - B * I1;
+//						if (Drucker<0.0)
+//						{
+//							double temp;
+//							if (B != 0.0) temp = A/B; else temp = 0.0;
+//							Particles[i]->Sigma(0,0) = Particles[i]->Sigma(0,0) - 1.0/(2.0+I(2,2))*(I1-temp);
+//							Particles[i]->Sigma(1,1) = Particles[i]->Sigma(1,1) - 1.0/(2.0+I(2,2))*(I1-temp);
+//							if (Dimension ==3) Particles[i]->Sigma(2,2) = Particles[i]->Sigma(2,2) - 1.0/(2.0+I(2,2))*(I1-temp);
+////							set_to_zero(Particles[i]->ShearStress);
+//						}
+//						else
+//						{
+							if (Drucker <=0.0) set_to_zero(Particles[i]->ShearStress);
 							if (Drucker >0.0) Particles[i]->ShearStress = std::min((Drucker/sqrt(J2)),1.0)*Particles[i]->ShearStress;
-							Particles[i]->Sigma = I1/(2.0+I(2,2)) * I + Particles[i]->ShearStress;
+							Particles[i]->Sigma = -Particles[i]->Pressure * I + Particles[i]->ShearStress;
+//							Particles[i]->Sigma = I1/(2.0+I(2,2)) * I + Particles[i]->ShearStress;
 //							if (isnan(Drucker/sqrt(J2)))
 //							{
 //								std::cout<<Drucker<<std::endl;
 //								std::cout<<J2<<std::endl;
 //								abort();
 //							}
-						}
+//						}
 					}
 				}
 				else
