@@ -33,25 +33,28 @@ int main(int argc, char **argv) try
 	dom.KernelType	= 0;
 	dom.Nproc		= 8;
 	dom.Alpha		= 1.0;
+	dom.Beta		= 1.0;
 	dom.NoSlip		= true;
-//	dom.Shepard		= false;
-//	dom.TI			= 0.3;
+	dom.Shepard		= true;
+	dom.TI			= 0.3;
 	dom.XSPH		= 0.5;
 
 	double xb,yb,h,rho;
-	double dx;
+	double dx,H,L;
 
-	rho = 998.21;
-	dx = 0.02;
-	h = dx*1.5;
+	H				= 1.2;
+	L				= 0.8;
+	rho				= 998.21;
+	dx				= 0.02;
+	h				= dx*1.5;
 
-	dom.Gravity			= 0.0,-9.81,0.0;
-	dom.Cs				= 10.0*sqrt(2.0*9.81*1.5);
-	dom.InitialDist 	= dx;
+	dom.Gravity		= 0.0,-9.81,0.0;
+	dom.Cs			= 10.0*sqrt(2.0*9.81*1.5);
+	dom.InitialDist	= dx;
 	double maz;
 	maz=(0.1*h/dom.Cs);
 
-	dom.AddBoxLength(1 ,Vec3_t ( -0.4 , -3.0*dx , 0.0 ), 0.8 , 1.2 + 3.0*dx + dx/10.0  ,  0 , dx/2.0 ,rho, h,1 , 0 , false,false);
+	dom.AddBoxLength(1 ,Vec3_t ( -L/2.0 , -3.0*dx , 0.0 ), L , H + 3.0*dx + dx/10.0  ,  0 , dx/2.0 ,rho, h,1 , 0 , false,false);
 
 	for (size_t a=0; a<dom.Particles.Size(); a++)
 	{
@@ -73,14 +76,14 @@ int main(int argc, char **argv) try
 			dom.Particles[a]->ID=2;
 			dom.Particles[a]->IsFree=false;
 		}
-		if (dom.Particles[a]->ID==1)
-		{
-//			dom.Particles[a]->Density  = rho*pow((1+rho*9.81*(1.5-dom.Particles[a]->x(1))/(rho*dom.Cs*dom.Cs/7.0)),(1.0/7.0));
-//			dom.Particles[a]->Densityb = rho*pow((1+rho*9.81*(1.5-dom.Particles[a]->x(1))/(rho*dom.Cs*dom.Cs/7.0)),(1.0/7.0));
-			dom.Particles[a]->Density  = rho*((1+9.81*(1.5-dom.Particles[a]->x(1))/(dom.Cs*dom.Cs)));
-			dom.Particles[a]->Densityb = rho*((1+9.81*(1.5-dom.Particles[a]->x(1))/(dom.Cs*dom.Cs)));
+//		if (dom.Particles[a]->ID==1)
+//		{
+//			dom.Particles[a]->Density  = rho*pow((1+rho*9.81*(H-dom.Particles[a]->x(1))/(rho*dom.Cs*dom.Cs/7.0)),(1.0/7.0));
+//			dom.Particles[a]->Densityb = rho*pow((1+rho*9.81*(H-dom.Particles[a]->x(1))/(rho*dom.Cs*dom.Cs/7.0)),(1.0/7.0));
+			dom.Particles[a]->Density  = rho*((1+9.81*(H-dom.Particles[a]->x(1))/(dom.Cs*dom.Cs)));
+			dom.Particles[a]->Densityb = rho*((1+9.81*(H-dom.Particles[a]->x(1))/(dom.Cs*dom.Cs)));
 
-		}
+//		}
 	}
 
 	dom.Solve(/*tf*/50000.0,/*dt*/maz,/*dtOut*/(400.0*maz),"test06",10000);

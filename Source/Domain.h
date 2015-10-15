@@ -248,7 +248,7 @@ inline Domain::Domain ()
     Nproc	= 1;
 
     deltat	= 0.0;
-    Shepard = true;
+    Shepard = false;
 
     TRPR = 0.0;
     BLPF = 0.0;

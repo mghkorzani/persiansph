@@ -182,11 +182,18 @@ inline void Particle::Move (double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3
 			vb = temp;
 
 			// Evolve density
-			if (ShepardFilter && !isnan(SumDen/ZWab))
+			if (ShepardFilter)
 			{
-				// Shepard filter
-				Density = SumDen/ZWab;
-				Densityb = Density;
+				if (!isnan(SumDen/ZWab))
+				{
+					// Shepard filter
+					Density = SumDen/ZWab;
+					Densityb = Density;
+				}
+				else
+				{
+					Densityb = Density;
+				}
 			}
 			else
 			{
@@ -195,7 +202,6 @@ inline void Particle::Move (double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3
 				Densityb = dens;
 			}
 
-			// Evolve shear stress
 			// Evolve shear stress
 			if (Material == 2)
 			{
