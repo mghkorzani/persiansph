@@ -251,7 +251,7 @@ inline void Domain::CalcForceSS(Particle * P1, Particle * P2)
 
         }
 
-        TIij = pow((K/Kernel(Dimension, KernelType, InitialDist, h)),4)*(Ri+Rj);
+        TIij = pow((K/Kernel(Dimension, KernelType, InitialDist, h)),TIn)*(Ri+Rj);
     }
 
     Mat3_t StrainRate,Rotation;
@@ -323,7 +323,7 @@ inline void Domain::CalcForceSS(Particle * P1, Particle * P2)
     	P1->SumDen += mj*    K;
     	P1->ZWab   += mj/dj* K;
     }
-    P1->dDensity += di * (mj/dj) * dot( vij , GK*xij );
+//    P1->dDensity += di * (mj/dj) * dot( vij , GK*xij );
     omp_unset_lock(&P1->my_lock);
 
     Mult( GK*xij , mi * ( 1.0/(di*di)*Sigmai + 1.0/(dj*dj)*Sigmaj + PIij + TIij ) ,temp);
@@ -336,7 +336,7 @@ inline void Domain::CalcForceSS(Particle * P1, Particle * P2)
     	P2->SumDen += mi*    K;
     	P2->ZWab   += mi/di* K;
     }
-    P2->dDensity += dj * (mi/di) * dot( -vij , -GK*xij );
+//    P2->dDensity += dj * (mi/di) * dot( -vij , -GK*xij );
     omp_unset_lock(&P2->my_lock);
 }
 

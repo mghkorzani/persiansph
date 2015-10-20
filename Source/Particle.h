@@ -64,6 +64,7 @@ public:
     double  ShearRate;		///< Global shear rate
 
     Mat3_t  ShearStress;	///< Deviatoric shear stress tensor (deviatoric part of the Cauchy stress tensor)
+    double  NormalStress;	///< Deviatoric shear stress tensor (deviatoric part of the Cauchy stress tensor)
     Mat3_t  Sigma;			///< Cauchy stress tensor
 
     double 	Mu;				///< Dynamic viscosity coefficient of the fluid particle
@@ -72,6 +73,7 @@ public:
     double 	m;		  		///< Normalization value for Bingham fluids
 
     double 	G;				///< Shear modulus
+    double 	K;				///< Shear modulus
 
     size_t	Fail;			///< Failure criteria
     double	c;				///< Cohesion
@@ -133,6 +135,8 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
     c = 0.0;
     phi = 0.0;
     Sigmay = 0.0;
+    NormalStress = 0.0;
+    K = 0.0;
 }
 
 inline void Particle::Move (double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3_t domainmin, bool ShepardFilter, Mat3_t I)
@@ -164,6 +168,7 @@ inline void Particle::Move (double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3
 				Mult(ShearStress,RotationRateT,SRT);
 				Mult(Rotation,ShearStress,RS);
 				ShearStress = dt*(2.0*G*(StrainRate-1.0/(2.0+I(2,2))*(StrainRate(0,0)+StrainRate(1,1)+StrainRate(2,2))*I)+SRT+RS) + ShearStress;
+				NormalStress = dt*(1.0/(2.0+I(2,2))*(StrainRate(0,0)+StrainRate(1,1)+StrainRate(2,2))*K) + NormalStress;
 			}
 		}
 		ct++;
@@ -211,6 +216,7 @@ inline void Particle::Move (double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3
 				Mult(ShearStress,RotationRateT,SRT);
 				Mult(Rotation,ShearStress,RS);
 				ShearStress = dt*(2.0*G*(StrainRate-1.0/(2.0+I(2,2))*(StrainRate(0,0)+StrainRate(1,1)+StrainRate(2,2))*I)+SRT+RS) + ShearStress;
+				NormalStress = dt*(1.0/(2.0+I(2,2))*(StrainRate(0,0)+StrainRate(1,1)+StrainRate(2,2))*K) + NormalStress;
 			}
 		}
 		ct=0;
