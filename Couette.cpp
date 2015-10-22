@@ -34,7 +34,6 @@ int main(int argc, char **argv) try
     	dom.PresEq		= 0;
     	dom.VisEq		= 3;
     	dom.KernelType	= 4;
-    	dom.NoSlip		= true;
 
         double yb,h,rho;
     	double dx;
@@ -59,15 +58,17 @@ int main(int argc, char **argv) try
     		yb=dom.Particles[a]->x(1);
     		if (yb>=0.0009901)
     		{
-    			dom.Particles[a]->ID		=4;
-    			dom.Particles[a]->IsFree	=false;
-    			dom.Particles[a]->v			=2.5e-5,0.0,0.0;
-    			dom.Particles[a]->vb		=2.5e-5,0.0,0.0;
+    			dom.Particles[a]->ID		= 4;
+    			dom.Particles[a]->IsFree	= false;
+    			dom.Particles[a]->v			= 2.5e-5,0.0,0.0;
+    			dom.Particles[a]->vb		= 2.5e-5,0.0,0.0;
+    			dom.Particles[a]->NoSlip	= true;
    		}
     		if (yb<0.0)
     		{
-    			dom.Particles[a]->ID=5;
-    			dom.Particles[a]->IsFree=false;
+    			dom.Particles[a]->ID		= 5;
+    			dom.Particles[a]->IsFree	= false;
+    			dom.Particles[a]->NoSlip	= true;
     		}
     	}
 

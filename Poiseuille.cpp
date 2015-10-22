@@ -42,7 +42,6 @@ int main(int argc, char **argv) try
     	dom.PresEq		= 0;
     	dom.VisEq		= 3;
     	dom.KernelType	= 4;
-    	dom.NoSlip		= true;
 
         double yb,h,rho;
     	double dx;
@@ -61,15 +60,16 @@ int main(int argc, char **argv) try
 
     	for (size_t a=0; a<dom.Particles.Size(); a++)
     	{
-    		dom.Particles[a]->Mu = 1.002e-3;
-    		dom.Particles[a]->MuRef = 1.002e-3;
-    		dom.Particles[a]->Material = 1;
+    		dom.Particles[a]->Mu		= 1.002e-3;
+    		dom.Particles[a]->MuRef		= 1.002e-3;
+    		dom.Particles[a]->Material	= 1;
 
     		yb=dom.Particles[a]->x(1);
     		if (yb>=0.0005 || yb<=-0.0005)
     		{
-    			dom.Particles[a]->ID=2;
-    			dom.Particles[a]->IsFree=false;
+    			dom.Particles[a]->ID		= 2;
+    			dom.Particles[a]->IsFree	= false;
+    			dom.Particles[a]->NoSlip	= true;
     		}
     	}
 

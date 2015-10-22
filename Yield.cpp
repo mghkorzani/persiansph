@@ -65,7 +65,7 @@ int main(int argc, char **argv) try
     	dom.InitialDist	= dx;
 
         double timestep;
-        timestep = (0.15*h/(dom.Cs));
+        timestep = (0.1*h/(dom.Cs));
         cout<<timestep<<endl;
         cout<<dom.Cs<<endl;
     	dom.GeneralAfter = & UserAcc;

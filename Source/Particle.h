@@ -35,6 +35,7 @@ class Particle
 public:
     // Data
     bool   	IsFree;			///< Check the particle if it is free to move or not
+    bool   	NoSlip;			///< No-Slip BC
     int    	ID;				///< an Integer value to identify the particle set
     int    	Material;		///< an Integer value to identify the particle material type
     						///< 1 = Fluid, 2 = Solid
@@ -49,10 +50,10 @@ public:
     double	ZWab;			///< Summation of mb/db*Wab for neighbour particles of the particle a (for Shepard filter)
     double	SumDen;			///< Summation of mb*Wab for neighbour particles of the particle a (for Shepard filter)
 
-    double 	Pressure;		///< Pressure at position of the particle
+    double 	Pressure;		///< Pressure of the particle n
 
-    double	Density;		///< Density at the position of the particle n
-    double 	Densityb;		///< Density at the position of the particle n-2
+    double	Density;		///< Density of the particle n
+    double 	Densityb;		///< Density of the particle n-2
     double 	RefDensity;		///< Reference Density of Particle
     double 	dDensity;		///< Rate of density change in time based on state equations
 
@@ -63,9 +64,11 @@ public:
 
     double  ShearRate;		///< Global shear rate
 
-    Mat3_t  ShearStress;	///< Deviatoric shear stress tensor (deviatoric part of the Cauchy stress tensor)
-    double  NormalStress;	///< Deviatoric shear stress tensor (deviatoric part of the Cauchy stress tensor)
-    Mat3_t  Sigma;			///< Cauchy stress tensor
+    Mat3_t  ShearStress;	///< Deviatoric shear stress tensor (deviatoric part of the Cauchy stress tensor) n
+    Mat3_t  ShearStressb;	///< Deviatoric shear stress tensor (deviatoric part of the Cauchy stress tensor) n-2
+    double  NormalStress;	///< Hydrostatic stress n
+    double  NormalStressb;	///< Hydrostatic stress n-2
+    Mat3_t  Sigma;			///< Cauchy stress tensor (Total Stress) n
 
     double 	Mu;				///< Dynamic viscosity coefficient of the fluid particle
     double 	MuRef;			///< Reference Dynamic viscosity coefficient
@@ -73,7 +76,7 @@ public:
     double 	m;		  		///< Normalization value for Bingham fluids
 
     double 	G;				///< Shear modulus
-    double 	K;				///< Shear modulus
+    double 	K;				///< Bulk modulus
 
     size_t	Fail;			///< Failure criteria
     double	c;				///< Cohesion
@@ -136,7 +139,13 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
     phi = 0.0;
     Sigmay = 0.0;
     NormalStress = 0.0;
+    NormalStressb = 0.0;
+
     K = 0.0;
+    NoSlip = false;
+    set_to_zero(ShearStress);
+    set_to_zero(ShearStressb);
+
 }
 
 inline void Particle::Move (double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3_t domainmin, bool ShepardFilter, Mat3_t I)
@@ -160,15 +169,22 @@ inline void Particle::Move (double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3
 			Densityb = dens;
 
 			// Evolve shear stress
-			if (Material == 2)
+			if (Material >= 2)
 			{
-				Mat3_t RotationRateT;
+				Mat3_t RotationRateT, Stress;
 				Mat3_t SRT,RS;
+				Stress = ShearStress;
 				Trans(Rotation,RotationRateT);
 				Mult(ShearStress,RotationRateT,SRT);
 				Mult(Rotation,ShearStress,RS);
-				ShearStress = dt*(2.0*G*(StrainRate-1.0/(2.0+I(2,2))*(StrainRate(0,0)+StrainRate(1,1)+StrainRate(2,2))*I)+SRT+RS) + ShearStress;
-				NormalStress = dt*(1.0/(2.0+I(2,2))*(StrainRate(0,0)+StrainRate(1,1)+StrainRate(2,2))*K) + NormalStress;
+				ShearStress = 2.0*dt*(2.0*G*(StrainRate-1.0/(2.0+I(2,2))*(StrainRate(0,0)+StrainRate(1,1)+StrainRate(2,2))*I)+SRT+RS) + ShearStressb;
+				ShearStressb = Stress;
+				if (Material == 3)
+				{
+					dens = NormalStress;
+					NormalStress = 2.0*dt*(1.0/(2.0+I(2,2))*(StrainRate(0,0)+StrainRate(1,1)+StrainRate(2,2))*K) + NormalStressb;
+					NormalStressb= dens;
+				}
 			}
 		}
 		ct++;
@@ -207,16 +223,22 @@ inline void Particle::Move (double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3
 				Densityb = dens;
 			}
 
-			// Evolve shear stress
-			if (Material == 2)
+			if (Material >= 2)
 			{
-				Mat3_t RotationRateT;
+				Mat3_t RotationRateT, Stress;
 				Mat3_t SRT,RS;
+				Stress = ShearStress;
 				Trans(Rotation,RotationRateT);
 				Mult(ShearStress,RotationRateT,SRT);
 				Mult(Rotation,ShearStress,RS);
-				ShearStress = dt*(2.0*G*(StrainRate-1.0/(2.0+I(2,2))*(StrainRate(0,0)+StrainRate(1,1)+StrainRate(2,2))*I)+SRT+RS) + ShearStress;
-				NormalStress = dt*(1.0/(2.0+I(2,2))*(StrainRate(0,0)+StrainRate(1,1)+StrainRate(2,2))*K) + NormalStress;
+				ShearStress = 2.0*dt*(2.0*G*(StrainRate-1.0/(2.0+I(2,2))*(StrainRate(0,0)+StrainRate(1,1)+StrainRate(2,2))*I)+SRT+RS) + ShearStressb;
+				ShearStressb = Stress;
+				if (Material == 3)
+				{
+					double dens = NormalStress;
+					NormalStress = 2.0*dt*(1.0/(2.0+I(2,2))*(StrainRate(0,0)+StrainRate(1,1)+StrainRate(2,2))*K) + NormalStressb;
+					NormalStressb= dens;
+				}
 			}
 		}
 		ct=0;

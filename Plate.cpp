@@ -31,7 +31,6 @@ int main(int argc, char **argv) try
     	dom.PresEq		= 0;
     	dom.KernelType	= 0;
     	dom.Shepard		= false;
-    	dom.NoSlip		= true;
 
     	dom.TI			= 0.3;
     	dom.Alpha		= 1.0;
@@ -42,7 +41,7 @@ int main(int argc, char **argv) try
 
     	H	= 0.02;
     	L	= 0.2;
-    	n	= 30.0;
+    	n	= 20.0;
 
     	rho	= 1000.0;
     	K	= 3.25e6;
@@ -53,7 +52,7 @@ int main(int argc, char **argv) try
     	dom.InitialDist	= dx;
 
         double timestep;
-        timestep = (0.15*h/(dom.Cs));
+        timestep = (0.05*h/(dom.Cs));
         cout<<timestep<<endl;
         cout<<dom.Cs<<endl;
         dom.DomMax(1) = 0.10;
@@ -76,11 +75,13 @@ int main(int argc, char **argv) try
     		{
     			dom.Particles[a]->ID=2;
     			dom.Particles[a]->IsFree=false;
+    			dom.Particles[a]->NoSlip= true;
     		}
     		if (x<=0.0 && y<-H/2.0)
     		{
-    			dom.Particles[a]->ID=2;
+     			dom.Particles[a]->ID=2;
     			dom.Particles[a]->IsFree=false;
+    			dom.Particles[a]->NoSlip= true;
     		}
     	}
     	dom.DelParticles(5);
@@ -99,7 +100,7 @@ int main(int argc, char **argv) try
     	}
 
 //    	dom.WriteXDMF("maz");
-    	dom.Solve(/*tf*/1000.0,/*dt*/timestep,/*dtOut*/400.0*timestep,"test06",2000);
+    	dom.Solve(/*tf*/1000.0,/*dt*/timestep,/*dtOut*/0.001,"test06",1000);
         return 0;
 }
 MECHSYS_CATCH
