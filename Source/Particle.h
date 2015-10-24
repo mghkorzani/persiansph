@@ -29,6 +29,14 @@
 #include "../External/matvec.h"
 
 namespace SPH {
+Mat3_t abab (const Mat3_t & A, const Mat3_t & B)
+{
+    Mat3_t M;
+    M(0,0)=A(0,0)*B(0,0);  M(0,1)=A(0,1)*B(0,1);  M(0,2)=A(0,2)*B(0,2);
+    M(1,0)=A(1,0)*B(1,0);  M(1,1)=A(1,1)*B(1,1);  M(1,2)=A(1,2)*B(1,2);
+    M(2,0)=A(2,0)*B(2,0);  M(2,1)=A(2,1)*B(2,1);  M(2,2)=A(2,2)*B(2,2);
+    return M;
+}
 
 class Particle
 {
@@ -66,9 +74,8 @@ public:
 
     Mat3_t  ShearStress;	///< Deviatoric shear stress tensor (deviatoric part of the Cauchy stress tensor) n
     Mat3_t  ShearStressb;	///< Deviatoric shear stress tensor (deviatoric part of the Cauchy stress tensor) n-2
-    double  NormalStress;	///< Hydrostatic stress n
-    double  NormalStressb;	///< Hydrostatic stress n-2
     Mat3_t  Sigma;			///< Cauchy stress tensor (Total Stress) n
+    Mat3_t  Sigmab;			///< Cauchy stress tensor (Total Stress) n-2
 
     double 	Mu;				///< Dynamic viscosity coefficient of the fluid particle
     double 	MuRef;			///< Reference Dynamic viscosity coefficient
@@ -138,9 +145,6 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
     c = 0.0;
     phi = 0.0;
     Sigmay = 0.0;
-    NormalStress = 0.0;
-    NormalStressb = 0.0;
-
     K = 0.0;
     NoSlip = false;
     set_to_zero(ShearStress);
@@ -150,98 +154,71 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
 
 inline void Particle::Move (double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3_t domainmin, bool ShepardFilter, Mat3_t I)
 {
-	if (ct < 30)
+	// Evolve position
+	x = x + dt*(v+VXSPH) + 0.5*dt*dt*a;
+
+	// Evolve density
+	if (ShepardFilter && ct==30)
 	{
-		if (IsFree)
+		if (!isnan(SumDen/ZWab))
 		{
-			// Evolve position
-			x = x + dt*(v+VXSPH) + 0.5*dt*dt*a;
-
-			// Evolve velocity
-			Vec3_t temp;
-			temp = v;
-			v = vb + 2*dt*a;
-			vb = temp;
-
-			// Evolve density
-			double dens = Density;
-			Density = Densityb + 2*dt*dDensity;
-			Densityb = dens;
-
-			// Evolve shear stress
-			if (Material >= 2)
-			{
-				Mat3_t RotationRateT, Stress;
-				Mat3_t SRT,RS;
-				Stress = ShearStress;
-				Trans(Rotation,RotationRateT);
-				Mult(ShearStress,RotationRateT,SRT);
-				Mult(Rotation,ShearStress,RS);
-				ShearStress = 2.0*dt*(2.0*G*(StrainRate-1.0/(2.0+I(2,2))*(StrainRate(0,0)+StrainRate(1,1)+StrainRate(2,2))*I)+SRT+RS) + ShearStressb;
-				ShearStressb = Stress;
-				if (Material == 3)
-				{
-					dens = NormalStress;
-					NormalStress = 2.0*dt*(1.0/(2.0+I(2,2))*(StrainRate(0,0)+StrainRate(1,1)+StrainRate(2,2))*K) + NormalStressb;
-					NormalStressb= dens;
-				}
-			}
+			// Shepard filter
+			Density = SumDen/ZWab;
+			Densityb = Density;
 		}
-		ct++;
+		else
+			Densityb = Density;
 	}
 	else
 	{
-		if (IsFree)
-		{
-			// Evolve position
-			x = x + dt*(vb+VXSPH) + 0.5*dt*dt*a;
+		double dens = Density;
+		Density = Density + dt*dDensity;
+		Densityb = dens;
+	}
 
-			// Evolve velocity
-			Vec3_t temp;
-			temp = v;
-			v = v + dt*a;
-			vb = temp;
+	// Evolve velocity
+	if (ct==30)
+	{
+		Vec3_t temp;
+		temp = v;
+		v = v + dt*a;
+		vb = temp;
+		ct = -1;
+	}
+	else
+	{
+		Vec3_t temp;
+		temp = v;
+		v = vb + 2*dt*a;
+		vb = temp;
+	}
+	ct++;
 
-			// Evolve density
-			if (ShepardFilter)
-			{
-				if (!isnan(SumDen/ZWab))
-				{
-					// Shepard filter
-					Density = SumDen/ZWab;
-					Densityb = Density;
-				}
-				else
-				{
-					Densityb = Density;
-				}
-			}
-			else
-			{
-				double dens = Density;
-				Density = Density + dt*dDensity;
-				Densityb = dens;
-			}
 
-			if (Material >= 2)
-			{
-				Mat3_t RotationRateT, Stress;
-				Mat3_t SRT,RS;
-				Stress = ShearStress;
-				Trans(Rotation,RotationRateT);
-				Mult(ShearStress,RotationRateT,SRT);
-				Mult(Rotation,ShearStress,RS);
-				ShearStress = 2.0*dt*(2.0*G*(StrainRate-1.0/(2.0+I(2,2))*(StrainRate(0,0)+StrainRate(1,1)+StrainRate(2,2))*I)+SRT+RS) + ShearStressb;
-				ShearStressb = Stress;
-				if (Material == 3)
-				{
-					double dens = NormalStress;
-					NormalStress = 2.0*dt*(1.0/(2.0+I(2,2))*(StrainRate(0,0)+StrainRate(1,1)+StrainRate(2,2))*K) + NormalStressb;
-					NormalStressb= dens;
-				}
-			}
-		}
-		ct=0;
+	// Evolve shear stress
+	if (Material == 2)
+	{
+		Mat3_t RotationRateT, Stress;
+		Mat3_t SRT,RS;
+		Stress = ShearStress;
+		Trans(Rotation,RotationRateT);
+		Mult(ShearStress,RotationRateT,SRT);
+		Mult(Rotation,ShearStress,RS);
+		ShearStress = 2.0*dt*(2.0*G*(StrainRate-1.0/(2.0+I(2,2))*(StrainRate(0,0)+StrainRate(1,1)+StrainRate(2,2))*I)+SRT+RS) + ShearStressb;
+		ShearStressb = Stress;
+	}
+
+	if (Material == 3)
+	{
+		Mat3_t RotationRateT, Stress;
+		Mat3_t SRT,RS;
+		Stress = Sigma;
+		Trans(Rotation,RotationRateT);
+		Mult(Sigma,RotationRateT,SRT);
+		Mult(Rotation,Sigma,RS);
+		Sigma	=	2.0*dt*(((StrainRate(0,0)+StrainRate(1,1)+StrainRate(2,2))*K)*OrthoSys::I+
+						2.0*G*(StrainRate-1.0/3.0*(StrainRate(0,0)+StrainRate(1,1)+StrainRate(2,2))*OrthoSys::I)+SRT+RS) + Sigmab;
+		Sigmab = Stress;
 	}
 
 	//Periodic BC particle position update

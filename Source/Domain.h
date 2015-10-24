@@ -1059,46 +1059,107 @@ inline void Domain::StartAcceleration (Vec3_t const & a)
             {
 				if (Particles[i]->Fail == 2)
 				{
-					double Alpha,k,I1,J2;
-					Particles[i]->Sigma = Particles[i]->NormalStress * I + Particles[i]->ShearStress;
-					k		= 3.0 * Particles[i]->c  / sqrt(9.0+12.0*tan(Particles[i]->phi)*tan(Particles[i]->phi));
-					Alpha	= tan(Particles[i]->phi) / sqrt(9.0+12.0*tan(Particles[i]->phi)*tan(Particles[i]->phi));
+					double Alpha,k,I1,J2,J3,Theta;
+					Particles[i]->Sigma = Particles[i]->ShearStress;
 					I1		= Particles[i]->Sigma(0,0) + Particles[i]->Sigma(1,1) + Particles[i]->Sigma(2,2);
-					Mat3_t  temp;
-					temp	= Particles[i]->Sigma - I1/(2.0+I(2,2))*I;
-					J2		= 0.5*(temp(0,0)*temp(0,0) + 2.0*temp(0,1)*temp(1,0) +
-								2.0*temp(0,2)*temp(2,0) + temp(1,1)*temp(1,1) +
-								2.0*temp(1,2)*temp(2,1) + temp(2,2)*temp(2,2));
-					double Drucker = k - Alpha * I1;
-					if (Drucker<=0.0)
+					Mat3_t  S;
+					S		= Particles[i]->Sigma - I1/(2.0+I(2,2))*I;
+					J2		= 0.5*(S(0,0)*S(0,0) + 2.0*S(0,1)*S(1,0) +
+								2.0*S(0,2)*S(2,0) + S(1,1)*S(1,1) +
+								2.0*S(1,2)*S(2,1) + S(2,2)*S(2,2));
+					J3		= Det(S);
+					Theta	= 1.0/3.0*acos(3.0*sqrt(3.0)*J3/2.0/pow(J2,1.5));
+					k		= 6.0* Particles[i]->c*cos(Particles[i]->phi)/(3.0*(1-sin(Particles[i]->phi))*sin(Theta)+sqrt(3.0)*(3.0+sin(Particles[i]->phi))*cos(Theta));
+					Alpha	= 2.0* sin(Particles[i]->phi)/(3.0*(1-sin(Particles[i]->phi))*sin(Theta)+sqrt(3.0)*(3.0+sin(Particles[i]->phi))*cos(Theta));
+					double Yield = k - Alpha * I1;
+					if (Yield>0.0)
 					{
-						if (Drucker<0.0)
+						if (sqrt(J2)>Yield)
 						{
-
-							double temp;
-							if (Alpha == 0.0) temp =0.0; else temp = k/Alpha;
-							Particles[i]->Sigma(0,0) = Particles[i]->Sigma(0,0) - 1.0/(2.0+I(2,2))*(I1-temp);
-							Particles[i]->Sigma(1,1) = Particles[i]->Sigma(1,1) - 1.0/(2.0+I(2,2))*(I1-temp);
-							if (Dimension == 3) Particles[i]->Sigma(2,2) = Particles[i]->Sigma(2,2) - 1.0/(2.0+I(2,2))*(I1-temp); else Particles[i]->Sigma(2,2) = 0.0;
+							Particles[i]->Sigma = I1/(2.0+I(2,2))*I + (Yield/sqrt(J2))*S;
+							Particles[i]->ShearStress = Particles[i]->Sigma;
 						}
-						Particles[i]->Sigma(0,1) = 0.0;
-						Particles[i]->Sigma(0,2) = 0.0;
-						Particles[i]->Sigma(1,0) = 0.0;
-						Particles[i]->Sigma(1,2) = 0.0;
-						Particles[i]->Sigma(2,0) = 0.0;
-						Particles[i]->Sigma(2,1) = 0.0;
-						set_to_zero(Particles[i]->ShearStress);
 					}
-					if (Drucker>0.0)
+					else
 					{
-						Particles[i]->ShearStress = std::min((Drucker/sqrt(J2)),1.0)*temp;
-						Particles[i]->Sigma = I1/(2.0+I(2,2))*I + Particles[i]->ShearStress;
+						if (Yield==0.0)
+						{
+							Particles[i]->Sigma(0,1) = 0.0;
+							Particles[i]->Sigma(0,2) = 0.0;
+							Particles[i]->Sigma(1,0) = 0.0;
+							Particles[i]->Sigma(1,2) = 0.0;
+							Particles[i]->Sigma(2,0) = 0.0;
+							Particles[i]->Sigma(2,1) = 0.0;
+							Particles[i]->ShearStress = Particles[i]->Sigma;
+						}
+						else
+							if (Yield<0.0)
+							{
+								set_to_zero(Particles[i]->Sigma);
+								set_to_zero(Particles[i]->ShearStress);
+//								double temp;
+//								if (Alpha == 0.0) temp =0.0; else temp = k/Alpha;
+//								Particles[i]->Sigma(0,0) = Particles[i]->Sigma(0,0) - 1.0/(2.0+I(2,2))*(I1-temp);
+//								Particles[i]->Sigma(1,1) = Particles[i]->Sigma(1,1) - 1.0/(2.0+I(2,2))*(I1-temp);
+//								if (Dimension == 3) Particles[i]->Sigma(2,2) = Particles[i]->Sigma(2,2) - 1.0/(2.0+I(2,2))*(I1-temp); else Particles[i]->Sigma(2,2) = 0.0;
+//								Particles[i]->ShearStress = Particles[i]->Sigma;
+							}
 					}
 				}
 				else
-					Particles[i]->Sigma = Particles[i]->NormalStress * I + Particles[i]->ShearStress;
+					Particles[i]->Sigma = Particles[i]->ShearStress;
 
-				if (Particles[i]->Fail != 2 ||Particles[i]->Fail != 0)
+				if (Particles[i]->Fail == 3)
+				{
+					double Alpha,k,I1,J2;
+					Particles[i]->Sigma = Particles[i]->ShearStress;
+					I1		= Particles[i]->Sigma(0,0) + Particles[i]->Sigma(1,1) + Particles[i]->Sigma(2,2);
+					Mat3_t  S;
+					S		= Particles[i]->Sigma - I1/(2.0+I(2,2))*I;
+					J2		= 0.5*(S(0,0)*S(0,0) + 2.0*S(0,1)*S(1,0) +
+								2.0*S(0,2)*S(2,0) + S(1,1)*S(1,1) +
+								2.0*S(1,2)*S(2,1) + S(2,2)*S(2,2));
+					k		= 3.0 * Particles[i]->c  / sqrt(9.0+12.0*tan(Particles[i]->phi)*tan(Particles[i]->phi));
+					Alpha	= tan(Particles[i]->phi) / sqrt(9.0+12.0*tan(Particles[i]->phi)*tan(Particles[i]->phi));
+					double Yield = k - Alpha * I1;
+					if (Yield>0.0)
+					{
+						if (sqrt(J2)>Yield)
+						{
+							Particles[i]->Sigma = I1/(2.0+I(2,2))*I + (Yield/sqrt(J2))*S;
+							Particles[i]->ShearStress = Particles[i]->Sigma;
+						}
+					}
+					else
+					{
+//						if (Yield==0.0)
+//						{
+//							Particles[i]->Sigma(0,1) = 0.0;
+//							Particles[i]->Sigma(0,2) = 0.0;
+//							Particles[i]->Sigma(1,0) = 0.0;
+//							Particles[i]->Sigma(1,2) = 0.0;
+//							Particles[i]->Sigma(2,0) = 0.0;
+//							Particles[i]->Sigma(2,1) = 0.0;
+//							Particles[i]->ShearStress = Particles[i]->Sigma;
+//						}
+//						else
+							if (Yield<0.0)
+							{
+//								set_to_zero(Particles[i]->Sigma);
+//								set_to_zero(Particles[i]->ShearStress);
+								double temp;
+								if (Alpha == 0.0) temp =0.0; else temp = k/Alpha;
+								Particles[i]->Sigma(0,0) = Particles[i]->Sigma(0,0) - 1.0/(2.0+I(2,2))*(I1-temp);
+								Particles[i]->Sigma(1,1) = Particles[i]->Sigma(1,1) - 1.0/(2.0+I(2,2))*(I1-temp);
+								if (Dimension == 3) Particles[i]->Sigma(2,2) = Particles[i]->Sigma(2,2) - 1.0/(2.0+I(2,2))*(I1-temp); else Particles[i]->Sigma(2,2) = 0.0;
+								Particles[i]->ShearStress = Particles[i]->Sigma;
+							}
+					}
+				}
+				else
+					Particles[i]->Sigma = Particles[i]->ShearStress;
+
+				if (Particles[i]->Fail != 2  && Particles[i]->Fail != 0 && Particles[i]->Fail != 3)
 				{
 					std::cout<<"Undefined failure criteria for soils"<<std::endl;
 					abort();
@@ -1244,7 +1305,9 @@ inline void Domain::LastComputeAcceleration ()
 inline void Domain::Move (double dt)
 {
 	#pragma omp parallel for schedule (static) num_threads(Nproc)
-	for (size_t i=0; i<Particles.Size(); i++) Particles[i]->Move(dt,DomSize,TRPR,BLPF,Shepard,I);
+	for (size_t i=0; i<Particles.Size(); i++)
+		if (Particles[i]->IsFree)
+			Particles[i]->Move(dt,DomSize,TRPR,BLPF,Shepard,I);
 
 }
 
@@ -1575,6 +1638,8 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
             tout += dtOut;
         }
 
+//        abort();
+
     	Move(dt);
 
         // Auto Save
@@ -1747,10 +1812,7 @@ inline void Domain::WriteXDMF (char const * FileKey)
         ACCvec  [3*i  ] = float(Particles[i]->a(0));
         ACCvec  [3*i+1] = float(Particles[i]->a(1));
         ACCvec  [3*i+2] = float(Particles[i]->a(2));
-        if (Particles[i]->Material == 3)
-        	Pressure[i    ] = float(Particles[i]->NormalStress);
-        else
-        	Pressure[i    ] = float(Particles[i]->Pressure);
+       	Pressure[i    ] = float(Particles[i]->Pressure);
         ShearRate[i   ] = float(Particles[i]->ShearRate);
         Density [i    ] = float(Particles[i]->Density);
         Mass	[i    ] = float(Particles[i]->Mass);
