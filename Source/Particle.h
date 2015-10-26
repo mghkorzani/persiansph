@@ -204,20 +204,39 @@ inline void Particle::Move (double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3
 		Trans(Rotation,RotationRateT);
 		Mult(ShearStress,RotationRateT,SRT);
 		Mult(Rotation,ShearStress,RS);
-		ShearStress = 2.0*dt*(2.0*G*(StrainRate-1.0/(2.0+I(2,2))*(StrainRate(0,0)+StrainRate(1,1)+StrainRate(2,2))*I)+SRT+RS) + ShearStressb;
+		ShearStress = 2.0*dt*(2.0*G*(StrainRate-1.0/3.0*(StrainRate(0,0)+StrainRate(1,1)+StrainRate(2,2))*OrthoSys::I)+SRT+RS) + ShearStressb;
 		ShearStressb = Stress;
 	}
 
 	if (Material == 3)
 	{
-		Mat3_t RotationRateT, Stress;
+		Mat3_t RotationRateT, Stress, landa, M1, Plastic;
+		M1 = 1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0;
 		Mat3_t SRT,RS;
-		Stress = Sigma;
 		Trans(Rotation,RotationRateT);
 		Mult(Sigma,RotationRateT,SRT);
 		Mult(Rotation,Sigma,RS);
-		Sigma	=	2.0*dt*(((StrainRate(0,0)+StrainRate(1,1)+StrainRate(2,2))*K)*OrthoSys::I+
-						2.0*G*(StrainRate-1.0/3.0*(StrainRate(0,0)+StrainRate(1,1)+StrainRate(2,2))*OrthoSys::I)+SRT+RS) + Sigmab;
+		double I1strain,I1,J2,alpha,k;
+		I1 = Sigma(0,0) + Sigma(1,1) + Sigma(2,2);
+		ShearStress = Sigma - 1.0/3.0* I1 *OrthoSys::I;
+		J2 = 0.5*(ShearStress(0,0)*ShearStress(0,0) + 2.0*ShearStress(0,1)*ShearStress(1,0) +
+				2.0*ShearStress(0,2)*ShearStress(2,0) + ShearStress(1,1)*ShearStress(1,1) +
+				2.0*ShearStress(1,2)*ShearStress(2,1) + ShearStress(2,2)*ShearStress(2,2));
+		I1strain = StrainRate(0,0)+StrainRate(1,1)+StrainRate(2,2);
+		alpha	= tan(phi) / sqrt(9.0+12.0*tan(phi)*tan(phi));
+		k		= 3.0 * c  / sqrt(9.0+12.0*tan(phi)*tan(phi));
+		landa = abab(ShearStress,StrainRate);
+		landa = 1.0/(9*alpha*alpha*K+G)*( (3.0*alpha*K*I1strain)*M1 + (G/sqrt(J2))*landa );
+		Plastic = 3.0*alpha*K*OrthoSys::I + G/sqrt(J2)*ShearStress;
+
+
+		Stress = Sigma;
+		Sigma	=	2.0*dt*(
+								I1strain*K*OrthoSys::I
+							+	2.0*G*(StrainRate-1.0/3.0*I1strain*OrthoSys::I)
+							-	abab(landa,Plastic)
+							+	SRT+RS
+							) + Sigmab;
 		Sigmab = Stress;
 	}
 

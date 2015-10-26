@@ -74,7 +74,7 @@ int main(int argc, char **argv) try
     		dom.Particles[a]->G			= G;
     		dom.Particles[a]->K			= K;
     		dom.Particles[a]->Material	= 3;
-    		dom.Particles[a]->Fail		= 2;
+//    		dom.Particles[a]->Fail		= 2;
     		dom.Particles[a]->c			= 0.0;
     		dom.Particles[a]->phi		= 30.0/180.0*M_PI;
 //    		if (dom.Particles[a]->x(0)<-H || dom.Particles[a]->x(0)>H)
