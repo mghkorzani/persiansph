@@ -58,7 +58,7 @@ int main(int argc, char **argv) try
     	dom.DomMax(1)	= 1.1*H;
 
         double timestep;
-        timestep = (0.05*h/(dom.Cs));
+        timestep = (0.005*h/(dom.Cs));
 
         cout<<"Time Step = "<<timestep<<endl;
         cout<<"Cs = "<<dom.Cs<<endl;
@@ -67,7 +67,7 @@ int main(int argc, char **argv) try
 
 //     	dom.AddBoxLength(1 ,Vec3_t ( -H - 3.0*dx     ,  0.0    , 0.0 ), 2.0*H + 6.0*dx + dx/10.0 , H + dx/10.0      ,  0 , dx/2.0 ,rho, h, 1 , 0 , false, false );
      	dom.AddBoxLength(1 ,Vec3_t ( -H/2.0     ,  0.0    , 0.0 ), 1.0*H + dx/10.0 , H + dx/10.0      ,  0 , dx/2.0 ,rho, h, 1 , 0 , false, false );
-     	dom.AddBoxLength(1 ,Vec3_t ( -1.0*H , -3.0*dx , 0.0 ), 2.0*H + dx/10.0 , 3.0*dx + dx/10.0 ,  0 , dx/2.0 ,rho, h, 1 , 0 , false, false );
+     	dom.AddBoxLength(1 ,Vec3_t ( -2.0*H , -3.0*dx , 0.0 ), 4.0*H + dx/10.0 , 3.0*dx + dx/10.0 ,  0 , dx/2.0 ,rho, h, 1 , 0 , false, false );
 
     	for (size_t a=0; a<dom.Particles.Size(); a++)
     	{
@@ -76,7 +76,7 @@ int main(int argc, char **argv) try
     		dom.Particles[a]->Material	= 3;
 //    		dom.Particles[a]->Fail		= 2;
     		dom.Particles[a]->c			= 0.0;
-    		dom.Particles[a]->phi		= 30.0/180.0*M_PI;
+    		dom.Particles[a]->phi		= 27.0/180.0*M_PI;
 //    		if (dom.Particles[a]->x(0)<-H || dom.Particles[a]->x(0)>H)
 //    		{
 ////    			dom.Particles[a]->NoSlip	= true;
