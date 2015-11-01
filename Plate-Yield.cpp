@@ -40,7 +40,7 @@ int main(int argc, char **argv) try
         SPH::Domain		dom;
 
         dom.Dimension	= 2;
-        dom.Nproc		= 8;
+        dom.Nproc		= 24;
     	dom.PresEq		= 0;
     	dom.KernelType	= 0;
     	dom.Shepard		= false;
