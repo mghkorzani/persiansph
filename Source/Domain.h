@@ -68,7 +68,7 @@ inline Boundary::Boundary()
 	allv	= 0.0;
 	inv		= 0.0;
 	outv	= 0.0;
-	Periodic[0]=Periodic[1]=Periodic[2]			= false;
+	Periodic[0]=Periodic[1]=Periodic[2] = false;
 	inDensity = 0.0;
 	outDensity = 0.0;
 	allDensity = 0.0;
@@ -108,11 +108,10 @@ public:
     void StartAcceleration			(Vec3_t const & a = Vec3_t(0.0,0.0,0.0));															///< Add a fixed acceleration such as the Gravity
     void PrimaryComputeAcceleration	();																									///< Compute the solid boundary properties
     void LastComputeAcceleration	();																									///< Compute the acceleration due to the other particles
-//    void CalcForce					(Particle * P1, Particle * P2);																		///< Calculates the contact force between particles
     void CalcForce11				(Particle * P1, Particle * P2);																		///< Calculates the contact force between particles
     void CalcForce22				(Particle * P1, Particle * P2);																		///< Calculates the contact force between particles
     void CalcForce33				(Particle * P1, Particle * P2);																		///< Calculates the contact force between particles
-//    void CalcForceFS				(Particle * P1, Particle * P2);																		///< Calculates the contact force between particles
+    void CalcForce33FS				(Particle * P1, Vec3_t vij, Vec3_t xij);
     void Move						(double dt);																						///< Move particles
 
     void Solve						(double tf, double dt, double dtOut, char const * TheFileKey, size_t maxidx);						///< The solving function
@@ -1012,6 +1011,38 @@ inline void Domain::StartAcceleration (Vec3_t const & a)
     {
     	if (Particles[i]->IsFree)
     	{
+        	// Tensile Instability for all particles
+            if (Particles[i]->Material > 1 && TI > 0.0)
+            {
+				// XY plane must be used, It is very slow in 3D
+				if (Dimension == 2)
+				{
+					double teta, Sigmaxx, Sigmayy, C, S;
+
+					if ((Particles[i]->Sigma(0,0)-Particles[i]->Sigma(1,1))!=0.0) teta = 0.5*atan(2.0*Particles[i]->Sigma(0,1)/(Particles[i]->Sigma(0,0)-Particles[i]->Sigma(1,1))); else teta = M_PI/4.0;
+					C = cos(teta);
+					S = sin(teta);
+					Sigmaxx = C*C*Particles[i]->Sigma(0,0) + 2.0*C*S*Particles[i]->Sigma(0,1) + S*S*Particles[i]->Sigma(1,1);
+					Sigmayy = S*S*Particles[i]->Sigma(0,0) - 2.0*C*S*Particles[i]->Sigma(0,1) + C*C*Particles[i]->Sigma(1,1);
+					if (Sigmaxx>0) Sigmaxx = -TI * Sigmaxx/(Particles[i]->Density*Particles[i]->Density); else Sigmaxx = 0.0;
+					if (Sigmayy>0) Sigmayy = -TI * Sigmayy/(Particles[i]->Density*Particles[i]->Density); else Sigmayy = 0.0;
+					Particles[i]->TIR(0,0) = C*C*Sigmaxx + S*S*Sigmayy;
+					Particles[i]->TIR(1,1) = S*S*Sigmaxx + C*C*Sigmayy;
+					Particles[i]->TIR(0,1) = Particles[i]->TIR(1,0) = S*C*(Sigmaxx-Sigmayy);
+				}
+				else
+				{
+					Mat3_t Vec,Val,VecT,temp;
+
+					Rotation(Particles[i]->Sigma,Vec,VecT,Val);
+					if (Val(0,0)>0) Val(0,0) = -TI * Val(0,0)/(Particles[i]->Density*Particles[i]->Density); else Val(0,0) = 0.0;
+					if (Val(1,1)>0) Val(1,1) = -TI * Val(1,1)/(Particles[i]->Density*Particles[i]->Density); else Val(1,1) = 0.0;
+					if (Val(2,2)>0) Val(2,2) = -TI * Val(2,2)/(Particles[i]->Density*Particles[i]->Density); else Val(2,2) = 0.0;
+					Mult(Vec,Val,temp);
+					Mult(temp,VecT,Particles[i]->TIR);
+				}
+            }
+
             // Fluid Particles
             if (Particles[i]->Material == 1)
             {
@@ -1030,6 +1061,7 @@ inline void Domain::StartAcceleration (Vec3_t const & a)
 						Particles[i]->Mu = Particles[i]->MuRef + Particles[i]->T0*Particles[i]->m;
 				}
             }
+
 
             // Solid Particles
             if (Particles[i]->Material == 2)
@@ -1061,6 +1093,7 @@ inline void Domain::StartAcceleration (Vec3_t const & a)
     		Particles[i]->Pressure = 0.0;
             set_to_zero(Particles[i]->Sigma);
     	}
+
 
 
     	//Reset to zero for all particles
@@ -1108,12 +1141,6 @@ inline void Domain::PrimaryComputeAcceleration ()
 						if (Particles[i]->Material < 3)	Particles[i]->Pressure	+= Particles[j]->Pressure * K + dot(Gravity,xij)*Particles[j]->Density*K;
 						if (Particles[i]->NoSlip) 		Particles[i]->vb		+= Particles[j]->v * K;
 						if (Particles[i]->Material > 1)	Particles[i]->Sigma		=  Particles[i]->Sigma + K * Particles[j]->Sigma;
-//						if (Particles[i]->Material ==3)
-//						{
-//							Particles[i]->ShearStress(0,0) =  std::min(Particles[j]->Sigma(0,0),Particles[i]->ShearStress(0,0));
-//							Particles[i]->ShearStress(1,1) =  std::min(Particles[j]->Sigma(1,1),Particles[i]->ShearStress(1,1));
-//							Particles[i]->ShearStress(2,2) =  std::min(Particles[j]->Sigma(2,2),Particles[i]->ShearStress(2,2));
-//						}
 				    omp_unset_lock(&Particles[i]->my_lock);
 
 //					omp_set_lock(&dom_lock);
@@ -1138,12 +1165,6 @@ inline void Domain::PrimaryComputeAcceleration ()
 						if (Particles[j]->Material < 3)	Particles[j]->Pressure	+= Particles[i]->Pressure * K + dot(Gravity,xij)*Particles[i]->Density*K;
 						if (Particles[j]->NoSlip)		Particles[j]->vb		+= Particles[i]->v * K;
 						if (Particles[j]->Material > 1)	Particles[j]->Sigma		=  Particles[j]->Sigma + K * Particles[i]->Sigma;
-//						if (Particles[j]->Material ==3)
-//						{
-//							Particles[j]->ShearStress(0,0) =  std::min(Particles[i]->Sigma(0,0),Particles[j]->ShearStress(0,0));
-//							Particles[j]->ShearStress(1,1) =  std::min(Particles[i]->Sigma(1,1),Particles[j]->ShearStress(1,1));
-//							Particles[j]->ShearStress(2,2) =  std::min(Particles[i]->Sigma(2,2),Particles[j]->ShearStress(2,2));
-//						}
 				    omp_unset_lock(&Particles[j]->my_lock);
 
 //					omp_set_lock(&dom_lock);
@@ -1162,12 +1183,6 @@ inline void Domain::PrimaryComputeAcceleration ()
 			if (Particles[FixedParticles[i]]->Material < 3)	Particles[FixedParticles[i]]->Pressure	= Particles[FixedParticles[i]]->Pressure/Particles[FixedParticles[i]]->SumKernel;
 			if (Particles[FixedParticles[i]]->NoSlip)		Particles[FixedParticles[i]]->vb		= Particles[FixedParticles[i]]->vb/Particles[FixedParticles[i]]->SumKernel;
 			if (Particles[FixedParticles[i]]->Material > 1) Particles[FixedParticles[i]]->Sigma		= 1.0/Particles[FixedParticles[i]]->SumKernel*Particles[FixedParticles[i]]->Sigma;
-//			if (Particles[FixedParticles[i]]->Material == 3 && Particles[FixedParticles[i]]->NoSlip)
-//			{
-//				Particles[FixedParticles[i]]->Sigma(0,0) = Particles[FixedParticles[i]]->ShearStress(0,0);
-//				Particles[FixedParticles[i]]->Sigma(1,1) = Particles[FixedParticles[i]]->ShearStress(1,1);
-//				Particles[FixedParticles[i]]->Sigma(2,2) = Particles[FixedParticles[i]]->ShearStress(2,2);
-//			}
 		}
 }
 
@@ -1200,7 +1215,6 @@ inline void Domain::LastComputeAcceleration ()
 	}
 	Pairs.Clear();
 //	FixedPairs.Clear();
-
 
 	//Min time step check based on the acceleration
 	#pragma omp parallel for schedule (static) num_threads(Nproc)

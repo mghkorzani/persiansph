@@ -183,8 +183,8 @@ inline void Domain::CalcForce22(Particle * P1, Particle * P2)
     	if (dot(vij,xij)<0) PIij = (Alpha*Cij*MUij+Beta*MUij*MUij)/(0.5*(di+dj)) * I;                          ///<(2.74) Li, Liu Book
     }
 
-	Sigmai = P1->Sigma;
-	Sigmaj = P2->Sigma;
+	if (P1->IsFree) Sigmai = P1->Sigma; else Sigmai = P2->Sigma;
+	if (P2->IsFree) Sigmaj = P2->Sigma; else Sigmaj = P1->Sigma;
 
     //Tensile Instability
     Mat3_t TIij;
@@ -192,58 +192,13 @@ inline void Domain::CalcForce22(Particle * P1, Particle * P2)
 
     if (TI > 0.0)
     {
-        Mat3_t Ri, Rj;
-        set_to_zero(Ri);
-        set_to_zero(Rj);
-
-        // XY plane must be used, It is very slow in 3D
-        if (Dimension == 2)
-        {
-			double teta, Sigmaxx, Sigmayy, C, S;
-
-			if ((Sigmai(0,0)-Sigmai(1,1))!=0.0) teta = 0.5*atan(2.0*Sigmai(0,1)/(Sigmai(0,0)-Sigmai(1,1))); else teta = M_PI/4.0;
-			C = cos(teta);
-			S = sin(teta);
-			Sigmaxx = C*C*Sigmai(0,0) + 2.0*C*S*Sigmai(0,1) + S*S*Sigmai(1,1);
-			Sigmayy = S*S*Sigmai(0,0) - 2.0*C*S*Sigmai(0,1) + C*C*Sigmai(1,1);
-			if (Sigmaxx>0) Sigmaxx = -TI * Sigmaxx/(di*di); else Sigmaxx = 0.0;
-			if (Sigmayy>0) Sigmayy = -TI * Sigmayy/(di*di); else Sigmayy = 0.0;
-			Ri(0,0) = C*C*Sigmaxx + S*S*Sigmayy;
-			Ri(1,1) = S*S*Sigmaxx + C*C*Sigmayy;
-			Ri(0,1) = Ri(1,0) = S*C*(Sigmaxx-Sigmayy);
-
-			if ((Sigmaj(0,0)-Sigmaj(1,1))!=0.0) teta = 0.5*atan(2.0*Sigmaj(0,1)/(Sigmaj(0,0)-Sigmaj(1,1))); else teta = M_PI/4.0;
-			C = cos(teta);
-			S = sin(teta);
-			Sigmaxx = C*C*Sigmaj(0,0) + 2.0*C*S*Sigmaj(0,1) + S*S*Sigmaj(1,1);
-			Sigmayy = S*S*Sigmaj(0,0) - 2.0*C*S*Sigmaj(0,1) + C*C*Sigmaj(1,1);
-			if (Sigmaxx>0) Sigmaxx = -TI * Sigmaxx/(dj*dj); else Sigmaxx = 0.0;
-			if (Sigmayy>0) Sigmayy = -TI * Sigmayy/(dj*dj); else Sigmayy = 0.0;
-			Rj(0,0) = C*C*Sigmaxx + S*S*Sigmayy;
-			Rj(1,1) = S*S*Sigmaxx + C*C*Sigmayy;
-			Rj(0,1) = Rj(1,0) = S*C*(Sigmaxx-Sigmayy);
-        }
-        else
-        {
-        	Mat3_t Vec,Val,VecT,temp;
-
-        	Rotation(Sigmai,Vec,VecT,Val);
-			if (Val(0,0)>0) Val(0,0) = -TI * Val(0,0)/(di*di); else Val(0,0) = 0.0;
-			if (Val(1,1)>0) Val(1,1) = -TI * Val(1,1)/(di*di); else Val(1,1) = 0.0;
-			if (Val(2,2)>0) Val(2,2) = -TI * Val(2,2)/(di*di); else Val(2,2) = 0.0;
-			Mult(Vec,Val,temp);
-			Mult(temp,VecT,Ri);
-
-			Rotation(Sigmaj,Vec,VecT,Val);
-			if (Val(0,0)>0) Val(0,0) = -TI * Val(0,0)/(di*di); else Val(0,0) = 0.0;
-			if (Val(1,1)>0) Val(1,1) = -TI * Val(1,1)/(di*di); else Val(1,1) = 0.0;
-			if (Val(2,2)>0) Val(2,2) = -TI * Val(2,2)/(di*di); else Val(2,2) = 0.0;
-			Mult(Vec,Val,temp);
-			Mult(temp,VecT,Rj);
-
-        }
-
-        TIij = pow((K/Kernel(Dimension, KernelType, InitialDist, h)),TIn)*(Ri+Rj);
+    	if (P1->IsFree*P2->IsFree)
+             TIij = pow((K/Kernel(Dimension, KernelType, InitialDist, h)),TIn)*(P1->TIR+P2->TIR);
+     	else
+    	{
+    		if (P1->IsFree) TIij = pow((K/Kernel(Dimension, KernelType, InitialDist, h)),TIn)*(2.0*P1->TIR);
+    		if (P2->IsFree) TIij = pow((K/Kernel(Dimension, KernelType, InitialDist, h)),TIn)*(2.0*P2->TIR);
+    	}
     }
 
     Mat3_t StrainRate,Rotation;
@@ -352,6 +307,8 @@ inline void Domain::CalcForce33(Particle * P1, Particle * P2)
     	if (dot(vij,xij)<0) PIij = (Alpha*Cij*MUij+Beta*MUij*MUij)/(0.5*(di+dj)) * I;                          ///<(2.74) Li, Liu Book
     }
 
+//	if (P1->IsFree) Sigmai = P1->Sigma; else Sigmai = P2->Sigma;
+//	if (P2->IsFree) Sigmaj = P2->Sigma; else Sigmaj = P1->Sigma;
 	Sigmai = P1->Sigma;
 	Sigmaj = P2->Sigma;
 
@@ -361,65 +318,20 @@ inline void Domain::CalcForce33(Particle * P1, Particle * P2)
 
     if (TI > 0.0)
     {
-        Mat3_t Ri, Rj;
-        set_to_zero(Ri);
-        set_to_zero(Rj);
-
-        // XY plane must be used, It is very slow in 3D
-        if (Dimension == 2)
-        {
-			double teta, Sigmaxx, Sigmayy, C, S;
-
-			if ((Sigmai(0,0)-Sigmai(1,1))!=0.0) teta = 0.5*atan(2.0*Sigmai(0,1)/(Sigmai(0,0)-Sigmai(1,1))); else teta = M_PI/4.0;
-			C = cos(teta);
-			S = sin(teta);
-			Sigmaxx = C*C*Sigmai(0,0) + 2.0*C*S*Sigmai(0,1) + S*S*Sigmai(1,1);
-			Sigmayy = S*S*Sigmai(0,0) - 2.0*C*S*Sigmai(0,1) + C*C*Sigmai(1,1);
-			if (Sigmaxx>0) Sigmaxx = -TI * Sigmaxx/(di*di); else Sigmaxx = 0.0;
-			if (Sigmayy>0) Sigmayy = -TI * Sigmayy/(di*di); else Sigmayy = 0.0;
-			Ri(0,0) = C*C*Sigmaxx + S*S*Sigmayy;
-			Ri(1,1) = S*S*Sigmaxx + C*C*Sigmayy;
-			Ri(0,1) = Ri(1,0) = S*C*(Sigmaxx-Sigmayy);
-
-			if ((Sigmaj(0,0)-Sigmaj(1,1))!=0.0) teta = 0.5*atan(2.0*Sigmaj(0,1)/(Sigmaj(0,0)-Sigmaj(1,1))); else teta = M_PI/4.0;
-			C = cos(teta);
-			S = sin(teta);
-			Sigmaxx = C*C*Sigmaj(0,0) + 2.0*C*S*Sigmaj(0,1) + S*S*Sigmaj(1,1);
-			Sigmayy = S*S*Sigmaj(0,0) - 2.0*C*S*Sigmaj(0,1) + C*C*Sigmaj(1,1);
-			if (Sigmaxx>0) Sigmaxx = -TI * Sigmaxx/(dj*dj); else Sigmaxx = 0.0;
-			if (Sigmayy>0) Sigmayy = -TI * Sigmayy/(dj*dj); else Sigmayy = 0.0;
-			Rj(0,0) = C*C*Sigmaxx + S*S*Sigmayy;
-			Rj(1,1) = S*S*Sigmaxx + C*C*Sigmayy;
-			Rj(0,1) = Rj(1,0) = S*C*(Sigmaxx-Sigmayy);
-        }
-        else
-        {
-        	Mat3_t Vec,Val,VecT,temp;
-
-        	Rotation(Sigmai,Vec,VecT,Val);
-			if (Val(0,0)>0) Val(0,0) = -TI * Val(0,0)/(di*di); else Val(0,0) = 0.0;
-			if (Val(1,1)>0) Val(1,1) = -TI * Val(1,1)/(di*di); else Val(1,1) = 0.0;
-			if (Val(2,2)>0) Val(2,2) = -TI * Val(2,2)/(di*di); else Val(2,2) = 0.0;
-			Mult(Vec,Val,temp);
-			Mult(temp,VecT,Ri);
-
-			Rotation(Sigmaj,Vec,VecT,Val);
-			if (Val(0,0)>0) Val(0,0) = -TI * Val(0,0)/(di*di); else Val(0,0) = 0.0;
-			if (Val(1,1)>0) Val(1,1) = -TI * Val(1,1)/(di*di); else Val(1,1) = 0.0;
-			if (Val(2,2)>0) Val(2,2) = -TI * Val(2,2)/(di*di); else Val(2,2) = 0.0;
-			Mult(Vec,Val,temp);
-			Mult(temp,VecT,Rj);
-
-        }
-
-        TIij = pow((K/Kernel(Dimension, KernelType, InitialDist, h)),TIn)*(Ri+Rj);
+    	if (P1->IsFree*P2->IsFree)
+             TIij = pow((K/Kernel(Dimension, KernelType, InitialDist, h)),TIn)*(P1->TIR+P2->TIR);
+     	else
+    	{
+    		if (P1->IsFree) TIij = pow((K/Kernel(Dimension, KernelType, InitialDist, h)),TIn)*(2.0*P1->TIR);
+    		if (P2->IsFree) TIij = pow((K/Kernel(Dimension, KernelType, InitialDist, h)),TIn)*(2.0*P2->TIR);
+    	}
     }
 
     Mat3_t StrainRate,Rotation;
     set_to_zero(StrainRate);
     set_to_zero(Rotation);
 
-    Vec3_t vab;
+    Vec3_t vab = 0.0;
 	if (P1->IsFree*P2->IsFree)
 	{
 		vab = vij;
@@ -433,8 +345,24 @@ inline void Domain::CalcForce33(Particle * P1, Particle * P2)
 		}
 		if (!(P1->NoSlip || P2->NoSlip))
 		{
-			if (P1->IsFree)	vab = P1->v - P2->vb; else vab = P1->vb - P2->v;
-
+			if (P1->IsFree)
+			{
+				if (P2->FreeSlip(0) > 0.0)
+					vab = 2.0*P1->v(0),0.0,0.0;
+				else if (P2->FreeSlip(1) > 0.0)
+					vab = 0.0,2.0*P1->v(1),0.0;
+				else if (P2->FreeSlip(2) > 0.0)
+					vab = 0.0,0.0,2.0*P1->v(2);
+			}
+			else
+			{
+				if (P1->FreeSlip(0) > 0.0)
+					vab = -2.0*P2->v(0),0.0,0.0;
+				else if (P1->FreeSlip(1) > 0.0)
+					vab = 0.0,-2.0*P2->v(1),0.0;
+				else if (P1->FreeSlip(2) > 0.0)
+					vab = 0.0,0.0,-2.0*P2->v(2);
+			}
 		}
 
 	}
