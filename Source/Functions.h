@@ -283,7 +283,7 @@ inline double SecDerivativeKernel(size_t Dim, size_t KT, double r, double h)
     }
 }
 
-inline double Pressure(size_t EQ, double Cs0, double P00, double Density, double Density0)
+inline double PressureEq(size_t EQ, double Cs0, double P00, double Density, double Density0)
 {
 	switch (EQ)
     {

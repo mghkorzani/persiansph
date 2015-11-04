@@ -30,8 +30,16 @@ void UserDamping(SPH::Domain & domi)
     #pragma omp parallel for schedule (static) num_threads(domi.Nproc)
 	for (size_t i=0; i<domi.Particles.Size(); i++)
 			domi.Particles[i]->a -= Damp * domi.Particles[i]->v;
-//	if (domi.Time > (1750.0*domi.deltat) && domi.Time <(1751.0*domi.deltat))
-//		domi.DelParticles(3);
+
+	#pragma omp parallel for schedule (static) num_threads(domi.Nproc)
+	for (size_t i=0; i<domi.FixedParticles.Size(); i++)
+		if (domi.Particles[domi.FixedParticles[i]]->x(0)>=0.2)
+//			set_to_zero(domi.Particles[domi.FixedParticles[i]]->Sigma);
+		{
+			domi.Particles[domi.FixedParticles[i]]->Sigma(0,0) = 0.0;
+			domi.Particles[domi.FixedParticles[i]]->Sigma(1,1) = 0.0;
+			domi.Particles[domi.FixedParticles[i]]->Sigma(2,2) = 0.0;
+		}
 
 
 }
@@ -76,7 +84,7 @@ int main(int argc, char **argv) try
         double timestep;
         timestep = (0.05*h/(dom.Cs));
 
-        dom.GeneralAfter = & UserDamping;
+        dom.GeneralBefore = & UserDamping;
 
         cout<<"Time Step = "<<timestep<<endl;
         cout<<"Cs = "<<dom.Cs<<endl;
@@ -84,7 +92,7 @@ int main(int argc, char **argv) try
         cout<<"K = "<<K<<endl;
         cout<<"h = "<<h<<endl;
 
-     	dom.AddBoxLength(1 ,Vec3_t ( -3.0*dx ,  0.0    , 0.0 ), L + 6.0*dx + dx/10.0 , H + dx/10.0      ,  0 , dx/2.0 ,rho, h, 1 , 0 , false, false );
+     	dom.AddBoxLength(1 ,Vec3_t ( -3.0*dx ,  0.0    , 0.0 ), L + 3.0*dx + dx/10.0 , H + dx/10.0      ,  0 , dx/2.0 ,rho, h, 1 , 0 , false, false );
      	dom.AddBoxLength(1 ,Vec3_t ( -3.0*dx , -3.0*dx , 0.0 ), 3.0*L + dx/10.0      , 3.0*dx + dx/10.0 ,  0 , dx/2.0 ,rho, h, 1 , 0 , false, false );
 
 		double K0 = 1-sin(30.0/180.0*M_PI);
@@ -111,13 +119,6 @@ int main(int argc, char **argv) try
     			dom.Particles[a]->IsFree	= false;
     			dom.Particles[a]->ID		= 2;
     		}
-//    		if (dom.Particles[a]->x(0)>L && dom.Particles[a]->x(1)>0.0)
-//    		{
-//    			dom.Particles[a]->NoSlip	= false;
-////    			dom.Particles[a]->FreeSlip	= 1.0,0.0,0.0;
-//    			dom.Particles[a]->IsFree	= false;
-//    			dom.Particles[a]->ID		= 3;
-//    		}
 
     		dom.Particles[a]->Sigma(1,1)	= rho * -9.81 *(H-dom.Particles[a]->x(1));
     		dom.Particles[a]->Sigmab(1,1)	= rho * -9.81 *(H-dom.Particles[a]->x(1));

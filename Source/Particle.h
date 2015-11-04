@@ -27,6 +27,7 @@
 
 // MechSys
 #include "../External/matvec.h"
+#include "Functions.h"
 
 namespace SPH {
 Mat3_t abab (const Mat3_t & A, const Mat3_t & B)
@@ -77,7 +78,9 @@ public:
     Mat3_t  ShearStressb;	///< Deviatoric shear stress tensor (deviatoric part of the Cauchy stress tensor) n-2
     Mat3_t  Sigma;			///< Cauchy stress tensor (Total Stress) n
     Mat3_t  Sigmab;			///< Cauchy stress tensor (Total Stress) n-2
-    Mat3_t  TIR;			///< Cauchy stress tensor (Total Stress) n-2
+    Mat3_t  TIR;			///< Tensile Instability stress tensor R
+    Mat3_t  Strain;			///< Total Strain n
+    Mat3_t  Strainb;		///< Total Strain n-2
 
     double 	Mu;				///< Dynamic viscosity coefficient of the fluid particle
     double 	MuRef;			///< Reference Dynamic viscosity coefficient
@@ -243,7 +246,7 @@ inline void Particle::Mat1(double dt, bool ShepardFilter, size_t PresEq, double 
 		Densityb = dens;
 	}
 
-	Pressure = Pressure(PresEq, Cs, P0,Density, RefDensity);
+	Pressure = PressureEq(PresEq, Cs, P0,Density, RefDensity);
 
 	ShearRate = sqrt(0.5*(StrainRate(0,0)*StrainRate(0,0) + 2.0*StrainRate(0,1)*StrainRate(1,0) +
 			2.0*StrainRate(0,2)*StrainRate(2,0) + StrainRate(1,1)*StrainRate(1,1) +
@@ -267,7 +270,7 @@ inline void Particle::Mat2(double dt, size_t PresEq, double Cs, double P0)
 	Density = Density + dt*dDensity;
 	Densityb = dens;
 
-	Pressure = Pressure(PresEq, Cs, P0,Density, RefDensity);
+	Pressure = PressureEq(PresEq, Cs, P0,Density, RefDensity);
 
 	Mat3_t RotationRateT, Stress,SRT,RS;
 
@@ -303,6 +306,10 @@ inline void Particle::Mat3(double dt)
 {
 	Mat3_t RotationRateT, Stress, SRT,RS;
 	double I1,J2,alpha,k,I1strain;
+
+	Stress	= Strain;
+	Strain	= 2.0*dt*StrainRate + Strainb;
+	Strainb	= Stress;
 
 	// Jaumann rate terms
 	Trans(Rotation,RotationRateT);
