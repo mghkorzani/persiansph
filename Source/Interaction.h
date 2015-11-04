@@ -183,8 +183,8 @@ inline void Domain::CalcForce22(Particle * P1, Particle * P2)
     	if (dot(vij,xij)<0) PIij = (Alpha*Cij*MUij+Beta*MUij*MUij)/(0.5*(di+dj)) * I;                          ///<(2.74) Li, Liu Book
     }
 
-	if (P1->IsFree) Sigmai = P1->Sigma; else Sigmai = P2->Sigma;
-	if (P2->IsFree) Sigmaj = P2->Sigma; else Sigmaj = P1->Sigma;
+	Sigmai = P1->Sigma;
+	Sigmaj = P2->Sigma;
 
     //Tensile Instability
     Mat3_t TIij;
@@ -259,18 +259,24 @@ inline void Domain::CalcForce22(Particle * P1, Particle * P2)
     Vec3_t temp;
     Mult( GK*xij , mj * ( 1.0/(di*di)*Sigmai + 1.0/(dj*dj)*Sigmaj + PIij + TIij ) , temp);
     omp_set_lock(&P1->my_lock);
-		P1->a   += temp;
-		if (P1->IsFree) P1->StrainRate = P1->StrainRate + mj/dj*StrainRate;
-		if (P1->IsFree) P1->Rotation = P1->Rotation + mj/dj*Rotation;
-		P1->dDensity += di * (mj/dj) * dot( vij , GK*xij );
+		P1->a		+= temp;
+		P1->dDensity+= di * (mj/dj) * dot( vij , GK*xij );
+		if (P1->IsFree)
+		{
+			P1->StrainRate = P1->StrainRate + mj/dj*StrainRate;
+			P1->Rotation = P1->Rotation + mj/dj*Rotation;
+		}
     omp_unset_lock(&P1->my_lock);
 
     Mult( GK*xij , mi * ( 1.0/(di*di)*Sigmai + 1.0/(dj*dj)*Sigmaj + PIij + TIij ) ,temp);
     omp_set_lock(&P2->my_lock);
-		P2->a   -= temp;
-		if (P2->IsFree) P2->StrainRate = P2->StrainRate + mi/di*StrainRate;
-		if (P2->IsFree) P2->Rotation = P2->Rotation + mi/di*Rotation;
-		P2->dDensity += dj * (mi/di) * dot( -vij , -GK*xij );
+		P2->a		-= temp;
+		P2->dDensity+= dj * (mi/di) * dot( -vij , -GK*xij );
+		if (P2->IsFree)
+		{
+			P2->StrainRate = P2->StrainRate + mi/di*StrainRate;
+			P2->Rotation = P2->Rotation + mi/di*Rotation;
+		}
     omp_unset_lock(&P2->my_lock);
 }
 
@@ -307,8 +313,6 @@ inline void Domain::CalcForce33(Particle * P1, Particle * P2)
     	if (dot(vij,xij)<0) PIij = (Alpha*Cij*MUij+Beta*MUij*MUij)/(0.5*(di+dj)) * I;                          ///<(2.74) Li, Liu Book
     }
 
-//	if (P1->IsFree) Sigmai = P1->Sigma; else Sigmai = P2->Sigma;
-//	if (P2->IsFree) Sigmaj = P2->Sigma; else Sigmaj = P1->Sigma;
 	Sigmai = P1->Sigma;
 	Sigmaj = P2->Sigma;
 
@@ -353,6 +357,7 @@ inline void Domain::CalcForce33(Particle * P1, Particle * P2)
 					vab = 0.0,2.0*P1->v(1),0.0;
 				else if (P2->FreeSlip(2) > 0.0)
 					vab = 0.0,0.0,2.0*P1->v(2);
+				else vab = P1->v;
 			}
 			else
 			{
@@ -362,6 +367,7 @@ inline void Domain::CalcForce33(Particle * P1, Particle * P2)
 					vab = 0.0,-2.0*P2->v(1),0.0;
 				else if (P1->FreeSlip(2) > 0.0)
 					vab = 0.0,0.0,-2.0*P2->v(2);
+				else vab = -P2->v;
 			}
 		}
 
@@ -401,16 +407,22 @@ inline void Domain::CalcForce33(Particle * P1, Particle * P2)
     Vec3_t temp;
     Mult( GK*xij , mj * ( 1.0/(di*di)*Sigmai + 1.0/(dj*dj)*Sigmaj + PIij + TIij ) , temp);
     omp_set_lock(&P1->my_lock);
-		P1->a							+= temp;
-		if (P1->IsFree) P1->StrainRate	= P1->StrainRate + mj/dj*StrainRate;
-		if (P1->IsFree) P1->Rotation	= P1->Rotation + mj/dj*Rotation;
+		P1->a += temp;
+		if (P1->IsFree)
+		{
+			P1->StrainRate	= P1->StrainRate + mj/dj*StrainRate;
+			P1->Rotation	= P1->Rotation + mj/dj*Rotation;
+		}
     omp_unset_lock(&P1->my_lock);
 
     Mult( GK*xij , mi * ( 1.0/(di*di)*Sigmai + 1.0/(dj*dj)*Sigmaj + PIij + TIij ) ,temp);
     omp_set_lock(&P2->my_lock);
-		P2->a							-= temp;
-		if (P2->IsFree) P2->StrainRate	= P2->StrainRate + mi/di*StrainRate;
-		if (P2->IsFree) P2->Rotation	= P2->Rotation + mi/di*Rotation;
+		P2->a -= temp;
+		if (P2->IsFree)
+		{
+			P2->StrainRate	= P2->StrainRate + mi/di*StrainRate;
+			P2->Rotation	= P2->Rotation + mi/di*Rotation;
+		}
     omp_unset_lock(&P2->my_lock);
 }
 

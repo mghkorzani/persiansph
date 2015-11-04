@@ -26,12 +26,12 @@ using std::endl;
 double Damp;
 void UserDamping(SPH::Domain & domi)
 {
-	if (domi.Time<0.005)
+	if (domi.Time<0.0025)
     #pragma omp parallel for schedule (static) num_threads(domi.Nproc)
 	for (size_t i=0; i<domi.Particles.Size(); i++)
 			domi.Particles[i]->a -= Damp * domi.Particles[i]->v;
-	if (domi.Time == (3470.0*domi.deltat))
-		domi.DelParticles(3);
+//	if (domi.Time > (1750.0*domi.deltat) && domi.Time <(1751.0*domi.deltat))
+//		domi.DelParticles(3);
 
 
 }
@@ -50,7 +50,7 @@ int main(int argc, char **argv) try
     	dom.TIn			= 4.0;
     	dom.Alpha		= 0.1;
     	dom.Beta		= 0.1;
-//    	dom.XSPH		= 0.5;
+    	dom.XSPH		= 0.5;
     	dom.Gravity		= 0.0, -9.81, 0.0;
 
         double dx,h,rho,K,G;
@@ -67,11 +67,11 @@ int main(int argc, char **argv) try
     	G	= E/(2.0*(1.0+Nu));
     	dx	= H / n;
     	h	= dx*1.5;
-//        dom.Cs			= sqrt(K/rho);
-        dom.Cs			= sqrt(E/rho);
+        dom.Cs			= sqrt(K/rho);
+//        dom.Cs			= sqrt(E/rho);
     	dom.InitialDist	= dx;
 
-    	Damp = 0.02*sqrt(E/(rho*h*h));
+    	Damp = 0.1*sqrt(E/(rho*h*h));
 
         double timestep;
         timestep = (0.05*h/(dom.Cs));
@@ -97,27 +97,27 @@ int main(int argc, char **argv) try
     		dom.Particles[a]->Fail		= 3;
     		dom.Particles[a]->c			= 0.0;
     		dom.Particles[a]->phi		= 30.0/180.0*M_PI;
-    		dom.Particles[a]->psi		= 0.0 /180.0*M_PI;
+    		dom.Particles[a]->psi		= 1.0 /180.0*M_PI;
     		if (dom.Particles[a]->x(1)<0.0)
     		{
     			dom.Particles[a]->NoSlip	= true;
     			dom.Particles[a]->IsFree	= false;
     			dom.Particles[a]->ID		= 4;
     		}
-    		if (dom.Particles[a]->x(0)<0.0)
+    		if (dom.Particles[a]->x(0)<0.0 && dom.Particles[a]->x(1)>0.0)
     		{
     			dom.Particles[a]->NoSlip	= false;
-    			dom.Particles[a]->FreeSlip	= 1.0,0.0,0.0;
+//    			dom.Particles[a]->FreeSlip	= 1.0,0.0,0.0;
     			dom.Particles[a]->IsFree	= false;
     			dom.Particles[a]->ID		= 2;
     		}
-    		if (dom.Particles[a]->x(0)>L)
-    		{
-    			dom.Particles[a]->NoSlip	= false;
-    			dom.Particles[a]->FreeSlip	= 1.0,0.0,0.0;
-    			dom.Particles[a]->IsFree	= false;
-    			dom.Particles[a]->ID		= 3;
-    		}
+//    		if (dom.Particles[a]->x(0)>L && dom.Particles[a]->x(1)>0.0)
+//    		{
+//    			dom.Particles[a]->NoSlip	= false;
+////    			dom.Particles[a]->FreeSlip	= 1.0,0.0,0.0;
+//    			dom.Particles[a]->IsFree	= false;
+//    			dom.Particles[a]->ID		= 3;
+//    		}
 
     		dom.Particles[a]->Sigma(1,1)	= rho * -9.81 *(H-dom.Particles[a]->x(1));
     		dom.Particles[a]->Sigmab(1,1)	= rho * -9.81 *(H-dom.Particles[a]->x(1));
@@ -128,7 +128,7 @@ int main(int argc, char **argv) try
     	}
 
 
-    	dom.Solve(/*tf*/1000.0,/*dt*/timestep,/*dtOut*/0.0007,"test06",999);
+    	dom.Solve(/*tf*/1000.0,/*dt*/timestep,/*dtOut*/0.001,"test06",999);
         return 0;
 }
 MECHSYS_CATCH

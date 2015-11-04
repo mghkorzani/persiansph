@@ -31,8 +31,6 @@
 #include <hdf5.h>
 #include <hdf5_hl.h>
 
-//#include <mechsys/util/stopwatch.h>
-//#include <mechsys/util/string.h>
 
 namespace SPH {
 
@@ -111,7 +109,6 @@ public:
     void CalcForce11				(Particle * P1, Particle * P2);																		///< Calculates the contact force between particles
     void CalcForce22				(Particle * P1, Particle * P2);																		///< Calculates the contact force between particles
     void CalcForce33				(Particle * P1, Particle * P2);																		///< Calculates the contact force between particles
-    void CalcForce33FS				(Particle * P1, Vec3_t vij, Vec3_t xij);
     void Move						(double dt);																						///< Move particles
 
     void Solve						(double tf, double dt, double dtOut, char const * TheFileKey, size_t maxidx);						///< The solving function
@@ -261,7 +258,6 @@ inline Domain::Domain ()
 
     DomMax = -100000000000.0;
     DomMin = 100000000000.0;
-    I = OrthoSys::I;
 }
 
 inline Domain::~Domain ()
@@ -1011,7 +1007,7 @@ inline void Domain::StartAcceleration (Vec3_t const & a)
     {
     	if (Particles[i]->IsFree)
     	{
-        	// Tensile Instability for all particles
+        	// Tensile Instability for all soil and solid particles
             if (Particles[i]->Material > 1 && TI > 0.0)
             {
 				// XY plane must be used, It is very slow in 3D
@@ -1042,49 +1038,6 @@ inline void Domain::StartAcceleration (Vec3_t const & a)
 					Mult(temp,VecT,Particles[i]->TIR);
 				}
             }
-
-            // Fluid Particles
-            if (Particles[i]->Material == 1)
-            {
-                Particles[i]->Pressure = Pressure(PresEq, Cs, P0,Particles[i]->Density, Particles[i]->RefDensity);
-
-				Particles[i]->ShearRate = sqrt(0.5*(Particles[i]->StrainRate(0,0)*Particles[i]->StrainRate(0,0) + 2.0*Particles[i]->StrainRate(0,1)*Particles[i]->StrainRate(1,0) +
-						2.0*Particles[i]->StrainRate(0,2)*Particles[i]->StrainRate(2,0) + Particles[i]->StrainRate(1,1)*Particles[i]->StrainRate(1,1) +
-						2.0*Particles[i]->StrainRate(1,2)*Particles[i]->StrainRate(2,1) + Particles[i]->StrainRate(2,2)*Particles[i]->StrainRate(2,2)));
-
-				// Bingham viscosity calculation
-				if (Particles[i]->T0>0.0)
-				{
-					if (Particles[i]->ShearRate !=0.0)
-						Particles[i]->Mu = Particles[i]->MuRef + Particles[i]->T0*(1-exp(-Particles[i]->m*Particles[i]->ShearRate))/Particles[i]->ShearRate;
-					else
-						Particles[i]->Mu = Particles[i]->MuRef + Particles[i]->T0*Particles[i]->m;
-				}
-            }
-
-
-            // Solid Particles
-            if (Particles[i]->Material == 2)
-            {
-                Particles[i]->Pressure = Pressure(PresEq, Cs, P0,Particles[i]->Density, Particles[i]->RefDensity);
-
-				if (Particles[i]->Fail == 1)
-				{
-					double J2			= 0.5*(Particles[i]->ShearStress(0,0)*Particles[i]->ShearStress(0,0) + 2.0*Particles[i]->ShearStress(0,1)*Particles[i]->ShearStress(1,0) +
-											2.0*Particles[i]->ShearStress(0,2)*Particles[i]->ShearStress(2,0) + Particles[i]->ShearStress(1,1)*Particles[i]->ShearStress(1,1) +
-											2.0*Particles[i]->ShearStress(1,2)*Particles[i]->ShearStress(2,1) + Particles[i]->ShearStress(2,2)*Particles[i]->ShearStress(2,2));
-					Particles[i]->ShearStress = std::min((Particles[i]->Sigmay/sqrt(3.0*J2)),1.0)*Particles[i]->ShearStress;
-					Particles[i]->Sigma = -Particles[i]->Pressure * OrthoSys::I + Particles[i]->ShearStress;
-				}
-				else
-					Particles[i]->Sigma = -Particles[i]->Pressure * OrthoSys::I + Particles[i]->ShearStress;
-
-				if (Particles[i]->Fail > 1)
-				{
-					std::cout<<"Undefined failure criteria for solids"<<std::endl;
-					abort();
-				}
-            }
     	}
     	else
     	{
@@ -1101,20 +1054,16 @@ inline void Domain::StartAcceleration (Vec3_t const & a)
         Particles[i]->dDensity	= 0.0;
         Particles[i]->VXSPH		= 0.0;
         Particles[i]->ZWab		= 0.0;
-        set_to_zero(Particles[i]->StrainRate);
-        set_to_zero(Particles[i]->Rotation);
         Particles[i]->SumDen	= 0.0;
         Particles[i]->Vis		= 0.0;
         Particles[i]->SumKernel	= 0.0;
+        set_to_zero(Particles[i]->StrainRate);
+        set_to_zero(Particles[i]->Rotation);
     }
 }
 
 inline void Domain::PrimaryComputeAcceleration ()
 {
-	#pragma omp parallel for schedule (static) num_threads(Nproc)
-	for (size_t i=0; i<FixedParticles.Size(); i++)
-		set_to_zero(Particles[FixedParticles[i]]->ShearStress);
-
 	#pragma omp parallel for schedule (dynamic) num_threads(Nproc)
 	for (size_t k=0; k<Pairs.Size();k++)
 	{
@@ -1231,7 +1180,7 @@ inline void Domain::Move (double dt)
 	#pragma omp parallel for schedule (static) num_threads(Nproc)
 	for (size_t i=0; i<Particles.Size(); i++)
 		if (Particles[i]->IsFree)
-			Particles[i]->Move(dt,DomSize,TRPR,BLPF,Shepard,I);
+			Particles[i]->Move(dt,DomSize,TRPR,BLPF,Shepard,PresEq,Cs,P0);
 
 }
 
