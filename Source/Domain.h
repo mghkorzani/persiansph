@@ -258,6 +258,7 @@ inline Domain::Domain ()
 
     DomMax = -100000000000.0;
     DomMin = 100000000000.0;
+    I = OrthoSys::I;
 }
 
 inline Domain::~Domain ()
@@ -1045,6 +1046,7 @@ inline void Domain::StartAcceleration (Vec3_t const & a)
     		Particles[i]->vb = 0.0;
     		Particles[i]->Pressure = 0.0;
             set_to_zero(Particles[i]->Sigma);
+            set_to_zero(Particles[i]->ShearStress);
     	}
 
 
@@ -1088,8 +1090,8 @@ inline void Domain::PrimaryComputeAcceleration ()
 				    omp_set_lock(&Particles[i]->my_lock);
 						Particles[i]->SumKernel									+= K;
 						if (Particles[i]->Material < 3)	Particles[i]->Pressure	+= Particles[j]->Pressure * K + dot(Gravity,xij)*Particles[j]->Density*K;
-						if (Particles[i]->NoSlip) 		Particles[i]->vb		+= Particles[j]->v * K;
 						if (Particles[i]->Material > 1)	Particles[i]->Sigma		=  Particles[i]->Sigma + K * Particles[j]->Sigma;
+						Particles[i]->vb += Particles[j]->v * K;
 				    omp_unset_lock(&Particles[i]->my_lock);
 
 //					omp_set_lock(&dom_lock);
@@ -1112,8 +1114,8 @@ inline void Domain::PrimaryComputeAcceleration ()
 				    omp_set_lock(&Particles[j]->my_lock);
 						Particles[j]->SumKernel									+= K;
 						if (Particles[j]->Material < 3)	Particles[j]->Pressure	+= Particles[i]->Pressure * K + dot(Gravity,xij)*Particles[i]->Density*K;
-						if (Particles[j]->NoSlip)		Particles[j]->vb		+= Particles[i]->v * K;
 						if (Particles[j]->Material > 1)	Particles[j]->Sigma		=  Particles[j]->Sigma + K * Particles[i]->Sigma;
+						Particles[j]->vb += Particles[i]->v * K;
 				    omp_unset_lock(&Particles[j]->my_lock);
 
 //					omp_set_lock(&dom_lock);
@@ -1129,9 +1131,43 @@ inline void Domain::PrimaryComputeAcceleration ()
 	for (size_t i=0; i<FixedParticles.Size(); i++)
 		if (Particles[FixedParticles[i]]->SumKernel!= 0.0)
 		{
-			if (Particles[FixedParticles[i]]->Material < 3)	Particles[FixedParticles[i]]->Pressure	= Particles[FixedParticles[i]]->Pressure/Particles[FixedParticles[i]]->SumKernel;
-			if (Particles[FixedParticles[i]]->NoSlip)		Particles[FixedParticles[i]]->vb		= Particles[FixedParticles[i]]->vb/Particles[FixedParticles[i]]->SumKernel;
-			if (Particles[FixedParticles[i]]->Material > 1) Particles[FixedParticles[i]]->Sigma		= 1.0/Particles[FixedParticles[i]]->SumKernel*Particles[FixedParticles[i]]->Sigma;
+			size_t a = FixedParticles[i];
+			if (Particles[a]->Material < 3)	Particles[a]->Pressure	= Particles[a]->Pressure/Particles[a]->SumKernel;
+			if (Particles[a]->Material > 1) Particles[a]->Sigma		= 1.0/Particles[a]->SumKernel*Particles[a]->Sigma;
+			Particles[a]->vb		= Particles[a]->vb/Particles[a]->SumKernel;
+
+			// Tensile Instability for fixed soil and solid particles
+            if (Particles[a]->Material > 1 && TI > 0.0)
+            {
+				// XY plane must be used, It is very slow in 3D
+				if (Dimension == 2)
+				{
+					double teta, Sigmaxx, Sigmayy, C, S;
+
+					if ((Particles[a]->Sigma(0,0)-Particles[a]->Sigma(1,1))!=0.0) teta = 0.5*atan(2.0*Particles[a]->Sigma(0,1)/(Particles[a]->Sigma(0,0)-Particles[a]->Sigma(1,1))); else teta = M_PI/4.0;
+					C = cos(teta);
+					S = sin(teta);
+					Sigmaxx = C*C*Particles[a]->Sigma(0,0) + 2.0*C*S*Particles[a]->Sigma(0,1) + S*S*Particles[a]->Sigma(1,1);
+					Sigmayy = S*S*Particles[a]->Sigma(0,0) - 2.0*C*S*Particles[a]->Sigma(0,1) + C*C*Particles[a]->Sigma(1,1);
+					if (Sigmaxx>0) Sigmaxx = -TI * Sigmaxx/(Particles[a]->Density*Particles[a]->Density); else Sigmaxx = 0.0;
+					if (Sigmayy>0) Sigmayy = -TI * Sigmayy/(Particles[a]->Density*Particles[a]->Density); else Sigmayy = 0.0;
+					Particles[a]->TIR(0,0) = C*C*Sigmaxx + S*S*Sigmayy;
+					Particles[a]->TIR(1,1) = S*S*Sigmaxx + C*C*Sigmayy;
+					Particles[a]->TIR(0,1) = Particles[a]->TIR(1,0) = S*C*(Sigmaxx-Sigmayy);
+				}
+				else
+				{
+					Mat3_t Vec,Val,VecT,temp;
+
+					Rotation(Particles[a]->Sigma,Vec,VecT,Val);
+					if (Val(0,0)>0) Val(0,0) = -TI * Val(0,0)/(Particles[a]->Density*Particles[a]->Density); else Val(0,0) = 0.0;
+					if (Val(1,1)>0) Val(1,1) = -TI * Val(1,1)/(Particles[a]->Density*Particles[a]->Density); else Val(1,1) = 0.0;
+					if (Val(2,2)>0) Val(2,2) = -TI * Val(2,2)/(Particles[a]->Density*Particles[a]->Density); else Val(2,2) = 0.0;
+					Mult(Vec,Val,temp);
+					Mult(temp,VecT,Particles[a]->TIR);
+				}
+            }
+
 		}
 }
 

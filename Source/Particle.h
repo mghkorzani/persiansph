@@ -45,7 +45,6 @@ public:
     // Data
     bool   	IsFree;			///< Check the particle if it is free to move or not
     bool   	NoSlip;			///< No-Slip BC
-    Vec3_t	FreeSlip;
     int    	ID;				///< an Integer value to identify the particle set
     int    	Material;		///< an Integer value to identify the particle material type
     						///< 1 = Fluid, 2 = Solid
@@ -158,7 +157,6 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
     Sigmay = 0.0;
     K = 0.0;
     NoSlip = false;
-    FreeSlip = 0.0;
     set_to_zero(ShearStress);
     set_to_zero(ShearStressb);
     set_to_zero(TIR);
@@ -246,7 +244,7 @@ inline void Particle::Mat1(double dt, bool ShepardFilter, size_t PresEq, double 
 		Densityb = dens;
 	}
 
-	Pressure = PressureEq(PresEq, Cs, P0,Density, RefDensity);
+	Pressure = EOS(PresEq, Cs, P0,Density, RefDensity);
 
 	ShearRate = sqrt(0.5*(StrainRate(0,0)*StrainRate(0,0) + 2.0*StrainRate(0,1)*StrainRate(1,0) +
 			2.0*StrainRate(0,2)*StrainRate(2,0) + StrainRate(1,1)*StrainRate(1,1) +
@@ -270,7 +268,7 @@ inline void Particle::Mat2(double dt, size_t PresEq, double Cs, double P0)
 	Density = Density + dt*dDensity;
 	Densityb = dens;
 
-	Pressure = PressureEq(PresEq, Cs, P0,Density, RefDensity);
+	Pressure = EOS(PresEq, Cs, P0,Density, RefDensity);
 
 	Mat3_t RotationRateT, Stress,SRT,RS;
 

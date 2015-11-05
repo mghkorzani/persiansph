@@ -23,23 +23,39 @@ using std::cout;
 using std::endl;
 
 // psi*sqrt(E/(rho*h*h))
+double check = 0.0;
 double Damp;
 void UserDamping(SPH::Domain & domi)
 {
-	if (domi.Time<0.0025)
+	if (domi.Time<0.025)
     #pragma omp parallel for schedule (static) num_threads(domi.Nproc)
 	for (size_t i=0; i<domi.Particles.Size(); i++)
-			domi.Particles[i]->a -= Damp * domi.Particles[i]->v;
+		if (domi.Particles[i]->IsFree) domi.Particles[i]->a -= Damp * domi.Particles[i]->v;
+	if (domi.Time>0.025 && domi.Time<(0.025+1.0*domi.deltat) && check == 0.0)
+	{
+		domi.TI	= 0.5;
+		domi.TIn= 2.55;
+//		std::cout<<"yes"<<std::endl;
+//		domi.DelParticles(3);
+		check = 1.0;
+	}
+}
 
-	#pragma omp parallel for schedule (static) num_threads(domi.Nproc)
-	for (size_t i=0; i<domi.FixedParticles.Size(); i++)
-		if (domi.Particles[domi.FixedParticles[i]]->x(0)>=0.2)
-//			set_to_zero(domi.Particles[domi.FixedParticles[i]]->Sigma);
+void UserBC(SPH::Domain & domi)
+{
+	if (domi.Time>(0.025+1.0*domi.deltat))
+	{
+		#pragma omp parallel for schedule (static) num_threads(domi.Nproc)
+		for (size_t i=0; i<domi.FixedParticles.Size(); i++)
 		{
-			domi.Particles[domi.FixedParticles[i]]->Sigma(0,0) = 0.0;
-			domi.Particles[domi.FixedParticles[i]]->Sigma(1,1) = 0.0;
-			domi.Particles[domi.FixedParticles[i]]->Sigma(2,2) = 0.0;
+			if (domi.Particles[domi.FixedParticles[i]]->x(0)>=0.2)
+			{
+				domi.Particles[domi.FixedParticles[i]]->Sigma(0,0) = 0.0;
+				domi.Particles[domi.FixedParticles[i]]->Sigma(1,1) = 0.0;
+				domi.Particles[domi.FixedParticles[i]]->Sigma(2,2) = 0.0;
+			}
 		}
+	}
 
 
 }
@@ -54,18 +70,18 @@ int main(int argc, char **argv) try
     	dom.KernelType	= 0;
 //    	dom.Shepard		= true;
 
-    	dom.TI			= 0.3;
-    	dom.TIn			= 4.0;
+//    	dom.TI			= 0.3;
+//    	dom.TIn			= 4.0;
     	dom.Alpha		= 0.1;
-    	dom.Beta		= 0.1;
-    	dom.XSPH		= 0.5;
+//    	dom.Beta		= 0.1;
+//    	dom.XSPH		= 0.5;
     	dom.Gravity		= 0.0, -9.81, 0.0;
 
         double dx,h,rho,K,G;
     	double E,Nu,H,n,L;
 
     	H	= 0.1;
-    	n	= 50.0;
+    	n	= 25.0;
     	L	= 0.2;
 
     	rho	= 1850.0;
@@ -79,12 +95,13 @@ int main(int argc, char **argv) try
 //        dom.Cs			= sqrt(E/rho);
     	dom.InitialDist	= dx;
 
-    	Damp = 0.1*sqrt(E/(rho*h*h));
+    	Damp = 0.02*sqrt(E/(rho*h*h));
 
         double timestep;
         timestep = (0.05*h/(dom.Cs));
 
-        dom.GeneralBefore = & UserDamping;
+//        dom.GeneralBefore = & UserBC;
+        dom.GeneralAfter = & UserDamping;
 
         cout<<"Time Step = "<<timestep<<endl;
         cout<<"Cs = "<<dom.Cs<<endl;
@@ -92,8 +109,8 @@ int main(int argc, char **argv) try
         cout<<"K = "<<K<<endl;
         cout<<"h = "<<h<<endl;
 
-     	dom.AddBoxLength(1 ,Vec3_t ( -3.0*dx ,  0.0    , 0.0 ), L + 3.0*dx + dx/10.0 , H + dx/10.0      ,  0 , dx/2.0 ,rho, h, 1 , 0 , false, false );
-     	dom.AddBoxLength(1 ,Vec3_t ( -3.0*dx , -3.0*dx , 0.0 ), 3.0*L + dx/10.0      , 3.0*dx + dx/10.0 ,  0 , dx/2.0 ,rho, h, 1 , 0 , false, false );
+     	dom.AddBoxLength(1 ,Vec3_t ( -3.0*dx ,  0.0    , 0.0 ), L + 6.0*dx + dx/10.0 , H + dx/10.0      ,  0 , dx/2.0 ,rho, h, 1 , 0 , false, false );
+     	dom.AddBoxLength(1 ,Vec3_t ( -3.0*dx , -3.0*dx , 0.0 ), 3.5*L + dx/10.0      , 3.0*dx + dx/10.0 ,  0 , dx/2.0 ,rho, h, 1 , 0 , false, false );
 
 		double K0 = 1-sin(30.0/180.0*M_PI);
 
@@ -115,9 +132,14 @@ int main(int argc, char **argv) try
     		if (dom.Particles[a]->x(0)<0.0 && dom.Particles[a]->x(1)>0.0)
     		{
     			dom.Particles[a]->NoSlip	= false;
-//    			dom.Particles[a]->FreeSlip	= 1.0,0.0,0.0;
     			dom.Particles[a]->IsFree	= false;
     			dom.Particles[a]->ID		= 2;
+    		}
+    		if (dom.Particles[a]->x(0)>L && dom.Particles[a]->x(1)>0.0)
+    		{
+    			dom.Particles[a]->NoSlip	= false;
+    			dom.Particles[a]->IsFree	= false;
+    			dom.Particles[a]->ID		= 3;
     		}
 
     		dom.Particles[a]->Sigma(1,1)	= rho * -9.81 *(H-dom.Particles[a]->x(1));
@@ -127,7 +149,7 @@ int main(int argc, char **argv) try
     		dom.Particles[a]->Sigma(2,2)	= K0 * rho * -9.81 *(H-dom.Particles[a]->x(1));
     		dom.Particles[a]->Sigmab(2,2)	= K0 * rho * -9.81 *(H-dom.Particles[a]->x(1));
     	}
-
+     			dom.DelParticles(3);
 
     	dom.Solve(/*tf*/1000.0,/*dt*/timestep,/*dtOut*/0.001,"test06",999);
         return 0;

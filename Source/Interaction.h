@@ -189,17 +189,7 @@ inline void Domain::CalcForce22(Particle * P1, Particle * P2)
     //Tensile Instability
     Mat3_t TIij;
     set_to_zero(TIij);
-
-    if (TI > 0.0)
-    {
-    	if (P1->IsFree*P2->IsFree)
-             TIij = pow((K/Kernel(Dimension, KernelType, InitialDist, h)),TIn)*(P1->TIR+P2->TIR);
-     	else
-    	{
-    		if (P1->IsFree) TIij = pow((K/Kernel(Dimension, KernelType, InitialDist, h)),TIn)*(2.0*P1->TIR);
-    		if (P2->IsFree) TIij = pow((K/Kernel(Dimension, KernelType, InitialDist, h)),TIn)*(2.0*P2->TIR);
-    	}
-    }
+    if (TI > 0.0) TIij = pow((K/Kernel(Dimension, KernelType, InitialDist, h)),TIn)*(P1->TIR+P2->TIR);
 
     Mat3_t StrainRate,Rotation;
     set_to_zero(StrainRate);
@@ -222,7 +212,6 @@ inline void Domain::CalcForce22(Particle * P1, Particle * P2)
 			if (P1->IsFree)	vab = P1->v - P2->vb; else vab = P1->vb - P2->v;
 
 		}
-
 	}
 
 	StrainRate(0,0) = 2.0*vab(0)*xij(0);
@@ -319,17 +308,7 @@ inline void Domain::CalcForce33(Particle * P1, Particle * P2)
     //Tensile Instability
     Mat3_t TIij;
     set_to_zero(TIij);
-
-    if (TI > 0.0)
-    {
-    	if (P1->IsFree*P2->IsFree)
-             TIij = pow((K/Kernel(Dimension, KernelType, InitialDist, h)),TIn)*(P1->TIR+P2->TIR);
-     	else
-    	{
-    		if (P1->IsFree) TIij = pow((K/Kernel(Dimension, KernelType, InitialDist, h)),TIn)*(2.0*P1->TIR);
-    		if (P2->IsFree) TIij = pow((K/Kernel(Dimension, KernelType, InitialDist, h)),TIn)*(2.0*P2->TIR);
-    	}
-    }
+    if (TI > 0.0) TIij = pow((K/Kernel(Dimension, KernelType, InitialDist, h)),TIn)*(P1->TIR+P2->TIR);
 
     Mat3_t StrainRate,Rotation;
     set_to_zero(StrainRate);
@@ -349,28 +328,9 @@ inline void Domain::CalcForce33(Particle * P1, Particle * P2)
 		}
 		if (!(P1->NoSlip || P2->NoSlip))
 		{
-			if (P1->IsFree)
-			{
-				if (P2->FreeSlip(0) > 0.0)
-					vab = 2.0*P1->v(0),0.0,0.0;
-				else if (P2->FreeSlip(1) > 0.0)
-					vab = 0.0,2.0*P1->v(1),0.0;
-				else if (P2->FreeSlip(2) > 0.0)
-					vab = 0.0,0.0,2.0*P1->v(2);
-				else vab = P1->v;
-			}
-			else
-			{
-				if (P1->FreeSlip(0) > 0.0)
-					vab = -2.0*P2->v(0),0.0,0.0;
-				else if (P1->FreeSlip(1) > 0.0)
-					vab = 0.0,-2.0*P2->v(1),0.0;
-				else if (P1->FreeSlip(2) > 0.0)
-					vab = 0.0,0.0,-2.0*P2->v(2);
-				else vab = -P2->v;
-			}
+			if (P1->IsFree) vab = P1->v - P2->vb; else vab = P1->vb - P2->v;
+			if (P1->IsFree) vab(0) = P1->v(0) + P2->vb(0); else vab(0) = -P1->vb(0) - P2->v(0);
 		}
-
 	}
 
 	StrainRate(0,0) = 2.0*vab(0)*xij(0);
