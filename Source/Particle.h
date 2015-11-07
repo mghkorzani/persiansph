@@ -115,7 +115,7 @@ public:
     void Move			(double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3_t domainmin,
     						bool ShepardFilter, size_t PresEq, double Cs, double P0);	///< Update the important quantities of a particle
     void translate		(double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3_t domainmin);
-    void Mat1			(double dt, bool ShepardFilter, size_t PresEq, double Cs, double P0);
+    void Mat1			(double dt, size_t PresEq, double Cs, double P0);
     void Mat2			(double dt, size_t PresEq, double Cs, double P0);
     void Mat3			(double dt);
 };
@@ -168,6 +168,25 @@ inline void Particle::Move (double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3
 	// Evolve position
 	x = x + dt*(v+VXSPH) + 0.5*dt*dt*a;
 
+	// Evolve density
+	if (ShepardFilter && ct==30)
+	{
+		if (!isnan(SumDen/ZWab))
+		{
+			// Shepard filter
+			Density = SumDen/ZWab;
+			Densityb = Density;
+		}
+		else
+			Densityb = Density;
+	}
+	else
+	{
+		double dens = Density;
+		Density = Density + dt*dDensity;
+		Densityb = dens;
+	}
+
 	// Evolve velocity
 	if (ct==30)
 	{
@@ -188,7 +207,7 @@ inline void Particle::Move (double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3
 
 	switch (Material)
     {case 1:
-    	Mat1(dt,ShepardFilter,PresEq,Cs,P0);
+    	Mat1(dt,PresEq,Cs,P0);
 		break;
     case 2:
     	Mat2(dt,PresEq,Cs,P0);
@@ -223,27 +242,8 @@ inline void Particle::Move (double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3
 	}
 }
 
-inline void Particle::Mat1(double dt, bool ShepardFilter, size_t PresEq, double Cs, double P0)
+inline void Particle::Mat1(double dt, size_t PresEq, double Cs, double P0)
 {
-	// Evolve density
-	if (ShepardFilter && ct==30)
-	{
-		if (!isnan(SumDen/ZWab))
-		{
-			// Shepard filter
-			Density = SumDen/ZWab;
-			Densityb = Density;
-		}
-		else
-			Densityb = Density;
-	}
-	else
-	{
-		double dens = Density;
-		Density = Density + dt*dDensity;
-		Densityb = dens;
-	}
-
 	Pressure = EOS(PresEq, Cs, P0,Density, RefDensity);
 
 	ShearRate = sqrt(0.5*(StrainRate(0,0)*StrainRate(0,0) + 2.0*StrainRate(0,1)*StrainRate(1,0) +
@@ -263,11 +263,6 @@ inline void Particle::Mat1(double dt, bool ShepardFilter, size_t PresEq, double 
 
 inline void Particle::Mat2(double dt, size_t PresEq, double Cs, double P0)
 {
-	// Evolve density
-	double dens = Density;
-	Density = Density + dt*dDensity;
-	Densityb = dens;
-
 	Pressure = EOS(PresEq, Cs, P0,Density, RefDensity);
 
 	Mat3_t RotationRateT, Stress,SRT,RS;
@@ -352,7 +347,7 @@ inline void Particle::Mat3(double dt)
 
 
 		// Check the elastic prediction step by the failure criteria
-		if ((sqrt(J2)+alpha*I1-k)>=0.0 && sqrt(J2)>0.0)
+		if ((sqrt(J2)+alpha*I1-k)>=0.0)
 		{
 			// Shear stress based on the existing stress (S n)
 			ShearStress = Stress - 1.0/3.0*(Stress(0,0)+Stress(1,1)+Stress(2,2))*OrthoSys::I;

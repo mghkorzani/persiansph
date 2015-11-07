@@ -302,8 +302,10 @@ inline void Domain::CalcForce33(Particle * P1, Particle * P2)
     	if (dot(vij,xij)<0) PIij = (Alpha*Cij*MUij+Beta*MUij*MUij)/(0.5*(di+dj)) * I;                          ///<(2.74) Li, Liu Book
     }
 
-	Sigmai = P1->Sigma;
-	Sigmaj = P2->Sigma;
+//	Sigmai = P1->Sigma;
+//	Sigmaj = P2->Sigma;
+    if (P1->IsFree) Sigmai = P1->Sigma; else  Sigmai = P2->Sigma;
+    if (P2->IsFree) Sigmaj = P2->Sigma; else  Sigmaj = P1->Sigma;
 
     //Tensile Instability
     Mat3_t TIij;
@@ -368,6 +370,12 @@ inline void Domain::CalcForce33(Particle * P1, Particle * P2)
     Mult( GK*xij , mj * ( 1.0/(di*di)*Sigmai + 1.0/(dj*dj)*Sigmaj + PIij + TIij ) , temp);
     omp_set_lock(&P1->my_lock);
 		P1->a += temp;
+		P1->dDensity+= di * (mj/dj) * dot( vij , GK*xij );
+	    if (P1->ct==30 && Shepard)
+	    {
+	    	P1->SumDen += mj*    K;
+	    	P1->ZWab   += mj/dj* K;
+	    }
 		if (P1->IsFree)
 		{
 			P1->StrainRate	= P1->StrainRate + mj/dj*StrainRate;
@@ -378,6 +386,12 @@ inline void Domain::CalcForce33(Particle * P1, Particle * P2)
     Mult( GK*xij , mi * ( 1.0/(di*di)*Sigmai + 1.0/(dj*dj)*Sigmaj + PIij + TIij ) ,temp);
     omp_set_lock(&P2->my_lock);
 		P2->a -= temp;
+		P2->dDensity+= dj * (mi/di) * dot( -vij , -GK*xij );
+	    if (P2->ct==30 && Shepard)
+	    {
+	    	P2->SumDen += mi*    K;
+	    	P2->ZWab   += mi/di* K;
+	    }
 		if (P2->IsFree)
 		{
 			P2->StrainRate	= P2->StrainRate + mi/di*StrainRate;
