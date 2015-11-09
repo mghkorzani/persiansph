@@ -38,7 +38,7 @@ int main(int argc, char **argv) try
         dom.Dimension	= 2;
         dom.Cs			= 0.0025;
         dom.BC.Periodic[0]	= true;
-        dom.Nproc		= 8;
+        dom.Nproc		= 16;
     	dom.PresEq		= 0;
     	dom.VisEq		= 3;
     	dom.KernelType	= 4;
@@ -52,7 +52,7 @@ int main(int argc, char **argv) try
     	dom.InitialDist 	= dx;
 
         double maz;
-        maz=(0.002*h/(dom.Cs));
+        maz=(0.008*h/(dom.Cs));
         std::cout<<maz<<std::endl;
     	dom.GeneralBefore	= & UserAcc;
 

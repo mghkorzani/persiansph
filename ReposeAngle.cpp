@@ -50,12 +50,8 @@ int main(int argc, char **argv) try
         dom.Nproc		= 24;
     	dom.PresEq		= 0;
     	dom.KernelType	= 0;
-//    	dom.Shepard		= true;
-//    	dom.TI			= 0.3;
-//    	dom.TIn			= 4.0;
     	dom.Alpha		= 0.1;
     	dom.Beta		= 0.1;
-//    	dom.XSPH		= 0.5;
     	dom.Gravity		= 0.0, -9.81, 0.0;
 
         double dx,h,rho,K,G,timestep,E,Nu,H,n,L,Phi,Psi,c;
@@ -74,9 +70,8 @@ int main(int argc, char **argv) try
     	dx	= H / n;
     	h	= dx*1.2;
         dom.Cs			= sqrt(E/rho);
-//        dom.Cs			= 600.0;
     	dom.InitialDist	= dx;
-        timestep		= (0.05*h/(dom.Cs));
+        timestep		= (0.03*h/(dom.Cs));
 
 //    	Damp 			= 0.02*sqrt(E/(rho*h*h));
 //        dom.GeneralAfter= & UserDamping;
@@ -124,35 +119,31 @@ int main(int argc, char **argv) try
     		{
     			dom.Particles[a]->ID		= 6;
     		}
-//         	for (size_t i=0; i<10; i++)
-//    			if (dom.Particles[a]->ID == 1)
-//    			{
-//    				if (dom.Particles[a]->x(0)>(8.0*dx + i*10.0*dx + dx/2.1) && dom.Particles[a]->x(0)<=(10.0*dx + i*10.0*dx + dx/2.1))
-//    					dom.Particles[a]->ID = 2;
-//    			}
-//
-//         	for (size_t i=0; i<5; i++)
-//    			if (dom.Particles[a]->ID == 1)
-//    			{
-//    				if (dom.Particles[a]->x(1)>(8.0*dx + i*10.0*dx + dx/2.1) && dom.Particles[a]->x(1)<=(10.0*dx + i*10.0*dx + dx/2.1))
-//    					dom.Particles[a]->ID = 2;
-//    			}
+         	for (size_t i=0; i<10; i++)
+    			if (dom.Particles[a]->ID == 1)
+    			{
+    				if (dom.Particles[a]->x(0)>(7.0*dx + i*8.0*dx + dx/2.1) && dom.Particles[a]->x(0)<=(8.0*dx + i*8.0*dx + dx/2.1))
+    					dom.Particles[a]->ID = 2;
+    			}
+
+         	for (size_t i=0; i<5; i++)
+    			if (dom.Particles[a]->ID == 1)
+    			{
+    				if (dom.Particles[a]->x(1)>(7.0*dx + i*8.0*dx + dx/2.1) && dom.Particles[a]->x(1)<=(8.0*dx + i*8.0*dx + dx/2.1))
+    					dom.Particles[a]->ID = 2;
+    			}
 
 			if (dom.Particles[a]->ID == 1 || dom.Particles[a]->ID == 2)
 			{
 				dom.Particles[a]->Sigma(1,1)	= rho * -9.81 *(H-dom.Particles[a]->x(1));
-				dom.Particles[a]->Sigmab(1,1)	= rho * -9.81 *(H-dom.Particles[a]->x(1));
 				dom.Particles[a]->Sigma(0,0)	= K0 * rho * -9.81 *(H-dom.Particles[a]->x(1));
-				dom.Particles[a]->Sigmab(0,0)	= K0 * rho * -9.81 *(H-dom.Particles[a]->x(1));
 				dom.Particles[a]->Sigma(2,2)	= K0 * rho * -9.81 *(H-dom.Particles[a]->x(1));
-				dom.Particles[a]->Sigmab(2,2)	= K0 * rho * -9.81 *(H-dom.Particles[a]->x(1));
 			}
     	}
-
      	dom.DelParticles(5);
      	dom.DelParticles(6);
 
-    	dom.Solve(/*tf*/1000.0,/*dt*/timestep,/*dtOut*/0.01,"test06",999);
+    	dom.Solve(/*tf*/1000.0,/*dt*/timestep,/*dtOut*/0.005,"test06",999);
         return 0;
 }
 MECHSYS_CATCH
