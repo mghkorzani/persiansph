@@ -191,9 +191,9 @@ inline void Domain::CalcForce22(Particle * P1, Particle * P2)
     set_to_zero(TIij);
     if (TI > 0.0) TIij = pow((K/Kernel(Dimension, KernelType, InitialDist, h)),TIn)*(P1->TIR+P2->TIR);
 
-    Mat3_t StrainRate,Rotation;
+    Mat3_t StrainRate,RotationRate;
     set_to_zero(StrainRate);
-    set_to_zero(Rotation);
+    set_to_zero(RotationRate);
 
     Vec3_t vab;
 	if (P1->IsFree*P2->IsFree)
@@ -223,15 +223,15 @@ inline void Domain::CalcForce22(Particle * P1, Particle * P2)
 	StrainRate(2,0) = StrainRate(0,2);
 	StrainRate(2,1) = StrainRate(1,2);
 	StrainRate(2,2) = 2.0*vab(2)*xij(2);
-	StrainRate = -0.5 * GK * StrainRate;
+	StrainRate 		= -0.5 * GK * StrainRate;
 
-	Rotation(0,1) = vab(0)*xij(1)-vab(1)*xij(0);
-	Rotation(0,2) = vab(0)*xij(2)-vab(2)*xij(0);
-	Rotation(1,2) = vab(1)*xij(2)-vab(2)*xij(1);
-	Rotation(1,0) = -Rotation(0,1);
-	Rotation(2,0) = -Rotation(0,2);
-	Rotation(2,1) = -Rotation(1,2);
-	Rotation = -0.5 * GK * Rotation;
+	RotationRate(0,1) = vab(0)*xij(1)-vab(1)*xij(0);
+	RotationRate(0,2) = vab(0)*xij(2)-vab(2)*xij(0);
+	RotationRate(1,2) = vab(1)*xij(2)-vab(2)*xij(1);
+	RotationRate(1,0) = -RotationRate(0,1);
+	RotationRate(2,0) = -RotationRate(0,2);
+	RotationRate(2,1) = -RotationRate(1,2);
+	RotationRate	= -0.5 * GK * RotationRate;
 
     // XSPH Monaghan
     if (XSPH != 0.0)
@@ -252,8 +252,8 @@ inline void Domain::CalcForce22(Particle * P1, Particle * P2)
 		P1->dDensity+= di * (mj/dj) * dot( vij , GK*xij );
 		if (P1->IsFree)
 		{
-			P1->StrainRate = P1->StrainRate + mj/dj*StrainRate;
-			P1->Rotation = P1->Rotation + mj/dj*Rotation;
+			P1->StrainRate	= P1->StrainRate + mj/dj*StrainRate;
+			P1->RotationRate= P1->RotationRate + mj/dj*RotationRate;
 		}
     omp_unset_lock(&P1->my_lock);
 
@@ -263,8 +263,8 @@ inline void Domain::CalcForce22(Particle * P1, Particle * P2)
 		P2->dDensity+= dj * (mi/di) * dot( -vij , -GK*xij );
 		if (P2->IsFree)
 		{
-			P2->StrainRate = P2->StrainRate + mi/di*StrainRate;
-			P2->Rotation = P2->Rotation + mi/di*Rotation;
+			P2->StrainRate	= P2->StrainRate + mi/di*StrainRate;
+			P2->RotationRate= P2->RotationRate + mi/di*RotationRate;
 		}
     omp_unset_lock(&P2->my_lock);
 }
@@ -312,9 +312,9 @@ inline void Domain::CalcForce33(Particle * P1, Particle * P2)
     set_to_zero(TIij);
     if (TI > 0.0) TIij = pow((K/Kernel(Dimension, KernelType, InitialDist, h)),TIn)*(P1->TIR+P2->TIR);
 
-    Mat3_t StrainRate,Rotation;
+    Mat3_t StrainRate,RotationRate;
     set_to_zero(StrainRate);
-    set_to_zero(Rotation);
+    set_to_zero(RotationRate);
 
     Vec3_t vab = 0.0;
 	if (P1->IsFree*P2->IsFree)
@@ -344,15 +344,15 @@ inline void Domain::CalcForce33(Particle * P1, Particle * P2)
 	StrainRate(2,0) = StrainRate(0,2);
 	StrainRate(2,1) = StrainRate(1,2);
 	StrainRate(2,2) = 2.0*vab(2)*xij(2);
-	StrainRate = -0.5 * GK * StrainRate;
+	StrainRate		= -0.5 * GK * StrainRate;
 
-	Rotation(0,1) = vab(0)*xij(1)-vab(1)*xij(0);
-	Rotation(0,2) = vab(0)*xij(2)-vab(2)*xij(0);
-	Rotation(1,2) = vab(1)*xij(2)-vab(2)*xij(1);
-	Rotation(1,0) = -Rotation(0,1);
-	Rotation(2,0) = -Rotation(0,2);
-	Rotation(2,1) = -Rotation(1,2);
-	Rotation = -0.5 * GK * Rotation;
+	RotationRate(0,1) = vab(0)*xij(1)-vab(1)*xij(0);
+	RotationRate(0,2) = vab(0)*xij(2)-vab(2)*xij(0);
+	RotationRate(1,2) = vab(1)*xij(2)-vab(2)*xij(1);
+	RotationRate(1,0) = -RotationRate(0,1);
+	RotationRate(2,0) = -RotationRate(0,2);
+	RotationRate(2,1) = -RotationRate(1,2);
+	RotationRate		= -0.5 * GK * RotationRate;
 
     // XSPH Monaghan
     if (XSPH != 0.0)
@@ -379,7 +379,7 @@ inline void Domain::CalcForce33(Particle * P1, Particle * P2)
 		if (P1->IsFree)
 		{
 			P1->StrainRate	= P1->StrainRate + mj/dj*StrainRate;
-			P1->Rotation	= P1->Rotation + mj/dj*Rotation;
+			P1->RotationRate= P1->RotationRate + mj/dj*RotationRate;
 		}
     omp_unset_lock(&P1->my_lock);
 
@@ -395,7 +395,7 @@ inline void Domain::CalcForce33(Particle * P1, Particle * P2)
 		if (P2->IsFree)
 		{
 			P2->StrainRate	= P2->StrainRate + mi/di*StrainRate;
-			P2->Rotation	= P2->Rotation + mi/di*Rotation;
+			P2->RotationRate= P2->RotationRate + mi/di*RotationRate;
 		}
     omp_unset_lock(&P2->my_lock);
 }

@@ -1060,7 +1060,7 @@ inline void Domain::StartAcceleration (Vec3_t const & a)
         Particles[i]->Vis		= 0.0;
         Particles[i]->SumKernel	= 0.0;
         set_to_zero(Particles[i]->StrainRate);
-        set_to_zero(Particles[i]->Rotation);
+        set_to_zero(Particles[i]->RotationRate);
     }
 }
 
@@ -1885,7 +1885,7 @@ inline void Domain::Save (char const * FileKey)
         H5LTmake_dataset_double(group_id,"Mass",1,dims,dat);
         dat[0] = Particles[i]->Density;
         H5LTmake_dataset_double(group_id,"Rho",1,dims,dat);
-        dat[0] = Particles[i]->hr;
+        dat[0] = Particles[i]->h;
         H5LTmake_dataset_double(group_id,"h",1,dims,dat);
 
         int tag[1];
@@ -1965,7 +1965,6 @@ inline void Domain::Load (char const * FileKey)
         Particles[Particles.Size()-1]->Densityb = dat[0];			// Because of the constructor in Particle
 
         H5LTread_dataset_double(group_id,"h",dat);
-        Particles[Particles.Size()-1]->hr = dat[0];
         Particles[Particles.Size()-1]->h = dat[0];			// Because of the constructor in Particle
 
         int datint[1];

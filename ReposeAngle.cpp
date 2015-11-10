@@ -71,7 +71,7 @@ int main(int argc, char **argv) try
     	h	= dx*1.2;
         dom.Cs			= sqrt(E/rho);
     	dom.InitialDist	= dx;
-        timestep		= (0.015*h/(dom.Cs));
+        timestep		= (0.03*h/(dom.Cs));
 
 //    	Damp 			= 0.02*sqrt(E/(rho*h*h));
 //        dom.GeneralAfter= & UserDamping;
@@ -94,6 +94,7 @@ int main(int argc, char **argv) try
     		dom.Particles[a]->K			= K;
     		dom.Particles[a]->Material	= 3;
     		dom.Particles[a]->Fail		= 3;
+    		dom.Particles[a]->Scheme	= 1;
     		dom.Particles[a]->c			= c;
     		dom.Particles[a]->phi		= Phi/180.0*M_PI;
     		dom.Particles[a]->psi		= Psi/180.0*M_PI;
@@ -138,10 +139,6 @@ int main(int argc, char **argv) try
 				dom.Particles[a]->Sigma(1,1)	= rho * -9.81 *(H-dom.Particles[a]->x(1));
 				dom.Particles[a]->Sigma(0,0)	= K0 * rho * -9.81 *(H-dom.Particles[a]->x(1));
 				dom.Particles[a]->Sigma(2,2)	= K0 * rho * -9.81 *(H-dom.Particles[a]->x(1));
-				dom.Particles[a]->ct = 30;
-//				dom.Particles[a]->Sigmab(1,1)	= rho * -9.81 *(H-dom.Particles[a]->x(1));
-//				dom.Particles[a]->Sigmab(0,0)	= K0 * rho * -9.81 *(H-dom.Particles[a]->x(1));
-//				dom.Particles[a]->Sigmab(2,2)	= K0 * rho * -9.81 *(H-dom.Particles[a]->x(1));
 			}
     	}
      	dom.DelParticles(5);
