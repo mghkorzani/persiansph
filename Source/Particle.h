@@ -176,57 +176,56 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
 
 inline void Particle::Move (double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3_t domainmin, bool ShepardFilter, size_t PresEq, double Cs, double P0)
 {
+//	if (ct == 0)
+//	{
+//		Densitya = Density - dt/2.0*dDensity;
+//		va = v - dt/2.0*a;
+//	}
+//		Densityb = Densitya;
+//		Densitya += dt*dDensity;
+//		Density = (Densitya+Densityb)/2.0;
+//		vb = va;
+//		va += dt*a;
+//		v = (va + vb)/2.0;
+//		x += dt*va;
 
-	if (ct == 0)
+	// Evolve position
+	x += dt*(v+VXSPH) + 0.5*dt*dt*a;
+
+	if (ct == 30)
 	{
-		Densitya = Density - dt/2.0*dDensity;
-		va = v - dt/2.0*a;
-	}
-		Densityb = Densitya;
-		Densitya += dt*dDensity;
-		Density = (Densitya+Densityb)/2.0;
-		vb = va;
-		va += dt*a;
-		v = (va + vb)/2.0;
-		x += dt*va;
+		if (ShepardFilter)
+		{
+			if (!isnan(SumDen/ZWab))
+			{
+				Densityb	= Density;
+				Density		= SumDen/ZWab;
+			}
+			else
+				Densityb	= Density;
+		}
+		else
+		{
+			Densityb		= Density;
+			Density			+=dt*dDensity;
+		}
 
-//	// Evolve position
-//	x = x + dt*(v+VXSPH) + 0.5*dt*dt*a;
-//
-//	if (ct == 30)
-//	{
-//		if (ShepardFilter)
-//		{
-//			if (!isnan(SumDen/ZWab))
-//			{
-//				Densityb	= Density;
-//				Density		= SumDen/ZWab;
-//			}
-//			else
-//				Densityb	= Density;
-//		}
-//		else
-//		{
-//			Densityb		= Density;
-//			Density			+=2.0*dt*dDensity;
-//		}
-//
-//		vb	= v;
-//		v	+=dt*a;
+		vb	= v;
+		v	+=dt*a;
 //		ct	= 0;
-//	}
-//	else
-//	{
-//		double dens	= Density;
-//		Density		= Densityb + 2.0*dt*dDensity;
-//		Densityb	= dens;
-//
-//		Vec3_t temp;
-//		temp	= v;
-//		v		= vb + 2*dt*a;
-//		vb		= temp;
+	}
+	else
+	{
+		double dens	= Density;
+		Density		= Densityb + 2.0*dt*dDensity;
+		Densityb	= dens;
+
+		Vec3_t temp;
+		temp	= v;
+		v		= vb + 2*dt*a;
+		vb		= temp;
 //		ct++;
-//	}
+	}
 
 	switch (Material)
     {case 1:
@@ -246,7 +245,7 @@ inline void Particle::Move (double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3
 	    abort();
 	    break;
     }
-	ct++;
+//	ct++;
 
 
 	//Periodic BC particle position update
@@ -321,10 +320,127 @@ inline void Particle::Mat2(double dt, size_t PresEq, double Cs, double P0)
 	}
 }
 
+//inline void Particle::Mat3(double dt)
+//{
+//	Mat3_t RotationRateT, Stress, SRT,RS;
+//	double I1,J2,alpha,k,I1strain;
+//
+//	// Jaumann rate terms
+//	Trans(Rotation,RotationRateT);
+//	Mult(Sigma,RotationRateT,SRT);
+//	Mult(Rotation,Sigma,RS);
+//
+//	// Volumetric strain
+//	I1strain = StrainRate(0,0)+StrainRate(1,1)+StrainRate(2,2);
+//
+//	// Elastic prediction step (Sigma_e n+1)
+//	if (ct ==0)
+//	{
+//		Sigmaa	=	-dt/2.0*(
+//							I1strain*K*OrthoSys::I
+//							+	2.0*G*(StrainRate-1.0/3.0*I1strain*OrthoSys::I)
+//							+	SRT+RS
+//							) + Sigma;
+//	}
+//	Sigmab	= Sigmaa;
+//	Sigmaa	=	dt*(
+//					I1strain*K*OrthoSys::I
+//					+	2.0*G*(StrainRate-1.0/3.0*I1strain*OrthoSys::I)
+//					+	SRT+RS
+//					) + Sigmaa;
+//
+//	// Drucker-Prager failure criterion for plane strain
+//	alpha	= tan(phi) / sqrt(9.0+12.0*tan(phi)*tan(phi));
+//	k		= 3.0 * c  / sqrt(9.0+12.0*tan(phi)*tan(phi));
+//
+//	// Bring back stress to the apex of the failure criteria
+//	I1		= Sigmaa(0,0) + Sigmaa(1,1) + Sigmaa(2,2);
+//	if ((k-alpha*I1)<0.0)
+//	{
+//		double Ratio;
+//		if (alpha == 0.0) Ratio =0.0; else Ratio = k/alpha;
+//		Sigmaa(0,0) -= 1.0/3.0*(I1-Ratio);
+//		Sigmaa(1,1) -= 1.0/3.0*(I1-Ratio);
+//		Sigmaa(2,2) -= 1.0/3.0*(I1-Ratio);
+//		I1 			= Ratio;
+//	}
+//
+//	// Shear stress based on the elastic assumption (S_e n+1)
+//	ShearStress = Sigmaa - 1.0/3.0* I1 *OrthoSys::I;
+//	J2 			= 0.5*(ShearStress(0,0)*ShearStress(0,0) + 2.0*ShearStress(0,1)*ShearStress(1,0) +
+//					2.0*ShearStress(0,2)*ShearStress(2,0) + ShearStress(1,1)*ShearStress(1,1) +
+//					2.0*ShearStress(1,2)*ShearStress(2,1) + ShearStress(2,2)*ShearStress(2,2));
+//
+//
+//	// Check the elastic prediction step by the failure criteria
+//	if ((sqrt(J2)+alpha*I1-k)>0.0)
+//	{
+//		// Shear stress based on the existing stress (S n)
+//		ShearStress = Sigma - 1.0/3.0*(Sigma(0,0)+Sigma(1,1)+Sigma(2,2))*OrthoSys::I;
+//		J2 			= 0.5*(ShearStress(0,0)*ShearStress(0,0) + 2.0*ShearStress(0,1)*ShearStress(1,0) +
+//						2.0*ShearStress(0,2)*ShearStress(2,0) + ShearStress(1,1)*ShearStress(1,1) +
+//						2.0*ShearStress(1,2)*ShearStress(2,1) + ShearStress(2,2)*ShearStress(2,2));
+//
+//		if (sqrt(J2)>0.0)
+//		{
+//			Mat3_t temp, Plastic;
+//			double sum,dLanda;
+//
+//			// calculating the plastic term based on the existing shear stress and strain rate
+//			temp	= abab(ShearStress,StrainRate);
+//			sum		= temp(0,0)+temp(0,1)+temp(0,2)+temp(1,0)+temp(1,1)+temp(1,2)+temp(2,0)+temp(2,1)+temp(2,2);
+//			switch (Fail)
+//			{
+//			case 2:
+//				dLanda	= 1.0/(9.0*alpha*alpha*K+G)*( (3.0*alpha*K*I1strain) + (G/sqrt(J2))*sum );
+//				Plastic	= 3.0*alpha*K*OrthoSys::I + G/sqrt(J2)*ShearStress;
+//				break;
+//			case 3:
+//				dLanda	= 1.0/(9.0*alpha*K*3.0*sin(psi)+G)*( (3.0*alpha*K*I1strain) + (G/sqrt(J2))*sum );
+//				Plastic	= 3.0*3.0*sin(psi)*K*OrthoSys::I + G/sqrt(J2)*ShearStress;
+//				break;
+//			default:
+//				std::cout << "Failure Type No is out of range. Please correct it and run again" << std::endl;
+//				std::cout << "2 => Associated flow rule" << std::endl;
+//				std::cout << "3 => non-associated flow rule" << std::endl;
+//				abort();
+//				break;
+//			}
+//			if (ct == 0)
+//			{
+//				Sigmaa = Sigmaa - dt/2.0*(dLanda*Plastic);
+//			}
+//			else
+//				Sigmaa = Sigmaa - dt*(dLanda*Plastic);
+//		}
+//
+//		I1			= Sigmaa(0,0) + Sigmaa(1,1) + Sigmaa(2,2);
+//		if ((k-alpha*I1)<0.0)
+//		{
+//			double Ratio;
+//			if (alpha == 0.0) Ratio =0.0; else Ratio = k/alpha;
+//			Sigmaa(0,0) -= 1.0/3.0*(I1-Ratio);
+//			Sigmaa(1,1) -= 1.0/3.0*(I1-Ratio);
+//			Sigmaa(2,2) -= 1.0/3.0*(I1-Ratio);
+//			I1 			= Ratio;
+//		}
+//		ShearStress	= Sigmaa - 1.0/3.0* I1 *OrthoSys::I;
+//		J2			= 0.5*(ShearStress(0,0)*ShearStress(0,0) + 2.0*ShearStress(0,1)*ShearStress(1,0) +
+//						2.0*ShearStress(0,2)*ShearStress(2,0) + ShearStress(1,1)*ShearStress(1,1) +
+//						2.0*ShearStress(1,2)*ShearStress(2,1) + ShearStress(2,2)*ShearStress(2,2));
+//		if ((sqrt(J2)+alpha*I1-k)>0.0 && sqrt(J2)>0.0) Sigmaa = I1/3.0*OrthoSys::I + (k-alpha*I1)/sqrt(J2) * ShearStress;
+//	}
+//	Sigma = 1.0/2.0*(Sigmaa+Sigmab);
+//}
+
 inline void Particle::Mat3(double dt)
 {
 	Mat3_t RotationRateT, Stress, SRT,RS;
 	double I1,J2,alpha,k,I1strain;
+
+//	Stress	= Strain;
+//	Strain	= 2.0*dt*StrainRate + Strainb;
+//	Strainb	= Stress;
 
 	// Jaumann rate terms
 	Trans(Rotation,RotationRateT);
@@ -335,39 +451,40 @@ inline void Particle::Mat3(double dt)
 	I1strain = StrainRate(0,0)+StrainRate(1,1)+StrainRate(2,2);
 
 	// Elastic prediction step (Sigma_e n+1)
-	if (ct ==0)
-	{
-		Sigmaa	=	-dt/2.0*(
-							I1strain*K*OrthoSys::I
+	Stress	= Sigma;
+	if (ct == 30)
+		Sigma	=		dt*(
+								I1strain*K*OrthoSys::I
 							+	2.0*G*(StrainRate-1.0/3.0*I1strain*OrthoSys::I)
 							+	SRT+RS
 							) + Sigma;
-	}
-	Sigmab	= Sigmaa;
-	Sigmaa	=	dt*(
-					I1strain*K*OrthoSys::I
-					+	2.0*G*(StrainRate-1.0/3.0*I1strain*OrthoSys::I)
-					+	SRT+RS
-					) + Sigmaa;
+	else
+		Sigma	=	2.0*dt*(
+								I1strain*K*OrthoSys::I
+							+	2.0*G*(StrainRate-1.0/3.0*I1strain*OrthoSys::I)
+							+	SRT+RS
+							) + Sigmab;
+
+	Sigmab	= Stress;
 
 	// Drucker-Prager failure criterion for plane strain
 	alpha	= tan(phi) / sqrt(9.0+12.0*tan(phi)*tan(phi));
 	k		= 3.0 * c  / sqrt(9.0+12.0*tan(phi)*tan(phi));
 
 	// Bring back stress to the apex of the failure criteria
-	I1		= Sigmaa(0,0) + Sigmaa(1,1) + Sigmaa(2,2);
+	I1		= Sigma(0,0) + Sigma(1,1) + Sigma(2,2);
 	if ((k-alpha*I1)<0.0)
 	{
 		double Ratio;
 		if (alpha == 0.0) Ratio =0.0; else Ratio = k/alpha;
-		Sigmaa(0,0) -= 1.0/3.0*(I1-Ratio);
-		Sigmaa(1,1) -= 1.0/3.0*(I1-Ratio);
-		Sigmaa(2,2) -= 1.0/3.0*(I1-Ratio);
+		Sigma(0,0) -= 1.0/3.0*(I1-Ratio);
+		Sigma(1,1) -= 1.0/3.0*(I1-Ratio);
+		Sigma(2,2) -= 1.0/3.0*(I1-Ratio);
 		I1 			= Ratio;
 	}
 
 	// Shear stress based on the elastic assumption (S_e n+1)
-	ShearStress = Sigmaa - 1.0/3.0* I1 *OrthoSys::I;
+	ShearStress = Sigma - 1.0/3.0* I1 *OrthoSys::I;
 	J2 			= 0.5*(ShearStress(0,0)*ShearStress(0,0) + 2.0*ShearStress(0,1)*ShearStress(1,0) +
 					2.0*ShearStress(0,2)*ShearStress(2,0) + ShearStress(1,1)*ShearStress(1,1) +
 					2.0*ShearStress(1,2)*ShearStress(2,1) + ShearStress(2,2)*ShearStress(2,2));
@@ -377,7 +494,7 @@ inline void Particle::Mat3(double dt)
 	if ((sqrt(J2)+alpha*I1-k)>0.0)
 	{
 		// Shear stress based on the existing stress (S n)
-		ShearStress = Sigma - 1.0/3.0*(Sigma(0,0)+Sigma(1,1)+Sigma(2,2))*OrthoSys::I;
+		ShearStress = Stress - 1.0/3.0*(Stress(0,0)+Stress(1,1)+Stress(2,2))*OrthoSys::I;
 		J2 			= 0.5*(ShearStress(0,0)*ShearStress(0,0) + 2.0*ShearStress(0,1)*ShearStress(1,0) +
 						2.0*ShearStress(0,2)*ShearStress(2,0) + ShearStress(1,1)*ShearStress(1,1) +
 						2.0*ShearStress(1,2)*ShearStress(2,1) + ShearStress(2,2)*ShearStress(2,2));
@@ -407,32 +524,38 @@ inline void Particle::Mat3(double dt)
 				abort();
 				break;
 			}
-			if (ct == 0)
-			{
-				Sigmaa = Sigmaa - dt/2.0*(dLanda*Plastic);
-			}
+			// Apply the plastic term
+			if (ct == 30)
+				Sigma = Sigma -	dt*(dLanda*Plastic);
 			else
-				Sigmaa = Sigmaa - dt*(dLanda*Plastic);
+				Sigma = Sigma -	2.0*dt*(dLanda*Plastic);
+
 		}
 
-		I1			= Sigmaa(0,0) + Sigmaa(1,1) + Sigmaa(2,2);
+		//Scale back
+		I1			= Sigma(0,0) + Sigma(1,1) + Sigma(2,2);
 		if ((k-alpha*I1)<0.0)
 		{
 			double Ratio;
 			if (alpha == 0.0) Ratio =0.0; else Ratio = k/alpha;
-			Sigmaa(0,0) -= 1.0/3.0*(I1-Ratio);
-			Sigmaa(1,1) -= 1.0/3.0*(I1-Ratio);
-			Sigmaa(2,2) -= 1.0/3.0*(I1-Ratio);
+			Sigma(0,0) -= 1.0/3.0*(I1-Ratio);
+			Sigma(1,1) -= 1.0/3.0*(I1-Ratio);
+			Sigma(2,2) -= 1.0/3.0*(I1-Ratio);
 			I1 			= Ratio;
 		}
-		ShearStress	= Sigmaa - 1.0/3.0* I1 *OrthoSys::I;
+		ShearStress	= Sigma - 1.0/3.0* I1 *OrthoSys::I;
 		J2			= 0.5*(ShearStress(0,0)*ShearStress(0,0) + 2.0*ShearStress(0,1)*ShearStress(1,0) +
 						2.0*ShearStress(0,2)*ShearStress(2,0) + ShearStress(1,1)*ShearStress(1,1) +
 						2.0*ShearStress(1,2)*ShearStress(2,1) + ShearStress(2,2)*ShearStress(2,2));
-		if ((sqrt(J2)+alpha*I1-k)>0.0 && sqrt(J2)>0.0) Sigmaa = I1/3.0*OrthoSys::I + (k-alpha*I1)/sqrt(J2) * ShearStress;
+
+		if (I1>0.0) std::cout<<I1<<std::endl;
+
+		if ((sqrt(J2)+alpha*I1-k)>0.0 && sqrt(J2)>0.0) Sigma = I1/3.0*OrthoSys::I + (k-alpha*I1)/sqrt(J2) * ShearStress;
 	}
-	Sigma = 1.0/2.0*(Sigmaa+Sigmab);
+	if (ct == 30) ct = 0; else ct++;
+
 }
+
 
 inline void Particle::translate(double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3_t domainmin)
 {
