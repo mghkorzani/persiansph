@@ -69,9 +69,10 @@ int main(int argc, char **argv) try
     	G	= E/(2.0*(1.0+Nu));
     	dx	= H / n;
     	h	= dx*1.2;
-        dom.Cs			= sqrt(E/rho);
+//        dom.Cs			= sqrt(E/rho);
+        dom.Cs			= 600.0/4.0; //Very important
     	dom.InitialDist	= dx;
-        timestep		= (0.03*h/(dom.Cs));
+        timestep		= (0.2*h/(dom.Cs));
 
 //    	Damp 			= 0.02*sqrt(E/(rho*h*h));
 //        dom.GeneralAfter= & UserDamping;
@@ -94,7 +95,8 @@ int main(int argc, char **argv) try
     		dom.Particles[a]->K			= K;
     		dom.Particles[a]->Material	= 3;
     		dom.Particles[a]->Fail		= 3;
-    		dom.Particles[a]->Scheme	= 1;
+//    		dom.Particles[a]->Scheme	= 1; //Leapfrog
+    		dom.Particles[a]->Scheme	= 0; //Modified Verlet
     		dom.Particles[a]->c			= c;
     		dom.Particles[a]->phi		= Phi/180.0*M_PI;
     		dom.Particles[a]->psi		= Psi/180.0*M_PI;

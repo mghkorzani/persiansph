@@ -420,12 +420,21 @@ inline void Particle::Mat3MVerlet(double dt)
 
 		//Scale back
 		I1			= Sigma(0,0) + Sigma(1,1) + Sigma(2,2);
+		if ((k-alpha*I1)<0.0)
+		{
+			double Ratio;
+			if (alpha == 0.0) Ratio =0.0; else Ratio = k/alpha;
+			Sigma(0,0) -= 1.0/3.0*(I1-Ratio);
+			Sigma(1,1) -= 1.0/3.0*(I1-Ratio);
+			Sigma(2,2) -= 1.0/3.0*(I1-Ratio);
+			I1 			= Ratio;
+		}
 		ShearStress	= Sigma - 1.0/3.0* I1 *OrthoSys::I;
 		J2			= 0.5*(ShearStress(0,0)*ShearStress(0,0) + 2.0*ShearStress(0,1)*ShearStress(1,0) +
 						2.0*ShearStress(0,2)*ShearStress(2,0) + ShearStress(1,1)*ShearStress(1,1) +
 						2.0*ShearStress(1,2)*ShearStress(2,1) + ShearStress(2,2)*ShearStress(2,2));
 
-		if ((sqrt(J2)+alpha*I1-k)>0.0 && sqrt(J2)>0.0 && I1<0.0) Sigma = I1/3.0*OrthoSys::I + (k-alpha*I1)/sqrt(J2) * ShearStress;
+		if ((sqrt(J2)+alpha*I1-k)>0.0 && sqrt(J2)>0.0) Sigma = I1/3.0*OrthoSys::I + (k-alpha*I1)/sqrt(J2) * ShearStress;
 	}
 }
 
