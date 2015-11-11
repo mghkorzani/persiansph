@@ -25,9 +25,9 @@ void UserAcc(SPH::Domain & domi)
 	for (size_t i=0; i<domi.Particles.Size(); i++)
 	{
 		if (domi.Particles[i]->ID == 3)
-			domi.Particles[i]->a = Vec3_t(1.0,0.0,0.0);
+			domi.Particles[i]->a = Vec3_t(5.0,0.0,0.0);
 		if (domi.Particles[i]->ID == 2)
-			domi.Particles[i]->a = Vec3_t(-1.0,0.0,0.0);
+			domi.Particles[i]->a = Vec3_t(-5.0,0.0,0.0);
 	}
 }
 
@@ -41,15 +41,15 @@ int main(int argc, char **argv) try
 
         dom.Dimension	= 2;
         dom.Nproc		= 24;
-    	dom.PresEq		= 0;
     	dom.KernelType	= 0;
     	dom.Shepard		= false;
+    	dom.Scheme		= 0;
 
     	dom.TI			= 0.3;
     	dom.Alpha		= 1.0;
     	dom.XSPH		= 0.5;
 
-        double dx,h,rho,K,G;
+        double dx,h,rho,K,G,Cs;
     	double H,L,n;
 
     	H	= 0.01;
@@ -61,13 +61,13 @@ int main(int argc, char **argv) try
     	G	= 3.0e5;
     	dx	= H / n;
     	h	= dx*1.5;
-        dom.Cs			= sqrt(K/rho);
+        Cs	= sqrt(K/rho);
     	dom.InitialDist	= dx;
 
         double timestep;
-        timestep = (0.1*h/(dom.Cs));
+        timestep = (0.1*h/(Cs));
         cout<<timestep<<endl;
-        cout<<dom.Cs<<endl;
+        cout<<Cs<<endl;
     	dom.GeneralAfter = & UserAcc;
         dom.DomMax(0) = L;
         dom.DomMin(0) = -L;
@@ -78,10 +78,11 @@ int main(int argc, char **argv) try
 
     	for (size_t a=0; a<dom.Particles.Size(); a++)
     	{
-    		dom.Particles[a]->G = G;
-    		dom.Particles[a]->Material = 2;
-    		dom.Particles[a]->Fail = 1;
-    		dom.Particles[a]->Sigmay = 3000.0;
+    		dom.Particles[a]->G			= G;
+    		dom.Particles[a]->Cs		= Cs;
+    		dom.Particles[a]->Material	= 2;
+    		dom.Particles[a]->Fail		= 1;
+    		dom.Particles[a]->Sigmay	= 3000.0;
     		x = dom.Particles[a]->x(0);
     		if (x<-L/2.0)
     			dom.Particles[a]->ID=2;

@@ -32,8 +32,8 @@ int main(int argc, char **argv) try
     	dom.Alpha		= 0.1;
     	dom.Beta		= 0.1;
     	dom.Gravity		= 0.0, -9.81, 0.0;
-    	dom.TI			= 0.5;
-    	dom.TIn			= 2.55;
+//    	dom.TI			= 0.5;
+//    	dom.TIn			= 2.55;
 // 		dom.Scheme		= 1; //Leapfrog
 		dom.Scheme		= 0; //Modified Verlet
 
@@ -45,7 +45,7 @@ int main(int argc, char **argv) try
     	rho	= 1850.0;
     	K	= 1.5e6;
     	Phi	= 25.0;
-    	c	= 5000.0;
+    	c	= 0.0;
     	Psi	= 0.0;
     	Nu	= 0.3;
     	E	= (3.0*(1.0-2.0*Nu))*K;

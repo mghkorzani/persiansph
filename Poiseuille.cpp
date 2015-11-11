@@ -36,12 +36,11 @@ int main(int argc, char **argv) try
         SPH::Domain		dom;
 
         dom.Dimension	= 2;
-        dom.Cs			= 0.0025;
         dom.BC.Periodic[0]	= true;
         dom.Nproc		= 16;
-    	dom.PresEq		= 0;
     	dom.VisEq		= 3;
     	dom.KernelType	= 4;
+    	dom.Scheme		= 0;
 
         double yb,h,rho;
     	double dx;
@@ -52,7 +51,7 @@ int main(int argc, char **argv) try
     	dom.InitialDist 	= dx;
 
         double maz;
-        maz=(0.008*h/(dom.Cs));
+        maz=(0.2*h/(0.07));
         std::cout<<maz<<std::endl;
     	dom.GeneralBefore	= & UserAcc;
 
@@ -60,7 +59,9 @@ int main(int argc, char **argv) try
 
     	for (size_t a=0; a<dom.Particles.Size(); a++)
     	{
-    		dom.Particles[a]->Mu		= 1.002e-3;
+     		dom.Particles[a]->Cs		= 0.07;
+     		dom.Particles[a]->PresEq	= 0;
+     		dom.Particles[a]->Mu		= 1.002e-3;
     		dom.Particles[a]->MuRef		= 1.002e-3;
     		dom.Particles[a]->Material	= 1;
 

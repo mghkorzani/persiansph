@@ -302,10 +302,10 @@ inline void Domain::CalcForce33(Particle * P1, Particle * P2)
     	if (dot(vij,xij)<0) PIij = (Alpha*Cij*MUij+Beta*MUij*MUij)/(0.5*(di+dj)) * I;                          ///<(2.74) Li, Liu Book
     }
 
-//	Sigmai = P1->Sigma;
-//	Sigmaj = P2->Sigma;
-    if (P1->IsFree) Sigmai = P1->Sigma; else  Sigmai = P2->Sigma;
-    if (P2->IsFree) Sigmaj = P2->Sigma; else  Sigmaj = P1->Sigma;
+	Sigmai = P1->Sigma;
+	Sigmaj = P2->Sigma;
+//    if (P1->IsFree) Sigmai = P1->Sigma; else  Sigmai = P2->Sigma;
+//    if (P2->IsFree) Sigmaj = P2->Sigma; else  Sigmaj = P1->Sigma;
 
     //Tensile Instability
     Mat3_t TIij;

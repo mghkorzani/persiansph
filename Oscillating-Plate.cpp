@@ -28,15 +28,15 @@ int main(int argc, char **argv) try
 
         dom.Dimension	= 2;
         dom.Nproc		= 8;
-    	dom.PresEq		= 0;
     	dom.KernelType	= 0;
     	dom.Shepard		= false;
+    	dom.Scheme		= 0;
 
     	dom.TI			= 0.3;
     	dom.Alpha		= 1.0;
     	dom.XSPH		= 0.5;
 
-        double dx,h,rho,K,G;
+        double dx,h,rho,K,G,Cs;
     	double H,L,n;
 
     	H	= 0.02;
@@ -48,13 +48,13 @@ int main(int argc, char **argv) try
     	G	= 7.15e5;
     	dx	= H / n;
     	h	= dx*1.5;
-        dom.Cs			= sqrt(K/rho);
+        Cs			= sqrt(K/rho);
     	dom.InitialDist	= dx;
 
         double timestep;
-        timestep = (0.05*h/(dom.Cs));
+        timestep = (0.15*h/(Cs));
         cout<<timestep<<endl;
-        cout<<dom.Cs<<endl;
+        cout<<Cs<<endl;
         dom.DomMax(1) = 0.10;
         dom.DomMin(1) =-0.10;
         dom.DomMax(0) = 0.22;
@@ -88,12 +88,14 @@ int main(int argc, char **argv) try
 
     	for (size_t a=0; a<dom.Particles.Size(); a++)
     	{
-    		dom.Particles[a]->G = G;
-    		dom.Particles[a]->Material = 2;
+    		dom.Particles[a]->G			= G;
+    		dom.Particles[a]->PresEq	= 0;
+    		dom.Particles[a]->Cs		= Cs;
+    		dom.Particles[a]->Material	= 2;
     		x = dom.Particles[a]->x(0);
     		if (x>0.0)
     		{
-    			Vy = dom.Cs*Vf*((cos(k*L)+cosh(k*L))*(cosh(k*x)-cos(k*x))+(sin(k*L)-sinh(k*L))*(sinh(k*x)-sin(k*x)))/((cos(k*L)+cosh(k*L))*(cosh(k*L)-cos(k*L))+(sin(k*L)-sinh(k*L))*(sinh(k*L)-sin(k*L)));
+    			Vy = Cs*Vf*((cos(k*L)+cosh(k*L))*(cosh(k*x)-cos(k*x))+(sin(k*L)-sinh(k*L))*(sinh(k*x)-sin(k*x)))/((cos(k*L)+cosh(k*L))*(cosh(k*L)-cos(k*L))+(sin(k*L)-sinh(k*L))*(sinh(k*L)-sin(k*L)));
     			dom.Particles[a]->v(1)  = Vy;
     			dom.Particles[a]->vb(1) = Vy;
     		}
