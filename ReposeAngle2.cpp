@@ -28,15 +28,16 @@ int main(int argc, char **argv) try
 
         dom.Dimension	= 2;
         dom.Nproc		= 24;
-    	dom.PresEq		= 0;
     	dom.KernelType	= 0;
     	dom.Alpha		= 0.1;
     	dom.Beta		= 0.1;
     	dom.Gravity		= 0.0, -9.81, 0.0;
     	dom.TI			= 0.5;
     	dom.TIn			= 2.55;
+// 		dom.Scheme		= 1; //Leapfrog
+		dom.Scheme		= 0; //Modified Verlet
 
-        double dx,h,rho,K,G,timestep,E,Nu,H,n,L,Phi,Psi,c;
+        double dx,h,rho,K,G,timestep,E,Nu,H,n,L,Phi,Psi,c,Cs;
 
     	H	= 2.0;
     	n	= 50.0;
@@ -51,14 +52,14 @@ int main(int argc, char **argv) try
     	G	= E/(2.0*(1.0+Nu));
     	dx	= H / n;
     	h	= dx*1.2;
-        dom.Cs			= sqrt(E/rho);
-        cout<<"Cs = "<<dom.Cs<<endl;
-        dom.Cs			= 600.0/6.0; //Very important
+        Cs	= sqrt(E/rho);
+        cout<<"Cs = "<<Cs<<endl;
+        Cs	= 600.0/6.0; //Very important
     	dom.InitialDist	= dx;
-        timestep		= (0.2*h/(dom.Cs));
+        timestep		= (0.2*h/(Cs));
 
         cout<<"Time Step = "<<timestep<<endl;
-        cout<<"Cs = "<<dom.Cs<<endl;
+        cout<<"Cs = "<<Cs<<endl;
         cout<<"G = "<<G<<endl;
         cout<<"E = "<<E<<endl;
         cout<<"K = "<<K<<endl;
@@ -72,11 +73,10 @@ int main(int argc, char **argv) try
      	for (size_t a=0; a<dom.Particles.Size(); a++)
     	{
     		dom.Particles[a]->G			= G;
+    		dom.Particles[a]->Cs		= Cs;
     		dom.Particles[a]->K			= K;
     		dom.Particles[a]->Material	= 3;
     		dom.Particles[a]->Fail		= 3;
-//    		dom.Particles[a]->Scheme	= 1; //Leapfrog
-    		dom.Particles[a]->Scheme	= 0; //Modified Verlet
     		dom.Particles[a]->c			= c;
     		dom.Particles[a]->phi		= Phi/180.0*M_PI;
     		dom.Particles[a]->psi		= Psi/180.0*M_PI;

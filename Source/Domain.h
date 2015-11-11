@@ -142,10 +142,9 @@ public:
     double 					Alpha;				///< Artificial Viscosity Alpha Factor
     double					Beta;				///< Artificial Viscosity Beta Factor
     double					MuMax;				///< Max Dynamic viscosity for calculating the timestep
+    double					CsMax;				///< Max speed of sound for calculating the timestep
 
     Vec3_t					Gravity;       	 	///< Gravity acceleration
-    double					Cs;					///< Speed of sound
-    double 					P0;					///< background pressure for equation of state
 
 
     Vec3_t                  TRPR;				///< Top right-hand point at rear of the domain as a cube
@@ -159,7 +158,6 @@ public:
 
     int					*** HOC;				///< Array of "Head of Chain" for each cell
 
-    size_t					PresEq;				///< Selecting variable to choose an equation of state
     size_t					VisEq;				///< Selecting variable to choose an equation for viscosity
     size_t					KernelType;			///< Selecting variable to choose a kernel
 
@@ -181,6 +179,7 @@ public:
     Vec3_t					DomMin;
     PtDom					GeneralBefore;		///< Pointer to a function: to modify particles properties before CalcForce function
     PtDom					GeneralAfter;		///< Pointer to a function: to modify particles properties after CalcForce function
+    size_t					Scheme;				///< Integration scheme: 0 = Modified Verlet, 1 = Leapfrog
 
     Array<Array<std::pair<size_t,size_t> > >	Pairs;
     Array< size_t > 							FixedParticles;
@@ -222,15 +221,12 @@ inline Domain::Domain ()
     Beta	= 0.0;
 
     Gravity	= 0.0,0.0,0.0;
-    Cs		= 0.0;
 
     Cellfac = 2.0;
 
-
-    P0		= 0.0;
-    PresEq	= 0;
     KernelType	= 0;
     VisEq	= 0;
+    Scheme	= 0;
 
 
     XSPH	= 0.0;
@@ -676,6 +672,7 @@ inline void Domain::CellInitiate ()
 			if (Particles[i]->h > hmax) hmax=Particles[i]->h;
 			if (Particles[i]->Density > rhomax) rhomax=Particles[i]->Density;
 			if (Particles[i]->Mu > MuMax) MuMax=Particles[i]->Mu;
+			if (Particles[i]->Cs > CsMax) CsMax=Particles[i]->Cs;
 		}
 	}
 
@@ -1216,7 +1213,7 @@ inline void Domain::Move (double dt)
 	#pragma omp parallel for schedule (static) num_threads(Nproc)
 	for (size_t i=0; i<Particles.Size(); i++)
 		if (Particles[i]->IsFree)
-			Particles[i]->Move(dt,DomSize,TRPR,BLPF,Shepard,PresEq,Cs,P0);
+			Particles[i]->Move(dt,DomSize,TRPR,BLPF,Shepard,Scheme);
 
 }
 
@@ -1630,21 +1627,21 @@ inline void Domain::PrintInput(char const * FileKey)
 		}
 	}
 
-    oss << "Equation of State = ";
-	switch (PresEq)
-    {
-		case 0:
-			oss << "0 => P0+(Cs*Cs)*(Density-Density0)\n";
-			break;
-		case 1:
-			oss << "1 => P0+(Density0*Cs*Cs/7)*(pow(Density/Density0,7)-1)\n";
-			break;
-		case 2:
-			oss << "2 => (Cs*Cs)*Density\n";
-			break;
-    }
-	oss << "Cs = "<<Cs<<" m/s\n";
-	oss << "P0 = "<<P0<<" Pa\n";
+//    oss << "Equation of State = ";
+//	switch (PresEq)
+//    {
+//		case 0:
+//			oss << "0 => P0+(Cs*Cs)*(Density-Density0)\n";
+//			break;
+//		case 1:
+//			oss << "1 => P0+(Density0*Cs*Cs/7)*(pow(Density/Density0,7)-1)\n";
+//			break;
+//		case 2:
+//			oss << "2 => (Cs*Cs)*Density\n";
+//			break;
+//    }
+//	oss << "Cs = "<<Cs<<" m/s\n";
+//	oss << "P0 = "<<P0<<" Pa\n";
 	oss << "\n";
 
     oss << "Min domain Point = " << BLPF <<" m\n";
@@ -1661,7 +1658,7 @@ inline void Domain::PrintInput(char const * FileKey)
 
     // Check the time step
     double t1,t2;
-    t1 = 0.25*hmax/(Cs);
+    t1 = 0.25*hmax/(CsMax);
     if (MuMax>0.0) t2 = 0.125*hmax*hmax*rhomax/MuMax; else t2 =1000000.0;
 
     oss << "Max time step should be less than Min value of { "<< t1 <<" , "<< t2 <<" } S\n";

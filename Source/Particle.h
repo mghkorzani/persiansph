@@ -109,22 +109,24 @@ public:
     omp_lock_t my_lock;		///< Open MP lock
 
     double	SumKernel;		///< Summation of the kernel value for neighbour particles
-    size_t	Scheme;			///< Integration scheme: 0 = Modified Verlet, 1 = Leapfrog
     bool	FirstStep;		///< to initialize the integration scheme
+    size_t	PresEq;			///< Selecting variable to choose an equation of state
+    double	Cs;				///< Speed of sound
+    double	P0;				///< background pressure for equation of state
 
     // Constructor
     Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double Mass0, double Density0, double h0, bool Fixed=false);
 
     // Methods
     void Move			(double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3_t domainmin,
-    						bool ShepardFilter, size_t PresEq, double Cs, double P0);	///< Update the important quantities of a particle
-    void Move_MVerlet	(double dt,	bool ShepardFilter, size_t PresEq, double Cs, double P0);	///< Update the important quantities of a particle
-    void Move_Leapfrog	(double dt,	bool ShepardFilter, size_t PresEq, double Cs, double P0);	///< Update the important quantities of a particle
+    						bool ShepardFilter, size_t Scheme);	///< Update the important quantities of a particle
+    void Move_MVerlet	(double dt,	bool ShepardFilter);	///< Update the important quantities of a particle
+    void Move_Leapfrog	(double dt,	bool ShepardFilter);	///< Update the important quantities of a particle
     void translate		(double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3_t domainmin);
-    void Mat1			(double dt, size_t PresEq, double Cs, double P0);
-    void Mat2MVerlet	(double dt, size_t PresEq, double Cs, double P0);
+    void Mat1			(double dt);
+    void Mat2MVerlet	(double dt);
     void Mat3MVerlet	(double dt);
-    void Mat2Leapfrog	(double dt, size_t PresEq, double Cs, double P0);
+    void Mat2Leapfrog	(double dt);
     void Mat3Leapfrog	(double dt);
 };
 
@@ -133,6 +135,10 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
 	ct = 0;
 	a = 0.0;
     x = x0;
+
+    Cs		= 0.0;
+    P0		= 0.0;
+    PresEq	= 0;
 
     va = 0.0;
     vb = 0.0;
@@ -151,7 +157,6 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
     ID = Tag;
     CC[0]= CC[1] = CC[2] = 0;
     LL=0;
-    Scheme = 0;
     ZWab = 0.0;
     SumDen = 0.0;
     dDensity=0.0;
@@ -183,12 +188,12 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
 
 }
 
-inline void Particle::Move(double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3_t domainmin, bool ShepardFilter, size_t PresEq, double Cs, double P0)
+inline void Particle::Move(double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3_t domainmin, bool ShepardFilter, size_t Scheme)
 {
 	if (Scheme == 0)
-		Move_MVerlet(dt,ShepardFilter,PresEq,Cs,P0);
+		Move_MVerlet(dt,ShepardFilter);
 	else
-		Move_Leapfrog(dt,ShepardFilter,PresEq,Cs,P0);
+		Move_Leapfrog(dt,ShepardFilter);
 
 
 	//Periodic BC particle position update
@@ -210,7 +215,7 @@ inline void Particle::Move(double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3_
 
 }
 
-inline void Particle::Mat1(double dt, size_t PresEq, double Cs, double P0)
+inline void Particle::Mat1(double dt)
 {
 	Pressure = EOS(PresEq, Cs, P0,Density, RefDensity);
 
@@ -229,7 +234,7 @@ inline void Particle::Mat1(double dt, size_t PresEq, double Cs, double P0)
 }
 
 
-inline void Particle::Move_MVerlet (double dt, bool ShepardFilter, size_t PresEq, double Cs, double P0)
+inline void Particle::Move_MVerlet (double dt, bool ShepardFilter)
 {
 	if (FirstStep)
 	{
@@ -274,10 +279,10 @@ inline void Particle::Move_MVerlet (double dt, bool ShepardFilter, size_t PresEq
 
 	switch (Material)
     {case 1:
-    	Mat1(dt,PresEq,Cs,P0);
+    	Mat1(dt);
 		break;
     case 2:
-    	Mat2MVerlet(dt,PresEq,Cs,P0);
+    	Mat2MVerlet(dt);
     	break;
     case 3:
     	Mat3MVerlet(dt);
@@ -293,7 +298,7 @@ inline void Particle::Move_MVerlet (double dt, bool ShepardFilter, size_t PresEq
 	if (ct == 30) ct = 0; else ct++;
 }
 
-inline void Particle::Mat2MVerlet(double dt, size_t PresEq, double Cs, double P0)
+inline void Particle::Mat2MVerlet(double dt)
 {
 	Pressure = EOS(PresEq, Cs, P0,Density, RefDensity);
 
@@ -438,7 +443,7 @@ inline void Particle::Mat3MVerlet(double dt)
 	}
 }
 
-inline void Particle::Move_Leapfrog(double dt, bool ShepardFilter, size_t PresEq, double Cs, double P0)
+inline void Particle::Move_Leapfrog(double dt, bool ShepardFilter)
 {
 	if (FirstStep)
 	{
@@ -455,10 +460,10 @@ inline void Particle::Move_Leapfrog(double dt, bool ShepardFilter, size_t PresEq
 
 	switch (Material)
     {case 1:
-    	Mat1(dt,PresEq,Cs,P0);
+    	Mat1(dt);
 		break;
     case 2:
-    	Mat2Leapfrog(dt,PresEq,Cs,P0);
+    	Mat2Leapfrog(dt);
     	break;
     case 3:
     	Mat3Leapfrog(dt);
@@ -475,7 +480,7 @@ inline void Particle::Move_Leapfrog(double dt, bool ShepardFilter, size_t PresEq
 
 }
 
-inline void Particle::Mat2Leapfrog(double dt, size_t PresEq, double Cs, double P0)
+inline void Particle::Mat2Leapfrog(double dt)
 {
 	Pressure = EOS(PresEq, Cs, P0,Density, RefDensity);
 

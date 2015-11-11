@@ -35,8 +35,8 @@ inline void Domain::CalcForce11(Particle * P1, Particle * P2)
     double Mui = P1->Mu;
     double Muj = P2->Mu;
 
-    if (!P1->IsFree) di = DensitySolid(PresEq, Cs, P0,P1->Pressure, P2->RefDensity); else di = P1->Density;
-    if (!P2->IsFree) dj = DensitySolid(PresEq, Cs, P0,P2->Pressure, P1->RefDensity); else dj = P2->Density;
+    if (!P1->IsFree) di = DensitySolid(P2->PresEq, P2->Cs, P2->P0,P1->Pressure, P2->RefDensity); else di = P1->Density;
+    if (!P2->IsFree) dj = DensitySolid(P1->PresEq, P1->Cs, P1->P0,P2->Pressure, P1->RefDensity); else dj = P2->Density;
 
     Vec3_t vij = P1->v - P2->v;
     Vec3_t xij = P1->x - P2->x;
@@ -55,7 +55,7 @@ inline void Domain::CalcForce11(Particle * P1, Particle * P2)
     if (Alpha!=0.0 || Beta!=0.0)
     {
     	double MUij = h*dot(vij,xij)/(rij*rij+0.01*h*h);                                                ///<(2.75) Li, Liu Book
-    	double Cij = 0.5*(SoundSpeed(PresEq, Cs, di, P1->RefDensity)+SoundSpeed(PresEq, Cs, dj, P2->RefDensity));
+    	double Cij = 0.5*(SoundSpeed(P1->PresEq, P1->Cs, di, P1->RefDensity)+SoundSpeed(P2->PresEq, P2->Cs, dj, P2->RefDensity));
     	if (dot(vij,xij)<0) PIij = (-Alpha*Cij*MUij+Beta*MUij*MUij)/(0.5*(di+dj));                          ///<(2.74) Li, Liu Book
     }
 
@@ -158,8 +158,8 @@ inline void Domain::CalcForce22(Particle * P1, Particle * P2)
     double mj = P2->Mass;
     Mat3_t Sigmaj,Sigmai;
 
-    if (!P1->IsFree) di = DensitySolid(PresEq, Cs, P0,P1->Pressure, P2->RefDensity); else di = P1->Density;
-    if (!P2->IsFree) dj = DensitySolid(PresEq, Cs, P0,P2->Pressure, P1->RefDensity); else dj = P2->Density;
+    if (!P1->IsFree) di = DensitySolid(P2->PresEq, P2->Cs,P2-> P0,P1->Pressure, P2->RefDensity); else di = P1->Density;
+    if (!P2->IsFree) dj = DensitySolid(P1->PresEq, P1->Cs, P1->P0,P2->Pressure, P1->RefDensity); else dj = P2->Density;
 
     Vec3_t vij = P1->v - P2->v;
     Vec3_t xij = P1->x - P2->x;
@@ -179,7 +179,7 @@ inline void Domain::CalcForce22(Particle * P1, Particle * P2)
     if (Alpha!=0.0 || Beta!=0.0)
     {
     	double MUij = h*dot(vij,xij)/(rij*rij+0.01*h*h);                                                ///<(2.75) Li, Liu Book
-    	double Cij = 0.5*(SoundSpeed(PresEq, Cs, di, P1->RefDensity)+SoundSpeed(PresEq, Cs, dj, P2->RefDensity));
+    	double Cij = 0.5*(SoundSpeed(P1->PresEq, P1->Cs, di, P1->RefDensity)+SoundSpeed(P2->PresEq, P2->Cs, dj, P2->RefDensity));
     	if (dot(vij,xij)<0) PIij = (Alpha*Cij*MUij+Beta*MUij*MUij)/(0.5*(di+dj)) * I;                          ///<(2.74) Li, Liu Book
     }
 
@@ -298,7 +298,7 @@ inline void Domain::CalcForce33(Particle * P1, Particle * P2)
     if (Alpha!=0.0 || Beta!=0.0)
     {
     	double MUij = h*dot(vij,xij)/(rij*rij+0.01*h*h);                                                ///<(2.75) Li, Liu Book
-    	double Cij = 0.5*(SoundSpeed(PresEq, Cs, di, P1->RefDensity)+SoundSpeed(PresEq, Cs, dj, P2->RefDensity));
+    	double Cij = 0.5*(P1->Cs+P2->Cs);
     	if (dot(vij,xij)<0) PIij = (Alpha*Cij*MUij+Beta*MUij*MUij)/(0.5*(di+dj)) * I;                          ///<(2.74) Li, Liu Book
     }
 
