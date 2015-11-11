@@ -329,6 +329,14 @@ inline void Particle::Mat2MVerlet(double dt)
 
 	Sigma			= -Pressure * OrthoSys::I + ShearStress;
 
+	Stress	= Strain;
+	if (ct == 30)
+		Strain	= dt*StrainRate + Strain;
+	else
+		Strain	= 2.0*dt*StrainRate + Strainb;
+	Strainb	= Stress;
+
+
 	if (Fail > 1)
 	{
 		std::cout<<"Undefined failure criteria for solids"<<std::endl;
@@ -514,6 +522,13 @@ inline void Particle::Mat2Leapfrog(double dt)
 	ShearStress	= 1.0/2.0*(ShearStressa+ShearStressb);
 
 	Sigma = -Pressure * OrthoSys::I + ShearStress;
+
+	if (FirstStep)
+		Straina	= -dt/2.0*StrainRate + Strain;
+	Strainb	= Straina;
+	Straina	= dt*StrainRate + Straina;
+	Strain	= 1.0/2.0*(Straina+Strainb);
+
 
 	if (Fail > 1)
 	{
