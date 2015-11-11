@@ -176,6 +176,8 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
     NoSlip = false;
     FirstStep = true;
 
+    set_to_zero(Strainb);
+    set_to_zero(Strain);
     set_to_zero(Sigmab);
     set_to_zero(Sigma);
     set_to_zero(Sigmaa);
@@ -339,10 +341,6 @@ inline void Particle::Mat3MVerlet(double dt)
 	Mat3_t RotationRateT, Stress, SRT,RS;
 	double I1,J2,alpha,k,I1strain;
 
-//	Stress	= Strain;
-//	Strain	= 2.0*dt*StrainRate + Strainb;
-//	Strainb	= Stress;
-
 	// Jaumann rate terms
 	Trans(RotationRate,RotationRateT);
 	Mult(Sigma,RotationRateT,SRT);
@@ -441,6 +439,14 @@ inline void Particle::Mat3MVerlet(double dt)
 
 		if ((sqrt(J2)+alpha*I1-k)>0.0 && sqrt(J2)>0.0) Sigma = I1/3.0*OrthoSys::I + (k-alpha*I1)/sqrt(J2) * ShearStress;
 	}
+
+	Stress	= Strain;
+	if (ct == 30)
+		Strain	= dt*StrainRate + Strain;
+	else
+		Strain	= 2.0*dt*StrainRate + Strainb;
+	Strainb	= Stress;
+
 }
 
 inline void Particle::Move_Leapfrog(double dt, bool ShepardFilter)
@@ -613,6 +619,12 @@ inline void Particle::Mat3Leapfrog(double dt)
 		if ((sqrt(J2)+alpha*I1-k)>0.0 && sqrt(J2)>0.0) Sigmaa = I1/3.0*OrthoSys::I + (k-alpha*I1)/sqrt(J2) * ShearStress;
 	}
 	Sigma = 1.0/2.0*(Sigmaa+Sigmab);
+
+	if (FirstStep)
+		Straina	= -dt/2.0*StrainRate + Strain;
+	Strainb	= Straina;
+	Straina	= dt*StrainRate + Straina;
+	Strain	= 1.0/2.0*(Straina+Strainb);
 }
 
 inline void Particle::translate(double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3_t domainmin)

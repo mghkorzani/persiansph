@@ -48,13 +48,13 @@ int main(int argc, char **argv) try
 
         dom.Dimension	= 2;
         dom.Nproc		= 24;
-    	dom.PresEq		= 0;
     	dom.KernelType	= 0;
     	dom.Alpha		= 0.1;
     	dom.Beta		= 0.1;
     	dom.Gravity		= 0.0, -9.81, 0.0;
+    	dom.Scheme		= 0;
 
-        double dx,h,rho,K,G,timestep,E,Nu,H,n,L,Phi,Psi,c;
+        double dx,h,rho,K,G,timestep,E,Nu,H,n,L,Phi,Psi,c,Cs;
 
     	H	= 0.1;
     	n	= 40.0;
@@ -70,15 +70,15 @@ int main(int argc, char **argv) try
     	dx	= H / n;
     	h	= dx*1.2;
 //        dom.Cs			= sqrt(E/rho);
-        dom.Cs			= 600.0/4.0; //Very important
+        Cs			= 600.0/4.0; //Very important
     	dom.InitialDist	= dx;
-        timestep		= (0.2*h/(dom.Cs));
+        timestep		= (0.2*h/(Cs));
 
 //    	Damp 			= 0.02*sqrt(E/(rho*h*h));
 //        dom.GeneralAfter= & UserDamping;
 
         cout<<"Time Step = "<<timestep<<endl;
-        cout<<"Cs = "<<dom.Cs<<endl;
+        cout<<"Cs = "<<Cs<<endl;
         cout<<"G = "<<G<<endl;
         cout<<"E = "<<E<<endl;
         cout<<"K = "<<K<<endl;
@@ -91,12 +91,11 @@ int main(int argc, char **argv) try
 
      	for (size_t a=0; a<dom.Particles.Size(); a++)
     	{
+    		dom.Particles[a]->Cs		= Cs;
     		dom.Particles[a]->G			= G;
     		dom.Particles[a]->K			= K;
     		dom.Particles[a]->Material	= 3;
     		dom.Particles[a]->Fail		= 3;
-//    		dom.Particles[a]->Scheme	= 1; //Leapfrog
-    		dom.Particles[a]->Scheme	= 0; //Modified Verlet
     		dom.Particles[a]->c			= c;
     		dom.Particles[a]->phi		= Phi/180.0*M_PI;
     		dom.Particles[a]->psi		= Psi/180.0*M_PI;
