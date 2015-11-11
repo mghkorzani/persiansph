@@ -413,9 +413,9 @@ inline void Particle::Mat3MVerlet(double dt)
 			}
 			// Apply the plastic term
 			if (ct == 30)
-				Sigma = Sigma -	dt*(std::max(dLanda,0.0)*Plastic);
+				Sigma = Sigma -	dt*(dLanda*Plastic);
 			else
-				Sigma = Sigma -	2.0*dt*(std::max(dLanda,0.0)*Plastic);
+				Sigma = Sigma -	2.0*dt*(dLanda*Plastic);
 		}
 
 		//Scale back
