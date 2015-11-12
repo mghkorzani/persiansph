@@ -107,8 +107,7 @@ public:
     void PrimaryComputeAcceleration	();																									///< Compute the solid boundary properties
     void LastComputeAcceleration	();																									///< Compute the acceleration due to the other particles
     void CalcForce11				(Particle * P1, Particle * P2);																		///< Calculates the contact force between particles
-    void CalcForce22				(Particle * P1, Particle * P2);																		///< Calculates the contact force between particles
-    void CalcForce33				(Particle * P1, Particle * P2);																		///< Calculates the contact force between particles
+    void CalcForce2233				(Particle * P1, Particle * P2);																		///< Calculates the contact force between particles
     void Move						(double dt);																						///< Move particles
 
     void Solve						(double tf, double dt, double dtOut, char const * TheFileKey, size_t maxidx);						///< The solving function
@@ -1182,10 +1181,10 @@ inline void Domain::LastComputeAcceleration ()
 			    	CalcForce11(Particles[Pairs[k][i].first],Particles[Pairs[k][i].second]);
 					break;
 			    case 4:
-			    	CalcForce22(Particles[Pairs[k][i].first],Particles[Pairs[k][i].second]);
+			    	CalcForce2233(Particles[Pairs[k][i].first],Particles[Pairs[k][i].second]);
 			    	break;
 			    case 9:
-			    	CalcForce33(Particles[Pairs[k][i].first],Particles[Pairs[k][i].second]);
+			    	CalcForce2233(Particles[Pairs[k][i].first],Particles[Pairs[k][i].second]);
 			    	break;
 			   default:
 			    	std::cout<<"Out of Interaction types"<<std::endl;

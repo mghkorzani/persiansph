@@ -150,7 +150,7 @@ inline void Domain::CalcForce11(Particle * P1, Particle * P2)
     omp_unset_lock(&P2->my_lock);
 }
 
-inline void Domain::CalcForce22(Particle * P1, Particle * P2)
+inline void Domain::CalcForce2233(Particle * P1, Particle * P2)
 {
 	double h = (P1->h+P2->h)/2;
 	double di,dj;
@@ -158,127 +158,16 @@ inline void Domain::CalcForce22(Particle * P1, Particle * P2)
     double mj = P2->Mass;
     Mat3_t Sigmaj,Sigmai;
 
-    if (!P1->IsFree) di = DensitySolid(P2->PresEq, P2->Cs,P2-> P0,P1->Pressure, P2->RefDensity); else di = P1->Density;
-    if (!P2->IsFree) dj = DensitySolid(P1->PresEq, P1->Cs, P1->P0,P2->Pressure, P1->RefDensity); else dj = P2->Density;
-
-    Vec3_t vij = P1->v - P2->v;
-    Vec3_t xij = P1->x - P2->x;
-
-    // Correction of xij for Periodic BC
-    if (DomSize(0)>0.0) {if (xij(0)>2*Cellfac*h || xij(0)<-2*Cellfac*h) {(P1->CC[0]>P2->CC[0]) ? xij(0) -= DomSize(0) : xij(0) += DomSize(0);}}
-	if (DomSize(1)>0.0) {if (xij(1)>2*Cellfac*h || xij(1)<-2*Cellfac*h) {(P1->CC[1]>P2->CC[1]) ? xij(1) -= DomSize(1) : xij(1) += DomSize(1);}}
-	if (DomSize(2)>0.0) {if (xij(2)>2*Cellfac*h || xij(2)<-2*Cellfac*h) {(P1->CC[2]>P2->CC[2]) ? xij(2) -= DomSize(2) : xij(2) += DomSize(2);}}
-
-    double rij	= norm(xij);
-    double GK	= GradKernel(Dimension, KernelType, rij, h) / rij;
-    double K	= Kernel(Dimension, KernelType, rij, h);
-
-    //Artificial Viscosity
-    Mat3_t PIij;
-    set_to_zero(PIij);
-    if (Alpha!=0.0 || Beta!=0.0)
-    {
-    	double MUij = h*dot(vij,xij)/(rij*rij+0.01*h*h);                                                ///<(2.75) Li, Liu Book
-    	double Cij = 0.5*(SoundSpeed(P1->PresEq, P1->Cs, di, P1->RefDensity)+SoundSpeed(P2->PresEq, P2->Cs, dj, P2->RefDensity));
-    	if (dot(vij,xij)<0) PIij = (Alpha*Cij*MUij+Beta*MUij*MUij)/(0.5*(di+dj)) * I;                          ///<(2.74) Li, Liu Book
-    }
-
-	Sigmai = P1->Sigma;
-	Sigmaj = P2->Sigma;
-
-    //Tensile Instability
-    Mat3_t TIij;
-    set_to_zero(TIij);
-    if (TI > 0.0) TIij = pow((K/Kernel(Dimension, KernelType, InitialDist, h)),TIn)*(P1->TIR+P2->TIR);
-
-    Mat3_t StrainRate,RotationRate;
-    set_to_zero(StrainRate);
-    set_to_zero(RotationRate);
-
-    Vec3_t vab;
-	if (P1->IsFree*P2->IsFree)
+	if (P1->Material*P2->Material == 9)
 	{
-		vab = vij;
+		if (!P1->IsFree) di = P2->Density; else di = P1->Density;
+		if (!P2->IsFree) dj = P1->Density; else dj = P2->Density;
 	}
 	else
 	{
-		if (P1->NoSlip || P2->NoSlip)
-		{
-			// No-Slip velocity correction
-			if (P1->IsFree)	vab = P1->v - (2.0*P2->v-P2->vb); else vab = (2.0*P1->v-P1->vb) - P2->v;
-		}
-		if (!(P1->NoSlip || P2->NoSlip))
-		{
-			if (P1->IsFree)	vab = P1->v - P2->vb; else vab = P1->vb - P2->v;
-
-		}
+	    if (!P1->IsFree) di = DensitySolid(P2->PresEq, P2->Cs,P2-> P0,P1->Pressure, P2->RefDensity); else di = P1->Density;
+	    if (!P2->IsFree) dj = DensitySolid(P1->PresEq, P1->Cs, P1->P0,P2->Pressure, P1->RefDensity); else dj = P2->Density;
 	}
-
-	StrainRate(0,0) = 2.0*vab(0)*xij(0);
-	StrainRate(0,1) = vab(0)*xij(1)+vab(1)*xij(0);
-	StrainRate(0,2) = vab(0)*xij(2)+vab(2)*xij(0);
-	StrainRate(1,0) = StrainRate(0,1);
-	StrainRate(1,1) = 2.0*vab(1)*xij(1);
-	StrainRate(1,2) = vab(1)*xij(2)+vab(2)*xij(1);
-	StrainRate(2,0) = StrainRate(0,2);
-	StrainRate(2,1) = StrainRate(1,2);
-	StrainRate(2,2) = 2.0*vab(2)*xij(2);
-	StrainRate 		= -0.5 * GK * StrainRate;
-
-	RotationRate(0,1) = vab(0)*xij(1)-vab(1)*xij(0);
-	RotationRate(0,2) = vab(0)*xij(2)-vab(2)*xij(0);
-	RotationRate(1,2) = vab(1)*xij(2)-vab(2)*xij(1);
-	RotationRate(1,0) = -RotationRate(0,1);
-	RotationRate(2,0) = -RotationRate(0,2);
-	RotationRate(2,1) = -RotationRate(1,2);
-	RotationRate	= -0.5 * GK * RotationRate;
-
-    // XSPH Monaghan
-    if (XSPH != 0.0)
-    {
-        omp_set_lock(&P1->my_lock);
-        P1->VXSPH		+= XSPH*mj/(0.5*(di+dj))*K*-vij;
-        omp_unset_lock(&P1->my_lock);
-
-        omp_set_lock(&P2->my_lock);
-		P2->VXSPH		+= XSPH*mi/(0.5*(di+dj))*K*vij;
-		omp_unset_lock(&P2->my_lock);
-    }
-
-    Vec3_t temp;
-    Mult( GK*xij , mj * ( 1.0/(di*di)*Sigmai + 1.0/(dj*dj)*Sigmaj + PIij + TIij ) , temp);
-    omp_set_lock(&P1->my_lock);
-		P1->a		+= temp;
-		P1->dDensity+= di * (mj/dj) * dot( vij , GK*xij );
-		if (P1->IsFree)
-		{
-			P1->StrainRate	= P1->StrainRate + mj/dj*StrainRate;
-			P1->RotationRate= P1->RotationRate + mj/dj*RotationRate;
-		}
-    omp_unset_lock(&P1->my_lock);
-
-    Mult( GK*xij , mi * ( 1.0/(di*di)*Sigmai + 1.0/(dj*dj)*Sigmaj + PIij + TIij ) ,temp);
-    omp_set_lock(&P2->my_lock);
-		P2->a		-= temp;
-		P2->dDensity+= dj * (mi/di) * dot( -vij , -GK*xij );
-		if (P2->IsFree)
-		{
-			P2->StrainRate	= P2->StrainRate + mi/di*StrainRate;
-			P2->RotationRate= P2->RotationRate + mi/di*RotationRate;
-		}
-    omp_unset_lock(&P2->my_lock);
-}
-
-inline void Domain::CalcForce33(Particle * P1, Particle * P2)
-{
-	double h = (P1->h+P2->h)/2;
-	double di,dj;
-    double mi = P1->Mass;
-    double mj = P2->Mass;
-    Mat3_t Sigmaj,Sigmai;
-
-    if (!P1->IsFree) di = P2->Density; else di = P1->Density;
-    if (!P2->IsFree) dj = P1->Density; else dj = P2->Density;
 
     Vec3_t vij = P1->v - P2->v;
     Vec3_t xij = P1->x - P2->x;
@@ -298,7 +187,12 @@ inline void Domain::CalcForce33(Particle * P1, Particle * P2)
     if (Alpha!=0.0 || Beta!=0.0)
     {
     	double MUij = h*dot(vij,xij)/(rij*rij+0.01*h*h);                                                ///<(2.75) Li, Liu Book
-    	double Cij = 0.5*(P1->Cs+P2->Cs);
+    	double Cij;
+    	if (P1->Material*P2->Material == 9)
+    		Cij = 0.5*(P1->Cs+P2->Cs);
+    	else
+    		Cij = 0.5*(SoundSpeed(P1->PresEq, P1->Cs, di, P1->RefDensity)+SoundSpeed(P2->PresEq, P2->Cs, dj, P2->RefDensity));
+    	if (dot(vij,xij)<0) PIij = (Alpha*Cij*MUij+Beta*MUij*MUij)/(0.5*(di+dj)) * I;                          ///<(2.74) Li, Liu Book
     	if (dot(vij,xij)<0) PIij = (Alpha*Cij*MUij+Beta*MUij*MUij)/(0.5*(di+dj)) * I;                          ///<(2.74) Li, Liu Book
     }
 
@@ -331,7 +225,7 @@ inline void Domain::CalcForce33(Particle * P1, Particle * P2)
 		if (!(P1->NoSlip || P2->NoSlip))
 		{
 			if (P1->IsFree) vab = P1->v - P2->vb; else vab = P1->vb - P2->v;
-			if (P1->IsFree) vab(0) = P1->v(0) + P2->vb(0); else vab(0) = -P1->vb(0) - P2->v(0);
+//			if (P1->IsFree) vab(0) = P1->v(0) + P2->vb(0); else vab(0) = -P1->vb(0) - P2->v(0);
 		}
 	}
 
