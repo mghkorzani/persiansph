@@ -108,6 +108,7 @@ public:
     void LastComputeAcceleration	();																									///< Compute the acceleration due to the other particles
     void CalcForce11				(Particle * P1, Particle * P2);																		///< Calculates the contact force between particles
     void CalcForce2233				(Particle * P1, Particle * P2);																		///< Calculates the contact force between particles
+    void CalcForce13				(Particle * P1, Particle * P2);																		///< Calculates the contact force between particles
     void Move						(double dt);																						///< Move particles
 
     void Solve						(double tf, double dt, double dtOut, char const * TheFileKey, size_t maxidx);						///< The solving function
@@ -138,8 +139,6 @@ public:
 
     int 					Dimension;    	  	///< Dimension of the problem
 
-    double 					Alpha;				///< Artificial Viscosity Alpha Factor
-    double					Beta;				///< Artificial Viscosity Beta Factor
     double					MuMax;				///< Max Dynamic viscosity for calculating the timestep
     double					CsMax;				///< Max speed of sound for calculating the timestep
 
@@ -216,8 +215,6 @@ inline Domain::Domain ()
 
     Dimension = 2;
     DomSize	= 0.0,0.0,0.0;
-    Alpha	= 0.0;
-    Beta	= 0.0;
 
     Gravity	= 0.0,0.0,0.0;
 
@@ -1004,6 +1001,9 @@ inline void Domain::StartAcceleration (Vec3_t const & a)
     {
     	if (Particles[i]->IsFree)
     	{
+    		if (Particles[i]->Material < 3 && Particles[i]->FirstStep)
+    			Particles[i]->Pressure = EOS(Particles[i]->PresEq, Particles[i]->Cs, Particles[i]->P0,Particles[i]->Density, Particles[i]->RefDensity);
+
         	// Tensile Instability for all soil and solid particles
             if (Particles[i]->Material > 1 && TI > 0.0)
             {
@@ -1067,7 +1067,7 @@ inline void Domain::PrimaryComputeAcceleration ()
 	{
 		for (size_t a=0; a<Pairs[k].Size();a++)
 		{
-			if (Particles[Pairs[k][a].first]->IsFree || Particles[Pairs[k][a].second]->IsFree)
+			if ((Particles[Pairs[k][a].first]->IsFree || Particles[Pairs[k][a].second]->IsFree) && Particles[Pairs[k][a].first]->Material == Particles[Pairs[k][a].second]->Material)
 			{
 				if (!Particles[Pairs[k][a].first]->IsFree)
 				{
@@ -1185,6 +1185,9 @@ inline void Domain::LastComputeAcceleration ()
 			    	break;
 			    case 9:
 			    	CalcForce2233(Particles[Pairs[k][i].first],Particles[Pairs[k][i].second]);
+			    	break;
+			    case 3:
+			    	CalcForce13(Particles[Pairs[k][i].first],Particles[Pairs[k][i].second]);
 			    	break;
 			   default:
 			    	std::cout<<"Out of Interaction types"<<std::endl;
@@ -1605,26 +1608,26 @@ inline void Domain::PrintInput(char const * FileKey)
 			break;
     }
 
-    oss << "Viscosity Equation = ";
-    if (Alpha!=0.0 || Beta!=0.0) oss << "Artificial Viscosity by Monaghan\nAlpha = "<<Alpha<<"   Beta = "<<Beta <<"\n";
-    else
-	{
-    	switch (VisEq)
-		{
-			case 0:
-				oss << "0 => Morris et al 1997\n";
-				break;
-			case 1:
-				oss << "1 => Shao et al 2003\n";
-				break;
-			case 2:
-				oss << "2 => Real viscosity for incompressible fluids\n";
-				break;
-			case 3:
-				oss << "3 => Takeda et al 1994 (Real viscosity for compressible fluids)\n";
-				break;
-		}
-	}
+//    oss << "Viscosity Equation = ";
+//    if (Alpha!=0.0 || Beta!=0.0) oss << "Artificial Viscosity by Monaghan\nAlpha = "<<Alpha<<"   Beta = "<<Beta <<"\n";
+//    else
+//	{
+//    	switch (VisEq)
+//		{
+//			case 0:
+//				oss << "0 => Morris et al 1997\n";
+//				break;
+//			case 1:
+//				oss << "1 => Shao et al 2003\n";
+//				break;
+//			case 2:
+//				oss << "2 => Real viscosity for incompressible fluids\n";
+//				break;
+//			case 3:
+//				oss << "3 => Takeda et al 1994 (Real viscosity for compressible fluids)\n";
+//				break;
+//		}
+//	}
 
 //    oss << "Equation of State = ";
 //	switch (PresEq)

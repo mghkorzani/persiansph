@@ -30,6 +30,8 @@ inline void Domain::CalcForce11(Particle * P1, Particle * P2)
 {
 	double h = (P1->h+P2->h)/2;
 	double di,dj;
+    double Alpha = (P1->Alpha + P2->Alpha)/2.0;
+    double Beta = (P1->Beta + P2->Beta)/2.0;
     double mi = P1->Mass;
     double mj = P2->Mass;
     double Mui = P1->Mu;
@@ -156,6 +158,8 @@ inline void Domain::CalcForce2233(Particle * P1, Particle * P2)
 	double di,dj;
     double mi = P1->Mass;
     double mj = P2->Mass;
+    double Alpha = (P1->Alpha + P2->Alpha)/2.0;
+    double Beta = (P1->Beta + P2->Beta)/2.0;
     Mat3_t Sigmaj,Sigmai;
 
 	if (P1->Material*P2->Material == 9)
@@ -292,6 +296,55 @@ inline void Domain::CalcForce2233(Particle * P1, Particle * P2)
 			P2->RotationRate= P2->RotationRate + mi/di*RotationRate;
 		}
     omp_unset_lock(&P2->my_lock);
+}
+
+inline void Domain::CalcForce13(Particle * P1, Particle * P2)
+{
+	double h = (P1->h+P2->h)/2;
+	double di = P1->Density;
+	double dj = P2->Density;
+
+    Vec3_t xij = P1->x - P2->x;
+
+    // Correction of xij for Periodic BC
+    if (DomSize(0)>0.0) {if (xij(0)>2*Cellfac*h || xij(0)<-2*Cellfac*h) {(P1->CC[0]>P2->CC[0]) ? xij(0) -= DomSize(0) : xij(0) += DomSize(0);}}
+	if (DomSize(1)>0.0) {if (xij(1)>2*Cellfac*h || xij(1)<-2*Cellfac*h) {(P1->CC[1]>P2->CC[1]) ? xij(1) -= DomSize(1) : xij(1) += DomSize(1);}}
+	if (DomSize(2)>0.0) {if (xij(2)>2*Cellfac*h || xij(2)<-2*Cellfac*h) {(P1->CC[2]>P2->CC[2]) ? xij(2) -= DomSize(2) : xij(2) += DomSize(2);}}
+
+    double rij	= norm(xij);
+    double GK	= GradKernel(Dimension, KernelType, rij, h) / rij;
+    double K	= Kernel(Dimension, KernelType, rij, h);
+
+    double k,n,Gammaw;
+	Vec3_t fs;
+    if (P1->Material == 3 )
+    {
+    	k = P1->k;
+    	n = P1->n;
+    	Gammaw = dj * 9.81;
+    	fs = Gammaw*n*(P2->v-P1->v)/k;
+    	omp_set_lock(&P1->my_lock);
+    		P1->a += -P2->Mass*P2->Pressure/(di*dj)*GK*xij + P2->Mass*fs/(di*dj)*K;
+        omp_unset_lock(&P1->my_lock);
+
+        omp_set_lock(&P2->my_lock);
+    		P2->a -= P1->Mass*fs/(di*dj)*K;
+        omp_unset_lock(&P2->my_lock);
+    }
+    else
+    {
+    	k = P2->k;
+    	n = P2->n;
+    	Gammaw = di * 9.81;
+    	fs = Gammaw*n*(P1->v-P2->v)/k;
+        omp_set_lock(&P1->my_lock);
+    		P1->a -= P2->Mass*fs/(di*dj)*K;
+        omp_unset_lock(&P1->my_lock);
+
+        omp_set_lock(&P2->my_lock);
+    		P2->a += P1->Mass*P1->Pressure/(di*dj)*GK*xij + P1->Mass*fs/(di*dj)*K;
+        omp_unset_lock(&P2->my_lock);
+    }
 }
 
 }; // namespace SPH
