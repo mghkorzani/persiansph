@@ -50,17 +50,20 @@ int main(int argc, char **argv) try
 //	dom.XSPH		= 0.5;
 	dom.Scheme		= 0;
 	dom.Gravity		= 0.0,-9.81,0.0;
+//	dom.TI			= 0.3;
+	dom.GeneralAfter= & UserDamping;
+	dom.BC.Periodic[0] = true;
 
 	double xb,yb,h,rhoF,rhoS,CsF,CsS;
 	double dx,HF,HS,L,K,G,Nu,E,T1,T2,T;
 
 	HF				= 0.5;
 	HS				= 1.0;
-	L				= 1.0;
+	L				= 0.4;
 	rhoF			= 998.21;
 	rhoS			= 2038.7;
 	dx				= 0.02;
-	h				= dx*1.2;
+	h				= dx*1.3;
 	E				= 15.0e6;
 	Nu				= 0.3;
 	K				= E/(3.0*(1.0-2.0*Nu));
@@ -71,11 +74,13 @@ int main(int argc, char **argv) try
 	T1				= (0.1*h/CsF);
     T2				= (0.2*h/CsS);
     T				= std::min(T1,T2);
+    std::cout<<"Tf = "<<T1<<std::endl;
+    std::cout<<"Ts = "<<T2<<std::endl;
+    std::cout<<"T  = "<<T<<std::endl;
    	DampS 			= 0.04*sqrt(E/(rhoS*h*h));
-	DampF 			= 0.05*CsF/h;
-	dom.GeneralAfter= & UserDamping;
+	DampF 			= 0.04*CsF/h;
 
-	dom.AddBoxLength(1 ,Vec3_t ( -L/2.0 -3.0*dx  , -3.0*dx , 0.0 ), L + 6.0*dx + dx/10.0 , HF + 6.0*dx + dx/10.0  ,  0 , dx/2.0 ,rhoF, h,1 , 0 , false,false);
+	dom.AddBoxLength(1 ,Vec3_t ( -L/2.0 , -3.0*dx , 0.0 ), L + dx/10.0 , HF + 3.0*dx + dx/10.0  ,  0 , dx/2.0 ,rhoF, h,1 , 0 , false,false);
 
 	for (size_t a=0; a<dom.Particles.Size(); a++)
 	{
@@ -85,35 +90,17 @@ int main(int argc, char **argv) try
 		dom.Particles[a]->Cs		= CsF;
 		xb=dom.Particles[a]->x(0);
 		yb=dom.Particles[a]->x(1);
-		if (xb<-L/2.0)
-		{
-			dom.Particles[a]->ID=2;
-			dom.Particles[a]->IsFree=false;
-			dom.Particles[a]->NoSlip=false;
-		}
-		if (xb>L/2.0)
-		{
-			dom.Particles[a]->ID=2;
-			dom.Particles[a]->IsFree=false;
-			dom.Particles[a]->NoSlip=false;
-		}
 		if (yb<0.0)
 		{
 			dom.Particles[a]->ID=2;
 			dom.Particles[a]->IsFree=false;
 		}
-		if (yb>HF && dom.Particles[a]->ID==1)
-		{
-			dom.Particles[a]->ID=3;
-			dom.Particles[a]->IsFree=false;
-		}
-			dom.Particles[a]->Density  = rhoF*((1+9.81*(HF-dom.Particles[a]->x(1))/(CsF*CsF)));
+		if (dom.Particles[a]->ID==1) dom.Particles[a]->Density  = rhoF*((1+9.81*(HF-dom.Particles[a]->x(1))/(CsF*CsF)));
 
 	}
-	dom.DelParticles(3);
 
 
-	dom.AddBoxLength(3 ,Vec3_t ( -L/2.0 -3.0*dx  , -3.0*dx , 0.0 ), L + 6.0*dx + dx/10.0 , HS + 6.0*dx + dx/10.0  ,  0 , dx/2.0 ,rhoS, h,1 , 0 , false,false);
+	dom.AddBoxLength(3 ,Vec3_t ( -L/2.0 , -3.0*dx , 0.0 ), L + dx/10.0 , HS + 3.0*dx + dx/10.0  ,  0 , dx/2.0 ,rhoS, h,1 , 0 , false,false);
 
 	for (size_t a=0; a<dom.Particles.Size(); a++)
 	{
@@ -130,32 +117,14 @@ int main(int argc, char **argv) try
 			dom.Particles[a]->Beta		= 0.1;
 			xb=dom.Particles[a]->x(0);
 			yb=dom.Particles[a]->x(1);
-			if (xb<-L/2.0)
-			{
-				dom.Particles[a]->ID=4;
-				dom.Particles[a]->IsFree=false;
-				dom.Particles[a]->NoSlip=false;
-			}
-			if (xb>L/2.0)
-			{
-				dom.Particles[a]->ID=4;
-				dom.Particles[a]->IsFree=false;
-				dom.Particles[a]->NoSlip=false;
-			}
 			if (yb<0.0)
 			{
 				dom.Particles[a]->ID=4;
 				dom.Particles[a]->IsFree=false;
 				dom.Particles[a]->NoSlip=true;
 			}
-			if (yb>HS && dom.Particles[a]->ID==3)
-			{
-				dom.Particles[a]->ID=5;
-				dom.Particles[a]->IsFree=false;
-			}
 		}
 	}
-	dom.DelParticles(5);
 
 	dom.Solve(/*tf*/50000.0,/*dt*/T,/*dtOut*/0.01,"test06",10000);
 	return 0;

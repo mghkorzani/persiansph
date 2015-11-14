@@ -49,7 +49,7 @@ inline void Domain::CalcForce11(Particle * P1, Particle * P2)
 	if (DomSize(2)>0.0) {if (xij(2)>2*Cellfac*h || xij(2)<-2*Cellfac*h) {(P1->CC[2]>P2->CC[2]) ? xij(2) -= DomSize(2) : xij(2) += DomSize(2);}}
 
     double rij	= norm(xij);
-    double GK	= GradKernel(Dimension, KernelType, rij, h) / rij;
+    double GK	= GradKernel(Dimension, KernelType, rij, h);
     double K	= Kernel(Dimension, KernelType, rij, h);
 
     //Artificial Viscosity
@@ -182,7 +182,7 @@ inline void Domain::CalcForce2233(Particle * P1, Particle * P2)
 	if (DomSize(2)>0.0) {if (xij(2)>2*Cellfac*h || xij(2)<-2*Cellfac*h) {(P1->CC[2]>P2->CC[2]) ? xij(2) -= DomSize(2) : xij(2) += DomSize(2);}}
 
     double rij	= norm(xij);
-    double GK	= GradKernel(Dimension, KernelType, rij, h) / rij;
+    double GK	= GradKernel(Dimension, KernelType, rij, h);
     double K	= Kernel(Dimension, KernelType, rij, h);
 
     //Artificial Viscosity
@@ -312,7 +312,7 @@ inline void Domain::CalcForce13(Particle * P1, Particle * P2)
 	if (DomSize(2)>0.0) {if (xij(2)>2*Cellfac*h || xij(2)<-2*Cellfac*h) {(P1->CC[2]>P2->CC[2]) ? xij(2) -= DomSize(2) : xij(2) += DomSize(2);}}
 
     double rij	= norm(xij);
-    double GK	= GradKernel(Dimension, KernelType, rij, h) / rij;
+    double GK	= GradKernel(Dimension, KernelType, rij, h);
     double K	= Kernel(Dimension, KernelType, rij, h);
 
     double k,n,Gammaw;
@@ -321,7 +321,7 @@ inline void Domain::CalcForce13(Particle * P1, Particle * P2)
     {
     	k = P1->k;
     	n = P1->n;
-    	Gammaw = dj * 9.81;
+    	Gammaw = P2->RefDensity * 9.81;
     	fs = Gammaw*n*(P2->v-P1->v)/k;
     	omp_set_lock(&P1->my_lock);
     		P1->a += -P2->Mass*P2->Pressure/(di*dj)*GK*xij + P2->Mass*fs/(di*dj)*K;
@@ -335,7 +335,7 @@ inline void Domain::CalcForce13(Particle * P1, Particle * P2)
     {
     	k = P2->k;
     	n = P2->n;
-    	Gammaw = di * 9.81;
+    	Gammaw = P1->RefDensity * 9.81;
     	fs = Gammaw*n*(P1->v-P2->v)/k;
         omp_set_lock(&P1->my_lock);
     		P1->a -= P2->Mass*fs/(di*dj)*K;

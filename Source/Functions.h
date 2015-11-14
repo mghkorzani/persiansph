@@ -110,43 +110,47 @@ inline double GradKernel(size_t Dim, size_t KT, double r, double h)
     	// Qubic Spline
     	Dim ==2 ? C = 10.0/(7.0*h*h*h*M_PI) : C = 1.0/(h*h*h*h*M_PI);
 
-        if ((q>=0.0)&&(q<1.0))	return C*(-3.0*q+(9.0/4.0)*q*q);
-        else if (q<2.0)			return C*((-3.0/4.0)*(2.0-q)*(2.0-q));
-        else					return 0.0;
+        if 		(q==0.0)			return C/h*(-3.0+(9.0/2.0)*q);
+        else if ((q>0.0)&&(q<1.0))	return C/r*(-3.0*q+(9.0/4.0)*q*q);
+        else if (q<2.0)				return C/r*((-3.0/4.0)*(2.0-q)*(2.0-q));
+        else						return 0.0;
 
 		break;
     case 1:
     	// Quadratic
     	Dim ==2 ? C = 2.0/(h*h*h*M_PI) : C = 5.0/(4.0*h*h*h*h*M_PI);
 
-    	if (q<2.0)				return C*(-3.0/4.0+(3.0/8.0)*q);
-		else					return 0.0;
+    	if 		(q<2.0)				return C/r*(-3.0/4.0+(3.0/8.0)*q);
+		else						return 0.0;
 
     	break;
     case 2:
     	// Quintic
     	Dim ==2 ? C = 7.0/(4.0*h*h*h*M_PI) : C = 7.0/(8.0*h*h*h*h*M_PI);
 
-    	if (q<2.0)				return C*-5.0*q*pow((1.0-q/2.0),3.0);
-		else					return 0.0;
+    	if 		(q==0.0)			return C*-5.0/h*(pow((1.0-q/2.0),3.0)-3.0*q/2.0*pow((1.0-q/2.0),2.0));
+    	else if ((q>0.0)&&(q<2.0))	return C/r*-5.0*q*pow((1.0-q/2.0),3.0);
+		else						return 0.0;
 
     	break;
     case 3:
     	// Gaussian with compact support
     	Dim ==2 ? C = 1.0/(h*h*h*M_PI) : C = 1.0/(h*h*h*h*pow(M_PI,(3.0/2.0)));
 
-    	if (q<=2.0)				return C*-2.0*q*exp(-q*q);
-		else					return 0.0;
+    	if 		(q==0.0)			return C*-2.0/h*(exp(-q*q)-2.0*q*q*exp(-q*q));
+    	else if ((q>0.0)&&(q<=2.0))	return C/r*-2.0*q*exp(-q*q);
+		else						return 0.0;
 
     	break;
 	case 4:
 		// Quintic Spline
 		Dim ==2 ? C = 7.0/(478.0*h*h*h*M_PI) : C = 1.0/(120.0*h*h*h*h*M_PI);
 
-		if ((q>=0.0)&&(q<1.0))	return C*(-5.0*pow((3.0-q),4.0)+30.0*pow((2.0-q),4.0)-75.0*pow((1.0-q),4.0));
-		else if (q<2.0)			return C*(-5.0*pow((3.0-q),4.0)+30.0*pow((2.0-q),4.0));
-		else if (q<3.0)			return C*(-5.0*pow((3.0-q),4.0));
-		else					return 0.0;
+		if		(q==0.0)			return C/h*(20.0*pow((3.0-q),3.0)-120.0*pow((2.0-q),3.0)+300.0*pow((1.0-q),3.0));
+		else if ((q>0.0)&&(q<1.0))	return C/r*(-5.0*pow((3.0-q),4.0)+30.0*pow((2.0-q),4.0)-75.0*pow((1.0-q),4.0));
+		else if (q<2.0)				return C/r*(-5.0*pow((3.0-q),4.0)+30.0*pow((2.0-q),4.0));
+		else if (q<3.0)				return C/r*(-5.0*pow((3.0-q),4.0));
+		else						return 0.0;
 
 		break;
    default:
