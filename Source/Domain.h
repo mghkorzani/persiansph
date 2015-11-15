@@ -1062,109 +1062,111 @@ inline void Domain::StartAcceleration (Vec3_t const & a)
 
 inline void Domain::PrimaryComputeAcceleration ()
 {
-	#pragma omp parallel for schedule (dynamic) num_threads(Nproc)
-	for (size_t k=0; k<Pairs.Size();k++)
+	if (FixedParticles.Size()>0)
 	{
-		for (size_t a=0; a<Pairs[k].Size();a++)
+		#pragma omp parallel for schedule (dynamic) num_threads(Nproc)
+		for (size_t k=0; k<Pairs.Size();k++)
 		{
-			if ((Particles[Pairs[k][a].first]->IsFree || Particles[Pairs[k][a].second]->IsFree) && Particles[Pairs[k][a].first]->Material == Particles[Pairs[k][a].second]->Material)
+			for (size_t a=0; a<Pairs[k].Size();a++)
 			{
-				if (!Particles[Pairs[k][a].first]->IsFree)
+				if ((Particles[Pairs[k][a].first]->IsFree || Particles[Pairs[k][a].second]->IsFree) && Particles[Pairs[k][a].first]->Material == Particles[Pairs[k][a].second]->Material)
 				{
-					size_t i	= Pairs[k][a].first;
-					size_t j	= Pairs[k][a].second;
-					Vec3_t xij	= Particles[i]->x-Particles[j]->x;
-					double h	= (Particles[i]->h+Particles[j]->h)/2.0;
+					if (!Particles[Pairs[k][a].first]->IsFree)
+					{
+						size_t i	= Pairs[k][a].first;
+						size_t j	= Pairs[k][a].second;
+						Vec3_t xij	= Particles[i]->x-Particles[j]->x;
+						double h	= (Particles[i]->h+Particles[j]->h)/2.0;
 
-					// Correction of xij for Periodic BC
-					if (DomSize(0)>0.0) {if (xij(0)>2*Cellfac*h || xij(0)<-2*Cellfac*h) {(Particles[i]->CC[0]>Particles[j]->CC[0]) ? xij(0) -= DomSize(0) : xij(0) += DomSize(0);}}
-					if (DomSize(1)>0.0) {if (xij(1)>2*Cellfac*h || xij(1)<-2*Cellfac*h) {(Particles[i]->CC[1]>Particles[j]->CC[1]) ? xij(1) -= DomSize(1) : xij(1) += DomSize(1);}}
-					if (DomSize(2)>0.0) {if (xij(2)>2*Cellfac*h || xij(2)<-2*Cellfac*h) {(Particles[i]->CC[2]>Particles[j]->CC[2]) ? xij(2) -= DomSize(2) : xij(2) += DomSize(2);}}
+						// Correction of xij for Periodic BC
+						if (DomSize(0)>0.0) {if (xij(0)>2*Cellfac*h || xij(0)<-2*Cellfac*h) {(Particles[i]->CC[0]>Particles[j]->CC[0]) ? xij(0) -= DomSize(0) : xij(0) += DomSize(0);}}
+						if (DomSize(1)>0.0) {if (xij(1)>2*Cellfac*h || xij(1)<-2*Cellfac*h) {(Particles[i]->CC[1]>Particles[j]->CC[1]) ? xij(1) -= DomSize(1) : xij(1) += DomSize(1);}}
+						if (DomSize(2)>0.0) {if (xij(2)>2*Cellfac*h || xij(2)<-2*Cellfac*h) {(Particles[i]->CC[2]>Particles[j]->CC[2]) ? xij(2) -= DomSize(2) : xij(2) += DomSize(2);}}
 
-					double K = Kernel(Dimension, KernelType, norm(xij), h);
+						double K = Kernel(Dimension, KernelType, norm(xij), h);
 
-				    omp_set_lock(&Particles[i]->my_lock);
-						Particles[i]->SumKernel									+= K;
-						if (Particles[i]->Material < 3)	Particles[i]->Pressure	+= Particles[j]->Pressure * K + dot(Gravity,xij)*Particles[j]->Density*K;
-						if (Particles[i]->Material > 1)	Particles[i]->Sigma		=  Particles[i]->Sigma + K * Particles[j]->Sigma;
-						Particles[i]->vb += Particles[j]->v * K;
-				    omp_unset_lock(&Particles[i]->my_lock);
+						omp_set_lock(&Particles[i]->my_lock);
+							Particles[i]->SumKernel									+= K;
+							if (Particles[i]->Material < 3)	Particles[i]->Pressure	+= Particles[j]->Pressure * K + dot(Gravity,xij)*Particles[j]->Density*K;
+							if (Particles[i]->Material > 1)	Particles[i]->Sigma		=  Particles[i]->Sigma + K * Particles[j]->Sigma;
+							Particles[i]->vb += Particles[j]->v * K;
+						omp_unset_lock(&Particles[i]->my_lock);
 
-//					omp_set_lock(&dom_lock);
-//		        	FixedPairs.Push(Pairs[k][a]);
-//					omp_unset_lock(&dom_lock);
+	//					omp_set_lock(&dom_lock);
+	//		        	FixedPairs.Push(Pairs[k][a]);
+	//					omp_unset_lock(&dom_lock);
+					}
+					if (!Particles[Pairs[k][a].second]->IsFree)
+					{
+						size_t i	= Pairs[k][a].first;
+						size_t j	= Pairs[k][a].second;
+						Vec3_t xij	= Particles[i]->x-Particles[j]->x;
+						double h	= (Particles[i]->h+Particles[j]->h)/2.0;
+
+						// Correction of xij for Periodic BC
+						if (DomSize(0)>0.0) {if (xij(0)>2*Cellfac*h || xij(0)<-2*Cellfac*h) {(Particles[i]->CC[0]>Particles[j]->CC[0]) ? xij(0) -= DomSize(0) : xij(0) += DomSize(0);}}
+						if (DomSize(1)>0.0) {if (xij(1)>2*Cellfac*h || xij(1)<-2*Cellfac*h) {(Particles[i]->CC[1]>Particles[j]->CC[1]) ? xij(1) -= DomSize(1) : xij(1) += DomSize(1);}}
+						if (DomSize(2)>0.0) {if (xij(2)>2*Cellfac*h || xij(2)<-2*Cellfac*h) {(Particles[i]->CC[2]>Particles[j]->CC[2]) ? xij(2) -= DomSize(2) : xij(2) += DomSize(2);}}
+
+						double K = Kernel(Dimension, KernelType, norm(xij), h);
+						omp_set_lock(&Particles[j]->my_lock);
+							Particles[j]->SumKernel									+= K;
+							if (Particles[j]->Material < 3)	Particles[j]->Pressure	+= Particles[i]->Pressure * K + dot(Gravity,xij)*Particles[i]->Density*K;
+							if (Particles[j]->Material > 1)	Particles[j]->Sigma		=  Particles[j]->Sigma + K * Particles[i]->Sigma;
+							Particles[j]->vb += Particles[i]->v * K;
+						omp_unset_lock(&Particles[j]->my_lock);
+
+	//					omp_set_lock(&dom_lock);
+	//		        	FixedPairs.Push(Pairs[k][a]);
+	//					omp_unset_lock(&dom_lock);
+					}
+
 				}
-				if (!Particles[Pairs[k][a].second]->IsFree)
-				{
-					size_t i	= Pairs[k][a].first;
-					size_t j	= Pairs[k][a].second;
-					Vec3_t xij	= Particles[i]->x-Particles[j]->x;
-					double h	= (Particles[i]->h+Particles[j]->h)/2.0;
-
-					// Correction of xij for Periodic BC
-					if (DomSize(0)>0.0) {if (xij(0)>2*Cellfac*h || xij(0)<-2*Cellfac*h) {(Particles[i]->CC[0]>Particles[j]->CC[0]) ? xij(0) -= DomSize(0) : xij(0) += DomSize(0);}}
-					if (DomSize(1)>0.0) {if (xij(1)>2*Cellfac*h || xij(1)<-2*Cellfac*h) {(Particles[i]->CC[1]>Particles[j]->CC[1]) ? xij(1) -= DomSize(1) : xij(1) += DomSize(1);}}
-					if (DomSize(2)>0.0) {if (xij(2)>2*Cellfac*h || xij(2)<-2*Cellfac*h) {(Particles[i]->CC[2]>Particles[j]->CC[2]) ? xij(2) -= DomSize(2) : xij(2) += DomSize(2);}}
-
-					double K = Kernel(Dimension, KernelType, norm(xij), h);
-				    omp_set_lock(&Particles[j]->my_lock);
-						Particles[j]->SumKernel									+= K;
-						if (Particles[j]->Material < 3)	Particles[j]->Pressure	+= Particles[i]->Pressure * K + dot(Gravity,xij)*Particles[i]->Density*K;
-						if (Particles[j]->Material > 1)	Particles[j]->Sigma		=  Particles[j]->Sigma + K * Particles[i]->Sigma;
-						Particles[j]->vb += Particles[i]->v * K;
-				    omp_unset_lock(&Particles[j]->my_lock);
-
-//					omp_set_lock(&dom_lock);
-//		        	FixedPairs.Push(Pairs[k][a]);
-//					omp_unset_lock(&dom_lock);
-				}
-
 			}
 		}
+
+		#pragma omp parallel for schedule (static) num_threads(Nproc)
+		for (size_t i=0; i<FixedParticles.Size(); i++)
+			if (Particles[FixedParticles[i]]->SumKernel!= 0.0)
+			{
+				size_t a = FixedParticles[i];
+				if (Particles[a]->Material < 3)	Particles[a]->Pressure	= Particles[a]->Pressure/Particles[a]->SumKernel;
+				if (Particles[a]->Material > 1) Particles[a]->Sigma		= 1.0/Particles[a]->SumKernel*Particles[a]->Sigma;
+				Particles[a]->vb		= Particles[a]->vb/Particles[a]->SumKernel;
+
+				// Tensile Instability for fixed soil and solid particles
+				if (Particles[a]->Material > 1 && TI > 0.0)
+				{
+					// XY plane must be used, It is very slow in 3D
+					if (Dimension == 2)
+					{
+						double teta, Sigmaxx, Sigmayy, C, S;
+
+						if ((Particles[a]->Sigma(0,0)-Particles[a]->Sigma(1,1))!=0.0) teta = 0.5*atan(2.0*Particles[a]->Sigma(0,1)/(Particles[a]->Sigma(0,0)-Particles[a]->Sigma(1,1))); else teta = M_PI/4.0;
+						C = cos(teta);
+						S = sin(teta);
+						Sigmaxx = C*C*Particles[a]->Sigma(0,0) + 2.0*C*S*Particles[a]->Sigma(0,1) + S*S*Particles[a]->Sigma(1,1);
+						Sigmayy = S*S*Particles[a]->Sigma(0,0) - 2.0*C*S*Particles[a]->Sigma(0,1) + C*C*Particles[a]->Sigma(1,1);
+						if (Sigmaxx>0) Sigmaxx = -TI * Sigmaxx/(Particles[a]->Density*Particles[a]->Density); else Sigmaxx = 0.0;
+						if (Sigmayy>0) Sigmayy = -TI * Sigmayy/(Particles[a]->Density*Particles[a]->Density); else Sigmayy = 0.0;
+						Particles[a]->TIR(0,0) = C*C*Sigmaxx + S*S*Sigmayy;
+						Particles[a]->TIR(1,1) = S*S*Sigmaxx + C*C*Sigmayy;
+						Particles[a]->TIR(0,1) = Particles[a]->TIR(1,0) = S*C*(Sigmaxx-Sigmayy);
+					}
+					else
+					{
+						Mat3_t Vec,Val,VecT,temp;
+
+						Rotation(Particles[a]->Sigma,Vec,VecT,Val);
+						if (Val(0,0)>0) Val(0,0) = -TI * Val(0,0)/(Particles[a]->Density*Particles[a]->Density); else Val(0,0) = 0.0;
+						if (Val(1,1)>0) Val(1,1) = -TI * Val(1,1)/(Particles[a]->Density*Particles[a]->Density); else Val(1,1) = 0.0;
+						if (Val(2,2)>0) Val(2,2) = -TI * Val(2,2)/(Particles[a]->Density*Particles[a]->Density); else Val(2,2) = 0.0;
+						Mult(Vec,Val,temp);
+						Mult(temp,VecT,Particles[a]->TIR);
+					}
+				}
+			}
 	}
-
-	#pragma omp parallel for schedule (static) num_threads(Nproc)
-	for (size_t i=0; i<FixedParticles.Size(); i++)
-		if (Particles[FixedParticles[i]]->SumKernel!= 0.0)
-		{
-			size_t a = FixedParticles[i];
-			if (Particles[a]->Material < 3)	Particles[a]->Pressure	= Particles[a]->Pressure/Particles[a]->SumKernel;
-			if (Particles[a]->Material > 1) Particles[a]->Sigma		= 1.0/Particles[a]->SumKernel*Particles[a]->Sigma;
-			Particles[a]->vb		= Particles[a]->vb/Particles[a]->SumKernel;
-
-			// Tensile Instability for fixed soil and solid particles
-            if (Particles[a]->Material > 1 && TI > 0.0)
-            {
-				// XY plane must be used, It is very slow in 3D
-				if (Dimension == 2)
-				{
-					double teta, Sigmaxx, Sigmayy, C, S;
-
-					if ((Particles[a]->Sigma(0,0)-Particles[a]->Sigma(1,1))!=0.0) teta = 0.5*atan(2.0*Particles[a]->Sigma(0,1)/(Particles[a]->Sigma(0,0)-Particles[a]->Sigma(1,1))); else teta = M_PI/4.0;
-					C = cos(teta);
-					S = sin(teta);
-					Sigmaxx = C*C*Particles[a]->Sigma(0,0) + 2.0*C*S*Particles[a]->Sigma(0,1) + S*S*Particles[a]->Sigma(1,1);
-					Sigmayy = S*S*Particles[a]->Sigma(0,0) - 2.0*C*S*Particles[a]->Sigma(0,1) + C*C*Particles[a]->Sigma(1,1);
-					if (Sigmaxx>0) Sigmaxx = -TI * Sigmaxx/(Particles[a]->Density*Particles[a]->Density); else Sigmaxx = 0.0;
-					if (Sigmayy>0) Sigmayy = -TI * Sigmayy/(Particles[a]->Density*Particles[a]->Density); else Sigmayy = 0.0;
-					Particles[a]->TIR(0,0) = C*C*Sigmaxx + S*S*Sigmayy;
-					Particles[a]->TIR(1,1) = S*S*Sigmaxx + C*C*Sigmayy;
-					Particles[a]->TIR(0,1) = Particles[a]->TIR(1,0) = S*C*(Sigmaxx-Sigmayy);
-				}
-				else
-				{
-					Mat3_t Vec,Val,VecT,temp;
-
-					Rotation(Particles[a]->Sigma,Vec,VecT,Val);
-					if (Val(0,0)>0) Val(0,0) = -TI * Val(0,0)/(Particles[a]->Density*Particles[a]->Density); else Val(0,0) = 0.0;
-					if (Val(1,1)>0) Val(1,1) = -TI * Val(1,1)/(Particles[a]->Density*Particles[a]->Density); else Val(1,1) = 0.0;
-					if (Val(2,2)>0) Val(2,2) = -TI * Val(2,2)/(Particles[a]->Density*Particles[a]->Density); else Val(2,2) = 0.0;
-					Mult(Vec,Val,temp);
-					Mult(temp,VecT,Particles[a]->TIR);
-				}
-            }
-
-		}
 }
 
 inline void Domain::LastComputeAcceleration ()
@@ -1276,17 +1278,19 @@ inline void Domain::InFlowBCLeave()
 		{
 			for (size_t i=0 ; i<DelPart.Size() ; i++)
 			{
-				Particles[DelPart[i]]->x = AddPart[i].first;
-				Particles[DelPart[i]]->ID = Particles[AddPart[i].second]->ID;
-				Particles[DelPart[i]]->Mass = Particles[AddPart[i].second]->Mass;
-				Particles[DelPart[i]]->RefDensity = Particles[AddPart[i].second]->RefDensity;
-				Particles[DelPart[i]]->h = Particles[AddPart[i].second]->h;
-				Particles[AddPart[i].second]->ID = -9000;
+				Particles[DelPart[i]]->x 			= AddPart[i].first;
+				Particles[DelPart[i]]->ID 			= Particles[AddPart[i].second]->ID;
+				Particles[DelPart[i]]->Mass 		= Particles[AddPart[i].second]->Mass;
+				Particles[DelPart[i]]->RefDensity	= Particles[AddPart[i].second]->RefDensity;
+				Particles[DelPart[i]]->h			= Particles[AddPart[i].second]->h;
+				Particles[DelPart[i]]->Material		= Particles[AddPart[i].second]->Material;
+				Particles[AddPart[i].second]->ID	= -9000;
 			}
 			for (size_t i=DelPart.Size() ; i<AddPart.Size() ; i++)
 			{
 				Particles.Push(new Particle(Particles[AddPart[i].second]->ID,AddPart[i].first,Particles[AddPart[i].second]->v,Particles[AddPart[i].second]->Mass,Particles[AddPart[i].second]->Density,Particles[AddPart[i].second]->h,false));
-				Particles[AddPart[i].second]->ID = -9000;
+				Particles[AddPart[i].second]->ID		= -9000;
+				Particles[AddPart[i].second]->Material	= 1;
 			}
 		}
 
@@ -1294,12 +1298,13 @@ inline void Domain::InFlowBCLeave()
 		{
 			for (size_t i=0 ; i<AddPart.Size() ; i++)
 			{
-				Particles[DelPart[i]]->x = AddPart[i].first;
-				Particles[DelPart[i]]->ID = Particles[AddPart[i].second]->ID;
-				Particles[DelPart[i]]->Mass = Particles[AddPart[i].second]->Mass;
-				Particles[DelPart[i]]->RefDensity = Particles[AddPart[i].second]->RefDensity;
-				Particles[DelPart[i]]->h = Particles[AddPart[i].second]->h;
-				Particles[AddPart[i].second]->ID = -9000;
+				Particles[DelPart[i]]->x 			= AddPart[i].first;
+				Particles[DelPart[i]]->ID 			= Particles[AddPart[i].second]->ID;
+				Particles[DelPart[i]]->Mass 		= Particles[AddPart[i].second]->Mass;
+				Particles[DelPart[i]]->RefDensity 	= Particles[AddPart[i].second]->RefDensity;
+				Particles[DelPart[i]]->h 			= Particles[AddPart[i].second]->h;
+				Particles[DelPart[i]]->Material		= Particles[AddPart[i].second]->Material;
+				Particles[AddPart[i].second]->ID 	= -9000;
 			}
 		}
 
@@ -1308,12 +1313,13 @@ inline void Domain::InFlowBCLeave()
 			Array <int> temp1;
 			for (size_t i=0 ; i<AddPart.Size() ; i++)
 			{
-				Particles[DelPart[i]]->x = AddPart[i].first;
-				Particles[DelPart[i]]->ID = Particles[AddPart[i].second]->ID;
-				Particles[DelPart[i]]->Mass = Particles[AddPart[i].second]->Mass;
-				Particles[DelPart[i]]->RefDensity = Particles[AddPart[i].second]->RefDensity;
-				Particles[DelPart[i]]->h = Particles[AddPart[i].second]->h;
-				Particles[AddPart[i].second]->ID = -9000;
+				Particles[DelPart[i]]->x 			= AddPart[i].first;
+				Particles[DelPart[i]]->ID 			= Particles[AddPart[i].second]->ID;
+				Particles[DelPart[i]]->Mass 		= Particles[AddPart[i].second]->Mass;
+				Particles[DelPart[i]]->RefDensity 	= Particles[AddPart[i].second]->RefDensity;
+				Particles[DelPart[i]]->h 			= Particles[AddPart[i].second]->h;
+				Particles[DelPart[i]]->Material		= Particles[AddPart[i].second]->Material;
+				Particles[AddPart[i].second]->ID 	= -9000;
 			}
 			for (size_t i=AddPart.Size() ; i<DelPart.Size() ; i++)
 			{
@@ -1391,6 +1397,7 @@ inline void Domain::InFlowBCFresh()
 		for (size_t i=0 ; i<BC.InPart.Size() ; i++)
 		{
 			InCon(Particles[BC.InPart[i]]->x,vel,den,BC);
+			Particles[BC.InPart[i]]->Material  = 1;
 			if (norm(BC.inv)>0.0)
 			{
 				Particles[BC.InPart[i]]->v  = vel;
@@ -1401,6 +1408,7 @@ inline void Domain::InFlowBCFresh()
 				Particles[BC.InPart[i]]->Density  = den;
 				Particles[BC.InPart[i]]->Densityb = den;
 				Particles[BC.InPart[i]]->RefDensity = BC.inDensity;
+    			Particles[BC.InPart[i]]->Pressure = EOS(Particles[i]->PresEq, Particles[BC.InPart[i]]->Cs, Particles[BC.InPart[i]]->P0,Particles[BC.InPart[i]]->Density, Particles[BC.InPart[i]]->RefDensity);
 			}
 		}
 
@@ -1423,6 +1431,7 @@ inline void Domain::InFlowBCFresh()
 				Particles[BC.OutPart[i]]->Density  = den;
 				Particles[BC.OutPart[i]]->Densityb = den;
 				Particles[BC.OutPart[i]]->RefDensity = BC.outDensity;
+    			Particles[BC.OutPart[i]]->Pressure = EOS(Particles[BC.OutPart[i]]->PresEq, Particles[BC.OutPart[i]]->Cs, Particles[BC.OutPart[i]]->P0,Particles[BC.OutPart[i]]->Density, Particles[BC.OutPart[i]]->RefDensity);
 			}
 		}
 
@@ -1435,9 +1444,9 @@ inline void Domain::InFlowBCReset()
 		for (size_t i=0 ; i<BC.InPart.Size() ; i++)
 		{
 				Particles[BC.InPart[i]]->a = 0.0;
-				Particles[BC.InPart[i]]->dDensity  = 0.0;
-				Particles[BC.InPart[i]]->SumDen  = 0.0;
-				Particles[BC.InPart[i]]->ZWab  = 0.0;
+//				Particles[BC.InPart[i]]->dDensity  = 0.0;
+//				Particles[BC.InPart[i]]->SumDen  = 0.0;
+//				Particles[BC.InPart[i]]->ZWab  = 0.0;
 		}
 
 	if (BC.OutPart.Size()>0)
@@ -1445,9 +1454,9 @@ inline void Domain::InFlowBCReset()
 		for (size_t i=0 ; i<BC.OutPart.Size() ; i++)
 		{
 				Particles[BC.OutPart[i]]->a = 0.0;
-				Particles[BC.OutPart[i]]->dDensity  = 0.0;
-				Particles[BC.OutPart[i]]->SumDen  = 0.0;
-				Particles[BC.OutPart[i]]->ZWab  = 0.0;
+//				Particles[BC.OutPart[i]]->dDensity  = 0.0;
+//				Particles[BC.OutPart[i]]->SumDen  = 0.0;
+//				Particles[BC.OutPart[i]]->ZWab  = 0.0;
 		}
 }
 
@@ -1466,12 +1475,10 @@ inline void Domain::WholeVelocity()
     		if (Particles[i]->IsFree && norm(BC.allv)>0.0)
     		{
 				Particles[i]->v  = vel;
-				Particles[i]->vb = vel;
     		}
     		if (Particles[i]->IsFree && BC.allDensity>0.0)
     		{
 				Particles[i]->Density = den;
-				Particles[i]->Densityb = den;
 				Particles[i]->RefDensity = BC.allDensity;
     		}
     	}

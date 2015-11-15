@@ -16,7 +16,8 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>  *
  ************************************************************************/
 
-#include <Domain.h>
+#include "./Source/Domain.h"
+#include "./Source/Interaction.h"
 
 
 using std::cout;
@@ -26,54 +27,46 @@ using std::ifstream;
 int main(int argc, char **argv) try
 {
     SPH::Domain		dom;
-	dom.Dimension	= 2;
+	dom.Dimension		= 2;
+	dom.BC.Periodic[1]	= true;
+//	dom.BC.Periodic[0]	= true;
+	dom.VisEq			= 3;
+	dom.KernelType		= 4;
+	dom.Nproc			= 24;
+	dom.Scheme			= 0;
 
-	dom.NoSlip		= true;
-	dom.BC.Periodic[1] = true;
-//	dom.BC.Periodic[0] = true;
-	dom.RigidBody	= true;
-	dom.RBTag		= 4;
-
-	dom.MU			= 1.002e-3;
-	dom.PresEq		= 0;
-	dom.VisEq		= 3;
-	dom.KernelType	= 4;
-	dom.Nproc		= 24;
-
-//	dom.TI			= 0.05;
-
-	double xb,yb,h,rho,mass,U;
-	double dx,R,Rc,Re;
+	double xb,yb,h,rho,mass,U,Cs,P0,Mu,dx,R,Rc,Re,T;
 	size_t no;
 
-	rho = 998.21;
-	dx = 0.002;
-	h = dx*1.1;
-	Rc = 0.05;
-	mass = dx*dx*rho;
-	Re = 100.0;
-	U = Re*dom.MU/(rho*2.0*Rc);
+	Mu		= 1.002e-3;
+	rho		= 998.21;
+	dx		= 0.002;
+	h		= dx*1.1;
+	Rc		= 0.05;
+	mass	= dx*dx*rho;
+	Re		= 100.0;
+	U		= Re*Mu/(rho*2.0*Rc);
+	Cs		= U*10.0;
+	P0		= Cs*Cs*rho*0.2;
+	T		= (0.15*h/(Cs+U));
 
-	dom.BC.InOutFlow =3;
-	dom.BC.allv = U,0.0,0.0;
-	dom.BC.inDensity = rho;
-	dom.BC.inv = U,0.0,0.0;
-	dom.BC.outv = U,0.0,0.0;
-	dom.BC.outDensity = rho;
-
-	dom.Cs				= U*15.0;
-	dom.P0				= dom.Cs*dom.Cs*rho*0.2;
+	dom.BC.InOutFlow	= 3;
+	dom.BC.allv			= U,0.0,0.0;
+	dom.BC.inDensity	= rho;
+	dom.BC.inv			= U,0.0,0.0;
+	dom.BC.outv			= U,0.0,0.0;
+	dom.BC.outDensity	= rho;
 	dom.InitialDist 	= dx;
-	double maz = (0.15*h/(dom.Cs+U));
+	dom.BC.MassConservation = true;
 
 	std::cout<<"Re = "<<Re<<std::endl;
 	std::cout<<"V  = "<<U<<std::endl;
-	std::cout<<"Cs = "<<dom.Cs<<std::endl;
-	std::cout<<"P0 = "<<dom.P0<<std::endl;
-	std::cout<<"Time Step = "<<maz<<std::endl;
+	std::cout<<"Cs = "<<Cs<<std::endl;
+	std::cout<<"P0 = "<<P0<<std::endl;
+	std::cout<<"Time Step = "<<T<<std::endl;
 	std::cout<<"Resolution = "<<(2.0*Rc/dx)<<std::endl;
 
-	dom.AddBoxLength(3 ,Vec3_t ( -10.0*Rc , -5.0*Rc , 0.0 ), 20.0*Rc , 10.0*Rc  ,  0 , dx/2.0 ,rho, h, 1 , 0 , false, false );
+	dom.AddBoxLength(1 ,Vec3_t ( -10.0*Rc , -5.0*Rc , 0.0 ), 20.0*Rc , 10.0*Rc  ,  0 , dx/2.0 ,rho, h, 1 , 0 , false, false );
 
 	for (size_t a=0; a<dom.Particles.Size(); a++)
 	{
@@ -88,16 +81,6 @@ int main(int argc, char **argv) try
 	dom.DelParticles(4);
 
 
-	//No-Slip BC
-	R = Rc;
-	no = ceil(2*M_PI*R/(dx/5.0));
-	for (size_t i=0; i<no; i++)
-	{
-		xb = R*cos(2*M_PI/no*i);
-		yb = R*sin(2*M_PI/no*i);
-		dom.AddNSSingleParticle(4,Vec3_t ( xb ,  yb , 0.0 ),true);
-	}
-
 	for (size_t j=0;j<6;j++)
 	{
 		R = Rc-dx*j;
@@ -106,12 +89,23 @@ int main(int argc, char **argv) try
 		{
 			xb = R*cos(2*M_PI/no*i);
 			yb = R*sin(2*M_PI/no*i);
-			dom.AddSingleParticle(4,Vec3_t ( xb ,  yb , 0.0 ), mass , rho , h , true);
+			dom.AddSingleParticle(2,Vec3_t ( xb ,  yb , 0.0 ), mass , rho , h , true);
+			dom.Particles[dom.Particles.Size()-1]->NoSlip = true;
 		}
 	}
 
+	for (size_t a=0; a<dom.Particles.Size(); a++)
+	{
+		dom.Particles[a]->Cs		= Cs;
+		dom.Particles[a]->P0		= P0;
+		dom.Particles[a]->Mu		= Mu;
+		dom.Particles[a]->MuRef		= Mu;
+		dom.Particles[a]->PresEq	= 0;
+		dom.Particles[a]->Material	= 1;
+	}
 
-	dom.Solve(/*tf*/20000.0,/*dt*/maz,/*dtOut*/(200.0*maz),"test06");
+
+	dom.Solve(/*tf*/20000.0,/*dt*/T,/*dtOut*/(200.0*T),"test06",100);
 	return 0;
 }
 MECHSYS_CATCH
