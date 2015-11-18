@@ -1444,9 +1444,9 @@ inline void Domain::InFlowBCReset()
 		for (size_t i=0 ; i<BC.InPart.Size() ; i++)
 		{
 				Particles[BC.InPart[i]]->a = 0.0;
-//				Particles[BC.InPart[i]]->dDensity  = 0.0;
-//				Particles[BC.InPart[i]]->SumDen  = 0.0;
-//				Particles[BC.InPart[i]]->ZWab  = 0.0;
+				Particles[BC.InPart[i]]->dDensity  = 0.0;
+				Particles[BC.InPart[i]]->SumDen  = 0.0;
+				Particles[BC.InPart[i]]->ZWab  = 0.0;
 		}
 
 	if (BC.OutPart.Size()>0)
@@ -1454,9 +1454,9 @@ inline void Domain::InFlowBCReset()
 		for (size_t i=0 ; i<BC.OutPart.Size() ; i++)
 		{
 				Particles[BC.OutPart[i]]->a = 0.0;
-//				Particles[BC.OutPart[i]]->dDensity  = 0.0;
-//				Particles[BC.OutPart[i]]->SumDen  = 0.0;
-//				Particles[BC.OutPart[i]]->ZWab  = 0.0;
+				Particles[BC.OutPart[i]]->dDensity  = 0.0;
+				Particles[BC.OutPart[i]]->SumDen  = 0.0;
+				Particles[BC.OutPart[i]]->ZWab  = 0.0;
 		}
 }
 
@@ -1552,9 +1552,6 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
             idx_out++;
             tout += dtOut;
         }
-
-//        abort();
-
     	Move(dt);
 
         // Auto Save
