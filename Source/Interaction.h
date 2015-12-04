@@ -265,7 +265,8 @@ inline void Domain::CalcForce2233(Particle * P1, Particle * P2)
     }
 
     Vec3_t temp;
-    Mult( GK*xij , mj * ( 1.0/(di*di)*Sigmai + 1.0/(dj*dj)*Sigmaj + PIij + TIij ) , temp);
+//    Mult( GK*xij , mj * ( 1.0/(di*di)*Sigmai + 1.0/(dj*dj)*Sigmaj + PIij + TIij ) , temp);
+    Mult( GK*xij , mj * ( 1.0/(di*dj)*Sigmai + 1.0/(di*dj)*Sigmaj + PIij + TIij ) , temp);
     omp_set_lock(&P1->my_lock);
 		P1->a += temp;
 		P1->dDensity+= di * (mj/dj) * dot( vij , GK*xij );
@@ -281,7 +282,8 @@ inline void Domain::CalcForce2233(Particle * P1, Particle * P2)
 		}
     omp_unset_lock(&P1->my_lock);
 
-    Mult( GK*xij , mi * ( 1.0/(di*di)*Sigmai + 1.0/(dj*dj)*Sigmaj + PIij + TIij ) ,temp);
+//    Mult( GK*xij , mi * ( 1.0/(di*di)*Sigmai + 1.0/(dj*dj)*Sigmaj + PIij + TIij ) ,temp);
+    Mult( GK*xij , mi * ( 1.0/(di*dj)*Sigmai + 1.0/(di*dj)*Sigmaj + PIij + TIij ) ,temp);
     omp_set_lock(&P2->my_lock);
 		P2->a -= temp;
 		P2->dDensity+= dj * (mi/di) * dot( -vij , -GK*xij );
