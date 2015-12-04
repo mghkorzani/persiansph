@@ -1049,6 +1049,7 @@ inline void Domain::StartAcceleration (Vec3_t const & a)
 
     	//Reset to zero for all particles
     	Particles[i]->a			= a;
+    	Particles[i]->SatCheck	= false;
         Particles[i]->dDensity	= 0.0;
         Particles[i]->VXSPH		= 0.0;
         Particles[i]->ZWab		= 0.0;
@@ -1069,61 +1070,102 @@ inline void Domain::PrimaryComputeAcceleration ()
 		{
 			for (size_t a=0; a<Pairs[k].Size();a++)
 			{
-				if ((Particles[Pairs[k][a].first]->IsFree || Particles[Pairs[k][a].second]->IsFree) && Particles[Pairs[k][a].first]->Material == Particles[Pairs[k][a].second]->Material)
+				if ((Particles[Pairs[k][a].first]->IsFree || Particles[Pairs[k][a].second]->IsFree))
 				{
-					if (!Particles[Pairs[k][a].first]->IsFree)
+					if (Particles[Pairs[k][a].first]->Material == Particles[Pairs[k][a].second]->Material)
 					{
-						size_t i	= Pairs[k][a].first;
-						size_t j	= Pairs[k][a].second;
-						Vec3_t xij	= Particles[i]->x-Particles[j]->x;
-						double h	= (Particles[i]->h+Particles[j]->h)/2.0;
+						if (!Particles[Pairs[k][a].first]->IsFree)
+						{
+							size_t i	= Pairs[k][a].first;
+							size_t j	= Pairs[k][a].second;
+							Vec3_t xij	= Particles[i]->x-Particles[j]->x;
+							double h	= (Particles[i]->h+Particles[j]->h)/2.0;
 
-						// Correction of xij for Periodic BC
-						if (DomSize(0)>0.0) {if (xij(0)>2*Cellfac*h || xij(0)<-2*Cellfac*h) {(Particles[i]->CC[0]>Particles[j]->CC[0]) ? xij(0) -= DomSize(0) : xij(0) += DomSize(0);}}
-						if (DomSize(1)>0.0) {if (xij(1)>2*Cellfac*h || xij(1)<-2*Cellfac*h) {(Particles[i]->CC[1]>Particles[j]->CC[1]) ? xij(1) -= DomSize(1) : xij(1) += DomSize(1);}}
-						if (DomSize(2)>0.0) {if (xij(2)>2*Cellfac*h || xij(2)<-2*Cellfac*h) {(Particles[i]->CC[2]>Particles[j]->CC[2]) ? xij(2) -= DomSize(2) : xij(2) += DomSize(2);}}
+							// Correction of xij for Periodic BC
+							if (DomSize(0)>0.0) {if (xij(0)>2*Cellfac*h || xij(0)<-2*Cellfac*h) {(Particles[i]->CC[0]>Particles[j]->CC[0]) ? xij(0) -= DomSize(0) : xij(0) += DomSize(0);}}
+							if (DomSize(1)>0.0) {if (xij(1)>2*Cellfac*h || xij(1)<-2*Cellfac*h) {(Particles[i]->CC[1]>Particles[j]->CC[1]) ? xij(1) -= DomSize(1) : xij(1) += DomSize(1);}}
+							if (DomSize(2)>0.0) {if (xij(2)>2*Cellfac*h || xij(2)<-2*Cellfac*h) {(Particles[i]->CC[2]>Particles[j]->CC[2]) ? xij(2) -= DomSize(2) : xij(2) += DomSize(2);}}
 
-						double K = Kernel(Dimension, KernelType, norm(xij), h);
+							double K = Kernel(Dimension, KernelType, norm(xij), h);
 
-						omp_set_lock(&Particles[i]->my_lock);
-							Particles[i]->SumKernel									+= K;
-							if (Particles[i]->Material < 3)	Particles[i]->Pressure	+= Particles[j]->Pressure * K + dot(Gravity,xij)*Particles[j]->Density*K;
-							if (Particles[i]->Material > 1)	Particles[i]->Sigma		=  Particles[i]->Sigma + K * Particles[j]->Sigma;
-							Particles[i]->vb += Particles[j]->v * K;
-						omp_unset_lock(&Particles[i]->my_lock);
+							omp_set_lock(&Particles[i]->my_lock);
+								Particles[i]->SumKernel									+= K;
+								if (Particles[i]->Material < 3)	Particles[i]->Pressure	+= Particles[j]->Pressure * K + dot(Gravity,xij)*Particles[j]->Density*K;
+								if (Particles[i]->Material > 1)	Particles[i]->Sigma		=  Particles[i]->Sigma + K * Particles[j]->Sigma;
+								Particles[i]->vb += Particles[j]->v * K;
+							omp_unset_lock(&Particles[i]->my_lock);
 
-	//					omp_set_lock(&dom_lock);
-	//		        	FixedPairs.Push(Pairs[k][a]);
-	//					omp_unset_lock(&dom_lock);
+		//					omp_set_lock(&dom_lock);
+		//		        	FixedPairs.Push(Pairs[k][a]);
+		//					omp_unset_lock(&dom_lock);
+						}
+						if (!Particles[Pairs[k][a].second]->IsFree)
+						{
+							size_t i	= Pairs[k][a].first;
+							size_t j	= Pairs[k][a].second;
+							Vec3_t xij	= Particles[i]->x-Particles[j]->x;
+							double h	= (Particles[i]->h+Particles[j]->h)/2.0;
+
+							// Correction of xij for Periodic BC
+							if (DomSize(0)>0.0) {if (xij(0)>2*Cellfac*h || xij(0)<-2*Cellfac*h) {(Particles[i]->CC[0]>Particles[j]->CC[0]) ? xij(0) -= DomSize(0) : xij(0) += DomSize(0);}}
+							if (DomSize(1)>0.0) {if (xij(1)>2*Cellfac*h || xij(1)<-2*Cellfac*h) {(Particles[i]->CC[1]>Particles[j]->CC[1]) ? xij(1) -= DomSize(1) : xij(1) += DomSize(1);}}
+							if (DomSize(2)>0.0) {if (xij(2)>2*Cellfac*h || xij(2)<-2*Cellfac*h) {(Particles[i]->CC[2]>Particles[j]->CC[2]) ? xij(2) -= DomSize(2) : xij(2) += DomSize(2);}}
+
+							double K = Kernel(Dimension, KernelType, norm(xij), h);
+							omp_set_lock(&Particles[j]->my_lock);
+								Particles[j]->SumKernel									+= K;
+								if (Particles[j]->Material < 3)	Particles[j]->Pressure	+= Particles[i]->Pressure * K + dot(Gravity,xij)*Particles[i]->Density*K;
+								if (Particles[j]->Material > 1)	Particles[j]->Sigma		=  Particles[j]->Sigma + K * Particles[i]->Sigma;
+								Particles[j]->vb += Particles[i]->v * K;
+							omp_unset_lock(&Particles[j]->my_lock);
+
+		//					omp_set_lock(&dom_lock);
+		//		        	FixedPairs.Push(Pairs[k][a]);
+		//					omp_unset_lock(&dom_lock);
+						}
 					}
-					if (!Particles[Pairs[k][a].second]->IsFree)
+					else
 					{
-						size_t i	= Pairs[k][a].first;
-						size_t j	= Pairs[k][a].second;
-						Vec3_t xij	= Particles[i]->x-Particles[j]->x;
-						double h	= (Particles[i]->h+Particles[j]->h)/2.0;
-
-						// Correction of xij for Periodic BC
-						if (DomSize(0)>0.0) {if (xij(0)>2*Cellfac*h || xij(0)<-2*Cellfac*h) {(Particles[i]->CC[0]>Particles[j]->CC[0]) ? xij(0) -= DomSize(0) : xij(0) += DomSize(0);}}
-						if (DomSize(1)>0.0) {if (xij(1)>2*Cellfac*h || xij(1)<-2*Cellfac*h) {(Particles[i]->CC[1]>Particles[j]->CC[1]) ? xij(1) -= DomSize(1) : xij(1) += DomSize(1);}}
-						if (DomSize(2)>0.0) {if (xij(2)>2*Cellfac*h || xij(2)<-2*Cellfac*h) {(Particles[i]->CC[2]>Particles[j]->CC[2]) ? xij(2) -= DomSize(2) : xij(2) += DomSize(2);}}
-
-						double K = Kernel(Dimension, KernelType, norm(xij), h);
-						omp_set_lock(&Particles[j]->my_lock);
-							Particles[j]->SumKernel									+= K;
-							if (Particles[j]->Material < 3)	Particles[j]->Pressure	+= Particles[i]->Pressure * K + dot(Gravity,xij)*Particles[i]->Density*K;
-							if (Particles[j]->Material > 1)	Particles[j]->Sigma		=  Particles[j]->Sigma + K * Particles[i]->Sigma;
-							Particles[j]->vb += Particles[i]->v * K;
-						omp_unset_lock(&Particles[j]->my_lock);
-
-	//					omp_set_lock(&dom_lock);
-	//		        	FixedPairs.Push(Pairs[k][a]);
-	//					omp_unset_lock(&dom_lock);
+						if (Particles[Pairs[k][a].first]->Material == 3)
+						{
+							if (!Particles[Pairs[k][a].first]->SatCheck)
+								if (Particles[Pairs[k][a].second]->CC[1] >= Particles[Pairs[k][a].first]->CC[1])
+									if (Particles[Pairs[k][a].second]->x(1) >= Particles[Pairs[k][a].first]->x(1))
+										Particles[Pairs[k][a].first]->SatCheck = true;
+						}
+						if (Particles[Pairs[k][a].second]->Material == 3)
+						{
+							if (!Particles[Pairs[k][a].second]->SatCheck)
+								if (Particles[Pairs[k][a].first]->CC[1] >= Particles[Pairs[k][a].second]->CC[1])
+									if (Particles[Pairs[k][a].first]->x(1) >= Particles[Pairs[k][a].second]->x(1))
+										Particles[Pairs[k][a].second]->SatCheck = true;
+						}
 					}
-
 				}
 			}
 		}
+
+		#pragma omp parallel for schedule (static) num_threads(Nproc)
+		for (size_t i=0; i<Particles.Size(); i++)
+		{
+			if (Particles[i]->SatCheck && !Particles[i]->IsSat)
+			{
+				Particles[i]->Mass			= Particles[i]->V*(Particles[i]->RefDensity - Particles[i]->RhoF);
+				Particles[i]->Density		= Particles[i]->Density - Particles[i]->RhoF;
+				Particles[i]->Densityb		= Particles[i]->Densityb - Particles[i]->RhoF;
+				Particles[i]->RefDensity	= Particles[i]->RefDensity - Particles[i]->RhoF;
+				Particles[i]->IsSat			= true;
+			}
+			if (!Particles[i]->SatCheck && Particles[i]->IsSat)
+			{
+				Particles[i]->Mass			= Particles[i]->V*(Particles[i]->RefDensity + Particles[i]->RhoF);
+				Particles[i]->Density		= Particles[i]->Density + Particles[i]->RhoF;
+				Particles[i]->Densityb		= Particles[i]->Densityb + Particles[i]->RhoF;
+				Particles[i]->RefDensity	= Particles[i]->RefDensity + Particles[i]->RhoF;
+				Particles[i]->IsSat			= false;
+			}
+		}
+
 
 		#pragma omp parallel for schedule (static) num_threads(Nproc)
 		for (size_t i=0; i<FixedParticles.Size(); i++)

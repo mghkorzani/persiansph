@@ -44,6 +44,8 @@ class Particle
 public:
     // Data
     bool   	IsFree;			///< Check the particle if it is free to move or not
+    bool   	IsSat;			///< Check the particle if it is Saturated or not
+    bool   	SatCheck;		///< Check the particle Saturation at each time step
     bool   	NoSlip;			///< No-Slip BC
     int    	ID;				///< an Integer value to identify the particle set
     int    	Material;		///< an Integer value to identify the particle material type: 1 = Fluid, 2 = Solid, 3 = Soil
@@ -64,6 +66,9 @@ public:
     double 	Densitya;		///< Density of the particle n+1/2 (Leapfrog)
     double 	Densityb;		///< Density of the particle n-1 (Modified Verlet)
     double 	dDensity;		///< Rate of density change in time based on state equations n
+
+    double	V;				///< Volume of a particle
+    double	RhoF;			///< Density of water or any other fluids
 
     double 	RefDensity;		///< Reference Density of Particle
     double 	Mass;			///< Mass of the particle
@@ -183,6 +188,10 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
     Sigmay = 0.0;
     NoSlip = false;
     FirstStep = true;
+    V = Mass/RefDensity;
+    RhoF = 0.0;
+    IsSat = false;
+    SatCheck = false;
 
     set_to_zero(Strainb);
     set_to_zero(Strain);

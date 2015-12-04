@@ -325,8 +325,15 @@ inline void Domain::CalcForce13(Particle * P1, Particle * P2)
     	n = P1->n;
     	Gammaw = P2->RefDensity * 9.81;
     	fs = Gammaw*n*(P2->v-P1->v)/k;
+//    	omp_set_lock(&P1->my_lock);
+//    		P1->a += -P2->Mass*P2->Pressure/(di*dj)*GK*xij + P2->Mass*fs/(di*dj)*K;
+//        omp_unset_lock(&P1->my_lock);
+//
+//        omp_set_lock(&P2->my_lock);
+//    		P2->a -= P1->Mass*fs/(di*dj)*K;
+//        omp_unset_lock(&P2->my_lock);
     	omp_set_lock(&P1->my_lock);
-    		P1->a += -P2->Mass*P2->Pressure/(di*dj)*GK*xij + P2->Mass*fs/(di*dj)*K;
+    		P1->a += P2->Mass*fs/(di*dj)*K;
         omp_unset_lock(&P1->my_lock);
 
         omp_set_lock(&P2->my_lock);
@@ -339,12 +346,19 @@ inline void Domain::CalcForce13(Particle * P1, Particle * P2)
     	n = P2->n;
     	Gammaw = P1->RefDensity * 9.81;
     	fs = Gammaw*n*(P1->v-P2->v)/k;
+//        omp_set_lock(&P1->my_lock);
+//    		P1->a -= P2->Mass*fs/(di*dj)*K;
+//        omp_unset_lock(&P1->my_lock);
+//
+//        omp_set_lock(&P2->my_lock);
+//    		P2->a += P1->Mass*P1->Pressure/(di*dj)*GK*xij + P1->Mass*fs/(di*dj)*K;
+//        omp_unset_lock(&P2->my_lock);
         omp_set_lock(&P1->my_lock);
     		P1->a -= P2->Mass*fs/(di*dj)*K;
         omp_unset_lock(&P1->my_lock);
 
         omp_set_lock(&P2->my_lock);
-    		P2->a += P1->Mass*P1->Pressure/(di*dj)*GK*xij + P1->Mass*fs/(di*dj)*K;
+    		P2->a += P1->Mass*fs/(di*dj)*K;
         omp_unset_lock(&P2->my_lock);
     }
 }

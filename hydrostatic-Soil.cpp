@@ -57,7 +57,7 @@ int main(int argc, char **argv) try
 	double xb,yb,h,rhoF,rhoS,CsF,CsS;
 	double dx,HF,HS,L,K,G,Nu,E,T1,T2,T;
 
-	HF				= 0.5;
+	HF				= 0.6;
 	HS				= 1.0;
 	L				= 0.4;
 	rhoF			= 998.21;
@@ -115,6 +115,7 @@ int main(int argc, char **argv) try
 			dom.Particles[a]->Fail		= 0;
 			dom.Particles[a]->Alpha		= 0.1;
 			dom.Particles[a]->Beta		= 0.1;
+			dom.Particles[a]->RhoF		= rhoF;
 			xb=dom.Particles[a]->x(0);
 			yb=dom.Particles[a]->x(1);
 			if (yb<0.0)
