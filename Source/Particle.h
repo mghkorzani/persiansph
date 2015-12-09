@@ -100,6 +100,9 @@ public:
     double 	G;				///< Shear modulus
     double 	K;				///< Bulk modulus
 
+    double	TI;				///< Tensile instability factor
+    double	TIn;			///< Tensile instability power
+
     size_t	Fail;			///< Failure criteria
     double	c;				///< Cohesion
     double	phi;			///< Friction angel
@@ -157,6 +160,8 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
     vb = 0.0;
     v = v0;
     VXSPH = 0.0;
+    TI		= 0.0;
+    TIn		= 4.0;
 
     Densitya = 0.0;
     Densityb = 0.0;

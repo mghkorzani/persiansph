@@ -63,14 +63,14 @@ inline void Domain::CalcForce11(Particle * P1, Particle * P2)
 
     //Tensile Instability
     double TIij = 0.0;
-    if (TI > 0.0)
+    if (P1->TI > 0.0 || P2->TI > 0.0)
     {
     	double Ri,Rj;
     	Ri = 0.0;
     	Rj = 0.0;
     	if (P1->Pressure < 0.0) Ri = -P1->Pressure/(di*di);
     	if (P2->Pressure < 0.0) Rj = -P2->Pressure/(dj*dj);
-        TIij = TI*(Ri + Rj)*pow((K/Kernel(Dimension, KernelType, InitialDist, h)),TIn);
+        TIij = (P1->TI*Ri + P2->TI*Rj)*pow((K/Kernel(Dimension, KernelType, InitialDist, h)),(P1->TIn+P2->TIn)/2.0);
     }
 
 	//Real Viscosity
@@ -208,7 +208,7 @@ inline void Domain::CalcForce2233(Particle * P1, Particle * P2)
     //Tensile Instability
     Mat3_t TIij;
     set_to_zero(TIij);
-    if (TI > 0.0) TIij = pow((K/Kernel(Dimension, KernelType, InitialDist, h)),TIn)*(P1->TIR+P2->TIR);
+    if (P1->TI > 0.0 || P2->TI > 0.0) TIij = pow((K/Kernel(Dimension, KernelType, InitialDist, h)),(P1->TIn+P2->TIn)/2.0)*(P1->TIR+P2->TIR);
 
     Mat3_t StrainRate,RotationRate;
     set_to_zero(StrainRate);

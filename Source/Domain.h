@@ -160,8 +160,6 @@ public:
     size_t					KernelType;			///< Selecting variable to choose a kernel
 
     double 					XSPH;				///< Velocity correction factor
-    double 					TI;					///< Tensile instability factor
-    double 					TIn;				///< Tensile instability power
     double 					InitialDist;		///< Initial distance of particles for calculation of tensile instability
     bool					Shepard;			///< It is a first order correction for the density which is called Shepard Filter
 
@@ -226,8 +224,6 @@ inline Domain::Domain ()
 
 
     XSPH	= 0.0;
-    TI		= 0.0;
-    TIn		= 4.0;
     InitialDist = 0.0;
 
     AvgVelocity = 0.0;
@@ -1005,7 +1001,7 @@ inline void Domain::StartAcceleration (Vec3_t const & a)
     			Particles[i]->Pressure = EOS(Particles[i]->PresEq, Particles[i]->Cs, Particles[i]->P0,Particles[i]->Density, Particles[i]->RefDensity);
 
         	// Tensile Instability for all soil and solid particles
-            if (Particles[i]->Material > 1 && TI > 0.0)
+            if (Particles[i]->Material > 1 && Particles[i]->TI > 0.0)
             {
 				// XY plane must be used, It is very slow in 3D
 				if (Dimension == 2)
@@ -1017,8 +1013,8 @@ inline void Domain::StartAcceleration (Vec3_t const & a)
 					S = sin(teta);
 					Sigmaxx = C*C*Particles[i]->Sigma(0,0) + 2.0*C*S*Particles[i]->Sigma(0,1) + S*S*Particles[i]->Sigma(1,1);
 					Sigmayy = S*S*Particles[i]->Sigma(0,0) - 2.0*C*S*Particles[i]->Sigma(0,1) + C*C*Particles[i]->Sigma(1,1);
-					if (Sigmaxx>0) Sigmaxx = -TI * Sigmaxx/(Particles[i]->Density*Particles[i]->Density); else Sigmaxx = 0.0;
-					if (Sigmayy>0) Sigmayy = -TI * Sigmayy/(Particles[i]->Density*Particles[i]->Density); else Sigmayy = 0.0;
+					if (Sigmaxx>0) Sigmaxx = -Particles[i]->TI * Sigmaxx/(Particles[i]->Density*Particles[i]->Density); else Sigmaxx = 0.0;
+					if (Sigmayy>0) Sigmayy = -Particles[i]->TI * Sigmayy/(Particles[i]->Density*Particles[i]->Density); else Sigmayy = 0.0;
 					Particles[i]->TIR(0,0) = C*C*Sigmaxx + S*S*Sigmayy;
 					Particles[i]->TIR(1,1) = S*S*Sigmaxx + C*C*Sigmayy;
 					Particles[i]->TIR(0,1) = Particles[i]->TIR(1,0) = S*C*(Sigmaxx-Sigmayy);
@@ -1028,9 +1024,9 @@ inline void Domain::StartAcceleration (Vec3_t const & a)
 					Mat3_t Vec,Val,VecT,temp;
 
 					Rotation(Particles[i]->Sigma,Vec,VecT,Val);
-					if (Val(0,0)>0) Val(0,0) = -TI * Val(0,0)/(Particles[i]->Density*Particles[i]->Density); else Val(0,0) = 0.0;
-					if (Val(1,1)>0) Val(1,1) = -TI * Val(1,1)/(Particles[i]->Density*Particles[i]->Density); else Val(1,1) = 0.0;
-					if (Val(2,2)>0) Val(2,2) = -TI * Val(2,2)/(Particles[i]->Density*Particles[i]->Density); else Val(2,2) = 0.0;
+					if (Val(0,0)>0) Val(0,0) = -Particles[i]->TI * Val(0,0)/(Particles[i]->Density*Particles[i]->Density); else Val(0,0) = 0.0;
+					if (Val(1,1)>0) Val(1,1) = -Particles[i]->TI * Val(1,1)/(Particles[i]->Density*Particles[i]->Density); else Val(1,1) = 0.0;
+					if (Val(2,2)>0) Val(2,2) = -Particles[i]->TI * Val(2,2)/(Particles[i]->Density*Particles[i]->Density); else Val(2,2) = 0.0;
 					Mult(Vec,Val,temp);
 					Mult(temp,VecT,Particles[i]->TIR);
 				}
@@ -1177,7 +1173,7 @@ inline void Domain::PrimaryComputeAcceleration ()
 				Particles[a]->vb		= Particles[a]->vb/Particles[a]->SumKernel;
 
 				// Tensile Instability for fixed soil and solid particles
-				if (Particles[a]->Material > 1 && TI > 0.0)
+				if (Particles[a]->Material > 1 && Particles[a]->TI > 0.0)
 				{
 					// XY plane must be used, It is very slow in 3D
 					if (Dimension == 2)
@@ -1189,8 +1185,8 @@ inline void Domain::PrimaryComputeAcceleration ()
 						S = sin(teta);
 						Sigmaxx = C*C*Particles[a]->Sigma(0,0) + 2.0*C*S*Particles[a]->Sigma(0,1) + S*S*Particles[a]->Sigma(1,1);
 						Sigmayy = S*S*Particles[a]->Sigma(0,0) - 2.0*C*S*Particles[a]->Sigma(0,1) + C*C*Particles[a]->Sigma(1,1);
-						if (Sigmaxx>0) Sigmaxx = -TI * Sigmaxx/(Particles[a]->Density*Particles[a]->Density); else Sigmaxx = 0.0;
-						if (Sigmayy>0) Sigmayy = -TI * Sigmayy/(Particles[a]->Density*Particles[a]->Density); else Sigmayy = 0.0;
+						if (Sigmaxx>0) Sigmaxx = -Particles[a]->TI * Sigmaxx/(Particles[a]->Density*Particles[a]->Density); else Sigmaxx = 0.0;
+						if (Sigmayy>0) Sigmayy = -Particles[a]->TI * Sigmayy/(Particles[a]->Density*Particles[a]->Density); else Sigmayy = 0.0;
 						Particles[a]->TIR(0,0) = C*C*Sigmaxx + S*S*Sigmayy;
 						Particles[a]->TIR(1,1) = S*S*Sigmaxx + C*C*Sigmayy;
 						Particles[a]->TIR(0,1) = Particles[a]->TIR(1,0) = S*C*(Sigmaxx-Sigmayy);
@@ -1200,9 +1196,9 @@ inline void Domain::PrimaryComputeAcceleration ()
 						Mat3_t Vec,Val,VecT,temp;
 
 						Rotation(Particles[a]->Sigma,Vec,VecT,Val);
-						if (Val(0,0)>0) Val(0,0) = -TI * Val(0,0)/(Particles[a]->Density*Particles[a]->Density); else Val(0,0) = 0.0;
-						if (Val(1,1)>0) Val(1,1) = -TI * Val(1,1)/(Particles[a]->Density*Particles[a]->Density); else Val(1,1) = 0.0;
-						if (Val(2,2)>0) Val(2,2) = -TI * Val(2,2)/(Particles[a]->Density*Particles[a]->Density); else Val(2,2) = 0.0;
+						if (Val(0,0)>0) Val(0,0) = -Particles[a]->TI * Val(0,0)/(Particles[a]->Density*Particles[a]->Density); else Val(0,0) = 0.0;
+						if (Val(1,1)>0) Val(1,1) = -Particles[a]->TI * Val(1,1)/(Particles[a]->Density*Particles[a]->Density); else Val(1,1) = 0.0;
+						if (Val(2,2)>0) Val(2,2) = -Particles[a]->TI * Val(2,2)/(Particles[a]->Density*Particles[a]->Density); else Val(2,2) = 0.0;
 						Mult(Vec,Val,temp);
 						Mult(temp,VecT,Particles[a]->TIR);
 					}
