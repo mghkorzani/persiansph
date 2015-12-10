@@ -63,9 +63,9 @@ int main(int argc, char **argv) try
 	rhoF	= 998.21;
 	Mu		= 1.002e-3;
 	CsF		= 10.0*sqrt(2.0*9.81*4.5);
-	Tf		= (0.1*h/CsF);
+	Tf		= (0.2*h/CsF);
 	DampF 	= 0.04*CsF/h;
-	dom.VisEq= 0.0;
+	dom.VisEq= 0;
 
 
 	dom.AddBoxLength(1 ,Vec3_t ( -16.0 - 3.0*dx , -3.0*dx , 0.0 ), 32.0 + 6.0*dx + dx/10.0 , 4.5 + 3.0*dx + dx/10.0  ,  0 , dx/2.0 ,rhoF, h,1 , 0 , false,false);
@@ -92,18 +92,11 @@ int main(int argc, char **argv) try
 			dom.Particles[a]->NoSlip= true;
 			dom.Particles[a]->IsFree= false;
 		}
-		if (xb>16.0 && yb<0.5)
-		{
-			dom.Particles[a]->ID	= 2;
-			dom.Particles[a]->NoSlip= true;
-			dom.Particles[a]->IsFree= false;
-		}
-		if (yb>(-0.5*(xb-11.0)) && yb>0.5 && dom.Particles[a]->ID == 1)
+		if (yb>(-0.5*(xb-11.0)) && dom.Particles[a]->ID == 1)
 			dom.Particles[a]->ID	= 5;
 
-		if (dom.Particles[a]->ID==1 && xb<=1.0) dom.Particles[a]->Density  = rhoF*((1+9.81*(4.5-dom.Particles[a]->x(1))/(CsF*CsF)));
-		if (dom.Particles[a]->ID==1 && xb>1.0 && xb<9.0) dom.Particles[a]->Density  = rhoF*((1+9.81*((-0.5*(xb-11.0))-dom.Particles[a]->x(1))/(CsF*CsF)));
-		if (dom.Particles[a]->ID==1 && xb>=9.0) dom.Particles[a]->Density  = rhoF*((1+9.81*(1.0-dom.Particles[a]->x(1))/(CsF*CsF)));
+		if (dom.Particles[a]->ID==1 && xb<=2.0) dom.Particles[a]->Density  = rhoF*((1+9.81*(4.5-dom.Particles[a]->x(1))/(CsF*CsF)));
+		if (dom.Particles[a]->ID==1 && xb>2.0 ) dom.Particles[a]->Density  = rhoF*((1+9.81*((-0.5*(xb-11.0))-dom.Particles[a]->x(1))/(CsF*CsF)));
 	}
 
 	double K,G,Nu,E,rhoS,CsS,Phi,c,Psi,k,Ts;
@@ -111,8 +104,8 @@ int main(int argc, char **argv) try
 	rhoS	= 2038.7;
 	Phi		= 25.0;
 	Psi		= 0.0;
-	k		= 0.01;
-	c		= 5.0e3;
+	k		= 2.0;
+	c		= 10.0e3;
 	E		= 25.0e6;
 	Nu		= 0.3;
 	K		= E/(3.0*(1.0-2.0*Nu));
@@ -159,7 +152,11 @@ int main(int argc, char **argv) try
 	dom.DelParticles(5);
 
     T		= std::min(Tf,Ts);
-	dom.Solve(/*tf*/50000.0,/*dt*/T,/*dtOut*/100*T,"test06",10000);
+    std::cout<<"Tf = "<<Tf<<std::endl;
+    std::cout<<"Ts = "<<Ts<<std::endl;
+    std::cout<<"T  = "<<T<<std::endl;
+
+	dom.Solve(/*tf*/50000.0,/*dt*/T,/*dtOut*/0.1,"test06",10000);
 	return 0;
 }
 MECHSYS_CATCH
