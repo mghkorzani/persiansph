@@ -44,6 +44,7 @@ class Particle
 public:
     // Data
     bool   	IsFree;			///< Check the particle if it is free to move or not
+    bool   	InOut;			///< Check the particle if it is in-flow or out-flow or not
     bool   	IsSat;			///< Check the particle if it is Saturated or not
     bool   	SatCheck;		///< Check the particle Saturation at each time step
     bool   	NoSlip;			///< No-Slip BC
@@ -192,6 +193,7 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
     psi = 0.0;
     Sigmay = 0.0;
     NoSlip = false;
+    InOut = false;
     FirstStep = true;
     V = Mass/RefDensity;
     RhoF = 0.0;

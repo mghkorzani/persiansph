@@ -25,7 +25,7 @@ using std::endl;
 using std::ifstream;
 
 double check = 0.0;
-double DampF,DampS;
+double DampF,DampS,Cs;
 double t = 0.5;
 void UserDamping(SPH::Domain & domi)
 {
@@ -34,9 +34,15 @@ void UserDamping(SPH::Domain & domi)
 	for (size_t i=0; i<domi.Particles.Size(); i++)
 	{
 		if (domi.Particles[i]->IsFree && domi.Particles[i]->Material == 3) domi.Particles[i]->a -= DampS * domi.Particles[i]->v;
-		if (domi.Particles[i]->IsFree && domi.Particles[i]->Material == 3) domi.Particles[i]->a -= DampS * domi.Particles[i]->v;
 	}
 }
+
+void UserInFlowCon(Vec3_t & position, Vec3_t & Vel, double & Den, SPH::Boundary & bdry)
+{
+	Vel = 0.5,0.0,0.0;
+	Den = 998.21*((1+9.81*(4.5-position(1))/(Cs*Cs)));
+}
+
 
 int main(int argc, char **argv) try
 {
@@ -50,8 +56,12 @@ int main(int argc, char **argv) try
 //	dom.XSPH		= 0.5;
 	dom.Scheme		= 0;
 	dom.Gravity		= 0.0,-9.81,0.0;
-//	dom.GeneralAfter= & UserDamping;
-//	dom.BC.Periodic[0] = true;
+	dom.GeneralAfter= & UserDamping;
+
+	dom.BC.InOutFlow	= 3;
+	dom.BC.inv			= 0.5,0.0,0.0;
+	dom.BC.inDensity	= 998.21;
+	dom.InCon	= & UserInFlowCon;
 
 	double xb,yb,h,dx,T;
 
@@ -63,9 +73,12 @@ int main(int argc, char **argv) try
 	rhoF	= 998.21;
 	Mu		= 1.002e-3;
 	CsF		= 10.0*sqrt(2.0*9.81*4.5);
+//	CsF		= 10.0*3.0;
 	Tf		= (0.2*h/CsF);
 	DampF 	= 0.04*CsF/h;
 	dom.VisEq= 0;
+
+	Cs = CsF;
 
 
 	dom.AddBoxLength(1 ,Vec3_t ( -16.0 - 3.0*dx , -3.0*dx , 0.0 ), 32.0 + 6.0*dx + dx/10.0 , 4.5 + 3.0*dx + dx/10.0  ,  0 , dx/2.0 ,rhoF, h,1 , 0 , false,false);
@@ -73,30 +86,38 @@ int main(int argc, char **argv) try
 	for (size_t a=0; a<dom.Particles.Size(); a++)
 	{
 		dom.Particles[a]->PresEq	= 0;
-		dom.Particles[a]->Alpha		= 0.03;
+//		dom.Particles[a]->Alpha		= 0.03;
 		dom.Particles[a]->Mu		= Mu;
 		dom.Particles[a]->MuRef		= Mu;
 		dom.Particles[a]->Material	= 1;
 		dom.Particles[a]->Cs		= CsF;
 		xb=dom.Particles[a]->x(0);
 		yb=dom.Particles[a]->x(1);
-		if (yb<0.0)
+		if (yb<0.0 && xb <-11)
+		{
+			dom.Particles[a]->ID	= 2;
+			dom.Particles[a]->NoSlip= false;
+			dom.Particles[a]->IsFree= false;
+		}
+		if (yb<0.0 && xb >-11)
 		{
 			dom.Particles[a]->ID	= 2;
 			dom.Particles[a]->NoSlip= true;
 			dom.Particles[a]->IsFree= false;
 		}
-		if (xb<-16.0)
-		{
-			dom.Particles[a]->ID	= 2;
-			dom.Particles[a]->NoSlip= true;
-			dom.Particles[a]->IsFree= false;
-		}
-		if (yb>(-0.5*(xb-11.0)) && dom.Particles[a]->ID == 1)
+//		if (xb<-16.0)
+//		{
+//			dom.Particles[a]->ID	= 2;
+//			dom.Particles[a]->NoSlip= true;
+//			dom.Particles[a]->IsFree= false;
+//		}
+//		if (xb>-2.0 && dom.Particles[a]->ID==1)
+//			dom.Particles[a]->ID	= 5;
+
+		if (xb>-11 && dom.Particles[a]->ID==1)
 			dom.Particles[a]->ID	= 5;
 
-		if (dom.Particles[a]->ID==1 && xb<=2.0) dom.Particles[a]->Density  = rhoF*((1+9.81*(4.5-dom.Particles[a]->x(1))/(CsF*CsF)));
-		if (dom.Particles[a]->ID==1 && xb>2.0 ) dom.Particles[a]->Density  = rhoF*((1+9.81*((-0.5*(xb-11.0))-dom.Particles[a]->x(1))/(CsF*CsF)));
+		if (dom.Particles[a]->ID==1) dom.Particles[a]->Density  = rhoF*((1+9.81*(4.5-dom.Particles[a]->x(1))/(CsF*CsF)));
 	}
 
 	double K,G,Nu,E,rhoS,CsS,Phi,c,Psi,k,Ts;
@@ -156,7 +177,7 @@ int main(int argc, char **argv) try
     std::cout<<"Ts = "<<Ts<<std::endl;
     std::cout<<"T  = "<<T<<std::endl;
 
-	dom.Solve(/*tf*/50000.0,/*dt*/T,/*dtOut*/0.1,"test06",10000);
+	dom.Solve(/*tf*/50000.0,/*dt*/T,/*dtOut*/0.2,"test06",10000);
 	return 0;
 }
 MECHSYS_CATCH

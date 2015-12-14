@@ -50,7 +50,9 @@ public:
 
     int 	InOutFlow;	///< Considering inflow in all directions  by adding and deleting particles=> [0]=X, [1]=Y, [2]=Z and 0=none, 1=-
     double  InFlowLoc1;
-    double  OutFlowLoc;
+    double  InFlowLoc2;
+    double  InFlowLoc3;
+   double  OutFlowLoc;
     double	cellfac;
     int		inoutcounter;
     bool	MassConservation;
@@ -72,6 +74,8 @@ inline Boundary::Boundary()
 	allDensity = 0.0;
 	InOutFlow = 0;
 	InFlowLoc1 = 0.0;
+	InFlowLoc2 = 0.0;
+	InFlowLoc3 = 0.0;
 	OutFlowLoc = 0.0;
 	cellfac = 4.0;
 	inoutcounter = 0;
@@ -125,7 +129,6 @@ public:
     void PrintInput					(char const * FileKey);
     void InFlowBCLeave				();
     void InFlowBCFresh				();
-    void InFlowBCReset				();
     void WholeVelocity				();
     void InitialChecks				();
 
@@ -1255,13 +1258,19 @@ inline void Domain::Move (double dt)
 	#pragma omp parallel for schedule (static) num_threads(Nproc)
 	for (size_t i=0; i<Particles.Size(); i++)
 		if (Particles[i]->IsFree)
-			Particles[i]->Move(dt,DomSize,TRPR,BLPF,Shepard,Scheme);
+		{
+			if (!Particles[i]->InOut)
+				Particles[i]->Move(dt,DomSize,TRPR,BLPF,Shepard,Scheme);
+			else
+				Particles[i]->x(0) += dt*Particles[i]->v(0);
+		}
 
 }
 
 inline void Domain::InFlowBCLeave()
 {
-	Array <int> DelPart;
+	size_t a;
+	Array <int> DelPart,TempPart;
 	Array<std::pair<Vec3_t,size_t> > AddPart;
 
 	#pragma omp parallel for schedule(static) num_threads(Nproc)
@@ -1269,163 +1278,180 @@ inline void Domain::InFlowBCLeave()
 		if ((Particles[i]->x(0) > TRPR(0)) || (Particles[i]->x(1) > TRPR(1)) || (Particles[i]->x(2) > TRPR(2)) ||
 				(Particles[i]->x(0) < BLPF(0)) || (Particles[i]->x(1) < BLPF(1)) || (Particles[i]->x(2) < BLPF(2)))
 		{
+			Particles[i]->InOut	= false;
 			omp_set_lock(&dom_lock);
 			DelPart.Push(i);
 			omp_unset_lock(&dom_lock);
 		}
-	if (BC.InOutFlow==2) Particles.DelItems(DelPart);
 
 	if (BC.InOutFlow==1 || BC.InOutFlow==3)
 	{
 		for (size_t i=0 ; i<BC.InPart.Size() ; i++)
 			if(Particles[BC.InPart[i]]->x(0) > BC.InFlowLoc1)
 			{
-				double temp;
-				Vec3_t temp1;
-				int a2,a3,b2,b3;
-				temp1 = Particles[BC.InPart[i]]->x;
-
-				if (Dimension==2) {a3=0;b3=0;}
-					else {	(Particles[BC.InPart[i]]->CC[2]-1)<0 			? a3=0 				: a3=(Particles[BC.InPart[i]]->CC[2]-1);
-							(Particles[BC.InPart[i]]->CC[2]+1)>=CellNo[2] 	? b3=CellNo[2]-1 	: b3=(Particles[BC.InPart[i]]->CC[2]+1);}
-
-				(Particles[BC.InPart[i]]->CC[1]-1)<0 			? a2=0 				: a2=(Particles[BC.InPart[i]]->CC[1]-1);
-				(Particles[BC.InPart[i]]->CC[1]+1)>=CellNo[1] 	? b2=CellNo[1]-1 	: b2=(Particles[BC.InPart[i]]->CC[1]+1);
-
-				for (int q3=a3; q3<=b3; q3++)
-				for (int q2=a2; q2<=b2; q2++)
-				for (int q1=0; q1<Particles[BC.InPart[i]]->CC[0]; q1++)
-				{
-					if (HOC[q1][q2][q3]!=-1)
-					{
-						temp = HOC[q1][q2][q3];
-						while (temp != -1)
-						{
-							if (Particles[temp]->IsFree && temp1(0)>Particles[temp]->x(0) && fabs(Particles[BC.InPart[i]]->x(1)-Particles[temp]->x(1))<(hmax/4.0) &&
-									fabs(Particles[BC.InPart[i]]->x(2)-Particles[temp]->x(2))<(hmax/4.0) && Particles[temp]->ID==-10000) temp1=Particles[temp]->x;
-							temp = Particles[temp]->LL;
-						}
-					}
-				}
-				temp1(0) -= 2.0*R;
-
+				Vec3_t temp1	= Particles[BC.InPart[i]]->x;
+				Particles[BC.InPart[i]]->InOut	= false;
+				temp1(0) -=  (BC.InFlowLoc3-BC.InFlowLoc2+InitialDist);
 				AddPart.Push(std::make_pair(temp1,BC.InPart[i]));
+				TempPart.Push(i);
 			}
-
-		if (AddPart.Size() > DelPart.Size())
-		{
-			for (size_t i=0 ; i<DelPart.Size() ; i++)
-			{
-				Particles[DelPart[i]]->x 			= AddPart[i].first;
-				Particles[DelPart[i]]->ID 			= Particles[AddPart[i].second]->ID;
-				Particles[DelPart[i]]->Mass 		= Particles[AddPart[i].second]->Mass;
-				Particles[DelPart[i]]->RefDensity	= Particles[AddPart[i].second]->RefDensity;
-				Particles[DelPart[i]]->h			= Particles[AddPart[i].second]->h;
-				Particles[DelPart[i]]->Material		= Particles[AddPart[i].second]->Material;
-				Particles[AddPart[i].second]->ID	= -9000;
-			}
-			for (size_t i=DelPart.Size() ; i<AddPart.Size() ; i++)
-			{
-				Particles.Push(new Particle(Particles[AddPart[i].second]->ID,AddPart[i].first,Particles[AddPart[i].second]->v,Particles[AddPart[i].second]->Mass,Particles[AddPart[i].second]->Density,Particles[AddPart[i].second]->h,false));
-				Particles[AddPart[i].second]->ID		= -9000;
-				Particles[AddPart[i].second]->Material	= 1;
-			}
-		}
-
-		if (AddPart.Size() == DelPart.Size())
-		{
-			for (size_t i=0 ; i<AddPart.Size() ; i++)
-			{
-				Particles[DelPart[i]]->x 			= AddPart[i].first;
-				Particles[DelPart[i]]->ID 			= Particles[AddPart[i].second]->ID;
-				Particles[DelPart[i]]->Mass 		= Particles[AddPart[i].second]->Mass;
-				Particles[DelPart[i]]->RefDensity 	= Particles[AddPart[i].second]->RefDensity;
-				Particles[DelPart[i]]->h 			= Particles[AddPart[i].second]->h;
-				Particles[DelPart[i]]->Material		= Particles[AddPart[i].second]->Material;
-				Particles[AddPart[i].second]->ID 	= -9000;
-			}
-		}
-
-		if (AddPart.Size() < DelPart.Size())
-		{
-			Array <int> temp1;
-			for (size_t i=0 ; i<AddPart.Size() ; i++)
-			{
-				Particles[DelPart[i]]->x 			= AddPart[i].first;
-				Particles[DelPart[i]]->ID 			= Particles[AddPart[i].second]->ID;
-				Particles[DelPart[i]]->Mass 		= Particles[AddPart[i].second]->Mass;
-				Particles[DelPart[i]]->RefDensity 	= Particles[AddPart[i].second]->RefDensity;
-				Particles[DelPart[i]]->h 			= Particles[AddPart[i].second]->h;
-				Particles[DelPart[i]]->Material		= Particles[AddPart[i].second]->Material;
-				Particles[AddPart[i].second]->ID 	= -9000;
-			}
-			for (size_t i=AddPart.Size() ; i<DelPart.Size() ; i++)
-			{
-				temp1.Push(DelPart[i]);
-			}
-			Particles.DelItems(temp1);
-		}
+		BC.InPart.DelItems(TempPart);
+		TempPart.Clear();
 	}
 
-//	if (DelPart.Size()>0 || AddPart.Size()>0) RigidParticles.Clear();
-	DelPart.Clear();
-	AddPart.Clear();
+	if (AddPart.Size() >= DelPart.Size())
+	{
+		for (size_t i=0 ; i<DelPart.Size() ; i++)
+		{
+			a = DelPart[i];
+			Particles[a]->PresEq	= Particles[AddPart[i].second]->PresEq;
+			Particles[a]->Alpha		= Particles[AddPart[i].second]->Alpha;
+			Particles[a]->Beta		= Particles[AddPart[i].second]->Beta;
+			Particles[a]->Mu		= Particles[AddPart[i].second]->Mu;
+			Particles[a]->MuRef		= Particles[AddPart[i].second]->MuRef;
+			Particles[a]->Material	= 1;
+			Particles[a]->Cs		= Particles[AddPart[i].second]->Cs;
+			Particles[a]->x 		= AddPart[i].first;
+			Particles[a]->ID 		= Particles[AddPart[i].second]->ID;
+			Particles[a]->Mass 		= Particles[AddPart[i].second]->Mass;
+			Particles[a]->h			= Particles[AddPart[i].second]->h;
+			BC.InPart.Push(a);
+		}
+		for (size_t i=DelPart.Size() ; i<AddPart.Size() ; i++)
+		{
+			Particles.Push(new Particle(Particles[AddPart[i].second]->ID,AddPart[i].first,Particles[AddPart[i].second]->v,Particles[AddPart[i].second]->Mass,Particles[AddPart[i].second]->RefDensity,Particles[AddPart[i].second]->h,false));
+			a = Particles.Size()-1;
+			Particles[a]->PresEq	= Particles[AddPart[i].second]->PresEq;
+			Particles[a]->Alpha		= Particles[AddPart[i].second]->Alpha;
+			Particles[a]->Beta		= Particles[AddPart[i].second]->Beta;
+			Particles[a]->Mu		= Particles[AddPart[i].second]->Mu;
+			Particles[a]->MuRef		= Particles[AddPart[i].second]->MuRef;
+			Particles[a]->Material	= 1;
+			Particles[a]->Cs		= Particles[AddPart[i].second]->Cs;
+			BC.InPart.Push(a);
+		}
+		DelPart.Clear();
+		AddPart.Clear();
+	}
+
+	// this condition satisfies BC.InOutFlow==2 and ParticleLeaveDomain automatically.
+	if (AddPart.Size() < DelPart.Size())
+	{
+		for (size_t i=0 ; i<AddPart.Size() ; i++)
+		{
+			a = DelPart[i];
+			Particles[a]->PresEq	= Particles[AddPart[i].second]->PresEq;
+			Particles[a]->Alpha		= Particles[AddPart[i].second]->Alpha;
+			Particles[a]->Beta		= Particles[AddPart[i].second]->Beta;
+			Particles[a]->Mu		= Particles[AddPart[i].second]->Mu;
+			Particles[a]->MuRef		= Particles[AddPart[i].second]->MuRef;
+			Particles[a]->Material	= 1;
+			Particles[a]->Cs		= Particles[AddPart[i].second]->Cs;
+			Particles[a]->x 		= AddPart[i].first;
+			Particles[a]->ID 		= Particles[AddPart[i].second]->ID;
+			Particles[a]->Mass 		= Particles[AddPart[i].second]->Mass;
+			Particles[a]->h			= Particles[AddPart[i].second]->h;
+			BC.InPart.Push(a);
+		}
+		for (size_t i=AddPart.Size() ; i<DelPart.Size() ; i++)
+		{
+			TempPart.Push(DelPart[i]);
+		}
+		Particles.DelItems(TempPart);
+		BC.inoutcounter = 1;
+		DelPart.Clear();
+		AddPart.Clear();
+	}
 }
 
 inline void Domain::InFlowBCFresh()
 {
 	int temp, temp1;
 	int q1,q2,q3;
-	if (BC.InOutFlow==1 || BC.InOutFlow==3)
+	if (BC.inoutcounter == 0)
+	{
+		if (BC.InOutFlow==1 || BC.InOutFlow==3)
+		{
+			BC.InPart.Clear();
+			BC.InFlowLoc1  = BLPF(0) + BC.cellfac*hmax;
+			temp1 = (int) (floor((BC.InFlowLoc1 - BLPF(0)) / CellSize(0)));
+
+			for (q2=0; BC.Periodic[1]? (q2<(CellNo[1]-2)) : (q2<CellNo[1]) ; q2++)
+			for (q3=0; BC.Periodic[2]? (q3<(CellNo[2]-2)) : (q3<CellNo[2]) ; q3++)
+			for (q1=0; q1<(temp1 + 1)                                      ; q1++)
+			{
+				if (HOC[q1][q2][q3]!=-1)
+				{
+					temp = HOC[q1][q2][q3];
+					while (temp != -1)
+					{
+						if (Particles[temp]->IsFree && (Particles[temp]->x(0) <= BC.InFlowLoc1) )
+							BC.InPart.Push(temp);
+						temp = Particles[temp]->LL;
+					}
+				}
+			}
+			BC.InFlowLoc2  = Particles[BC.InPart[0]]->x(0);
+			BC.InFlowLoc3  = Particles[BC.InPart[0]]->x(0);
+			#pragma omp parallel for schedule(static) num_threads(Nproc)
+			for (size_t i=0 ; i<BC.InPart.Size() ; i++)
+			{
+				if (Particles[BC.InPart[i]]->x(0) < BC.InFlowLoc2) BC.InFlowLoc2  = Particles[BC.InPart[i]]->x(0);
+				if (Particles[BC.InPart[i]]->x(0) > BC.InFlowLoc3) BC.InFlowLoc3  = Particles[BC.InPart[i]]->x(0);
+			}
+		}
+
+		if (BC.InOutFlow==2 || BC.InOutFlow==3)
+			BC.OutFlowLoc = TRPR(0) - BC.cellfac*hmax;
+
+		BC.inoutcounter = 2;
+	}
+
+	if (BC.inoutcounter == 1)
 	{
 		BC.InPart.Clear();
-		if (BC.inoutcounter==0)  BC.InFlowLoc1  = BLPF(0) + BC.cellfac*hmax;
 		temp1 = (int) (floor((BC.InFlowLoc1 - BLPF(0)) / CellSize(0)));
 
-		for (q2=0;BC.Periodic[1]? (q2<(CellNo[1]-2)) : (q2<CellNo[1]) ; q2++)
-		for (q3=0;BC.Periodic[2]? (q3<(CellNo[2]-2)) : (q3<CellNo[2]) ; q3++)
-		for (q1=0; q1<(temp1 + 1); q1++)
+		for (q2=0; BC.Periodic[1]? (q2<(CellNo[1]-2)) : (q2<CellNo[1]) ; q2++)
+		for (q3=0; BC.Periodic[2]? (q3<(CellNo[2]-2)) : (q3<CellNo[2]) ; q3++)
+		for (q1=0; q1<(temp1 + 1)                                      ; q1++)
 		{
 			if (HOC[q1][q2][q3]!=-1)
 			{
 				temp = HOC[q1][q2][q3];
 				while (temp != -1)
 				{
-					if (BC.inoutcounter == 0)
-						{if (Particles[temp]->IsFree && (Particles[temp]->x(0) < BC.InFlowLoc1) ) {BC.InPart.Push(temp);Particles[temp]->ID=-10000;}}
-					else
-						{if (Particles[temp]->IsFree && (Particles[temp]->x(0) < BC.InFlowLoc1) && (Particles[temp]->ID == -10000) ) BC.InPart.Push(temp);}
-
+					if (Particles[temp]->IsFree && (Particles[temp]->x(0) <= BC.InFlowLoc1) )
+						BC.InPart.Push(temp);
 					temp = Particles[temp]->LL;
 				}
 			}
 		}
+		BC.inoutcounter = 2;
 	}
+
 
 	if (BC.InOutFlow==2 || BC.InOutFlow==3)
 	{
 		BC.OutPart.Clear();
-		if (BC.OutFlowLoc==0.0) BC.OutFlowLoc = TRPR(0) - BC.cellfac*hmax;
 		temp1 = (int) (floor((BC.OutFlowLoc - BLPF(0)) / CellSize(0)));
 
-		for (q2=0;BC.Periodic[1]? (q2<(CellNo[1]-2)) : (q2<CellNo[1]) ; q2++)
-		for (q3=0;BC.Periodic[2]? (q3<(CellNo[2]-2)) : (q3<CellNo[2]) ; q3++)
-		for (q1=temp1;BC.Periodic[0]? (q1<(CellNo[0]-2)) : (q1<CellNo[0]) ; q1++)
+		for (q2=0     ; BC.Periodic[1]? (q2<(CellNo[1]-2)) : (q2<CellNo[1]) ; q2++)
+		for (q3=0     ; BC.Periodic[2]? (q3<(CellNo[2]-2)) : (q3<CellNo[2]) ; q3++)
+		for (q1=temp1 ; q1<CellNo[0]                                        ; q1++)
 		{
 			if (HOC[q1][q2][q3]!=-1)
 			{
 				temp = HOC[q1][q2][q3];
 				while (temp != -1)
 				{
-					if (Particles[temp]->IsFree && (Particles[temp]->x(0) > BC.OutFlowLoc) ) BC.OutPart.Push(temp);
+					if (Particles[temp]->IsFree && (Particles[temp]->x(0) >= BC.OutFlowLoc) )
+						BC.OutPart.Push(temp);
 					temp = Particles[temp]->LL;
 				}
 			}
 		}
 	}
-
-	// To check it is the first time that this function is running
-	BC.inoutcounter = 1;
 
 	Vec3_t vel;
 	double den;
@@ -1435,7 +1461,8 @@ inline void Domain::InFlowBCFresh()
 		for (size_t i=0 ; i<BC.InPart.Size() ; i++)
 		{
 			InCon(Particles[BC.InPart[i]]->x,vel,den,BC);
-			Particles[BC.InPart[i]]->Material  = 1;
+			Particles[BC.InPart[i]]->InOut		= true;
+			Particles[BC.InPart[i]]->Material	= 1;
 			if (norm(BC.inv)>0.0)
 			{
 				Particles[BC.InPart[i]]->v  = vel;
@@ -1458,6 +1485,7 @@ inline void Domain::InFlowBCFresh()
 		for (size_t i=0 ; i<BC.OutPart.Size() ; i++)
 		{
 			OutCon(Particles[BC.OutPart[i]]->x,vel,den,BC);
+			Particles[BC.OutPart[i]]->InOut		= true;
 			if (temp11<vel(0) && BC.MassConservation) vel(0) = temp11;
 			if (norm(BC.outv)>0.0)
 			{
@@ -1471,30 +1499,6 @@ inline void Domain::InFlowBCFresh()
 				Particles[BC.OutPart[i]]->RefDensity = BC.outDensity;
     			Particles[BC.OutPart[i]]->Pressure = EOS(Particles[BC.OutPart[i]]->PresEq, Particles[BC.OutPart[i]]->Cs, Particles[BC.OutPart[i]]->P0,Particles[BC.OutPart[i]]->Density, Particles[BC.OutPart[i]]->RefDensity);
 			}
-		}
-
-}
-
-inline void Domain::InFlowBCReset()
-{
-	if (BC.InPart.Size()>0)
-		#pragma omp parallel for schedule(static) num_threads(Nproc)
-		for (size_t i=0 ; i<BC.InPart.Size() ; i++)
-		{
-				Particles[BC.InPart[i]]->a = 0.0;
-				Particles[BC.InPart[i]]->dDensity  = 0.0;
-				Particles[BC.InPart[i]]->SumDen  = 0.0;
-				Particles[BC.InPart[i]]->ZWab  = 0.0;
-		}
-
-	if (BC.OutPart.Size()>0)
-		#pragma omp parallel for schedule(static) num_threads(Nproc)
-		for (size_t i=0 ; i<BC.OutPart.Size() ; i++)
-		{
-				Particles[BC.OutPart[i]]->a = 0.0;
-				Particles[BC.OutPart[i]]->dDensity  = 0.0;
-				Particles[BC.OutPart[i]]->SumDen  = 0.0;
-				Particles[BC.OutPart[i]]->ZWab  = 0.0;
 		}
 }
 
@@ -1527,6 +1531,12 @@ inline void Domain::InitialChecks()
 {
     if (KernelType==4) Cellfac = 3.0; else Cellfac = 2.0;
     if (Dimension == 2) I(2,2) = 0;
+
+    if (BC.InOutFlow>0 && BC.Periodic[0])
+    {
+    	std::cout << "Periodic BC in the X direction cannot be used with In/Out-Flow BC simultaneously" << std::endl;
+		abort();
+    }
 
     if (Dimension<=1 || Dimension>3)
     {
@@ -1563,7 +1573,7 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
     {
     	StartAcceleration(Gravity);
 
-    	InFlowBCFresh();
+    	if (BC.InOutFlow>0) InFlowBCFresh();
 
     	MainNeighbourSearch();
 
@@ -1574,8 +1584,6 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
     	LastComputeAcceleration();
 
     	GeneralAfter(*this);
-
-    	InFlowBCReset();
 
         // output
         if (Time>=tout)
@@ -1611,8 +1619,7 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
 
        Time += dt;
 
-       if (BC.InOutFlow>0 && !BC.Periodic[0]) InFlowBCLeave(); else CheckParticleLeave ();
-//       if (!(BC.Periodic[0] || BC.Periodic[1] || BC.Periodic[2])) CheckParticleLeave ();
+       if (BC.InOutFlow>0) InFlowBCLeave(); else CheckParticleLeave ();
 
        CellReset();
 
