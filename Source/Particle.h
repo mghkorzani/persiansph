@@ -43,6 +43,7 @@ class Particle
 {
 public:
     // Data
+    bool   	Shepard;		///< Shepard Filter for thr density
     bool   	IsFree;			///< Check the particle if it is free to move or not
     bool   	InOut;			///< Check the particle if it is in-flow or out-flow or not
     bool   	IsSat;			///< Check the particle if it is Saturated or not
@@ -132,9 +133,9 @@ public:
 
     // Methods
     void Move			(double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3_t domainmin,
-    						bool ShepardFilter, size_t Scheme);	///< Update the important quantities of a particle
-    void Move_MVerlet	(double dt,	bool ShepardFilter);	///< Update the important quantities of a particle
-    void Move_Leapfrog	(double dt,	bool ShepardFilter);	///< Update the important quantities of a particle
+    						size_t Scheme);	///< Update the important quantities of a particle
+    void Move_MVerlet	(double dt);	///< Update the important quantities of a particle
+    void Move_Leapfrog	(double dt);	///< Update the important quantities of a particle
     void translate		(double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3_t domainmin);
     void Mat1			(double dt);
     void Mat2MVerlet	(double dt);
@@ -193,6 +194,7 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
     psi = 0.0;
     Sigmay = 0.0;
     NoSlip = false;
+    Shepard = false;
     InOut = false;
     FirstStep = true;
     V = Mass/RefDensity;
@@ -214,12 +216,12 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
 
 }
 
-inline void Particle::Move(double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3_t domainmin, bool ShepardFilter, size_t Scheme)
+inline void Particle::Move(double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3_t domainmin, size_t Scheme)
 {
 	if (Scheme == 0)
-		Move_MVerlet(dt,ShepardFilter);
+		Move_MVerlet(dt);
 	else
-		Move_Leapfrog(dt,ShepardFilter);
+		Move_Leapfrog(dt);
 
 
 	//Periodic BC particle position update
@@ -260,7 +262,7 @@ inline void Particle::Mat1(double dt)
 }
 
 
-inline void Particle::Move_MVerlet (double dt, bool ShepardFilter)
+inline void Particle::Move_MVerlet (double dt)
 {
 	if (FirstStep)
 	{
@@ -272,7 +274,7 @@ inline void Particle::Move_MVerlet (double dt, bool ShepardFilter)
 
 	if (ct == 30)
 	{
-		if (ShepardFilter && !FirstStep)
+		if (Shepard && !FirstStep)
 		{
 			if (!isnan(SumDen/ZWab))
 			{
@@ -484,7 +486,7 @@ inline void Particle::Mat3MVerlet(double dt)
 
 }
 
-inline void Particle::Move_Leapfrog(double dt, bool ShepardFilter)
+inline void Particle::Move_Leapfrog(double dt)
 {
 	if (FirstStep)
 	{

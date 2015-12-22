@@ -164,7 +164,6 @@ public:
 
     double 					XSPH;				///< Velocity correction factor
     double 					InitialDist;		///< Initial distance of particles for calculation of tensile instability
-    bool					Shepard;			///< It is a first order correction for the density which is called Shepard Filter
 
     double					AvgVelocity;		///< Average velocity of the last two column for x periodic constant velocity
 
@@ -236,7 +235,6 @@ inline Domain::Domain ()
     Nproc	= 1;
 
     deltat	= 0.0;
-    Shepard = false;
 
     TRPR = 0.0;
     BLPF = 0.0;
@@ -1260,7 +1258,7 @@ inline void Domain::Move (double dt)
 		if (Particles[i]->IsFree)
 		{
 			if (!Particles[i]->InOut)
-				Particles[i]->Move(dt,DomSize,TRPR,BLPF,Shepard,Scheme);
+				Particles[i]->Move(dt,DomSize,TRPR,BLPF,Scheme);
 			else
 				Particles[i]->x(0) += dt*Particles[i]->v(0);
 		}
@@ -1315,6 +1313,7 @@ inline void Domain::InFlowBCLeave()
 			Particles[a]->ID 		= Particles[AddPart[i].second]->ID;
 			Particles[a]->Mass 		= Particles[AddPart[i].second]->Mass;
 			Particles[a]->h			= Particles[AddPart[i].second]->h;
+			Particles[a]->InOut		= true;
 			BC.InPart.Push(a);
 		}
 		for (size_t i=DelPart.Size() ; i<AddPart.Size() ; i++)
@@ -1328,6 +1327,7 @@ inline void Domain::InFlowBCLeave()
 			Particles[a]->MuRef		= Particles[AddPart[i].second]->MuRef;
 			Particles[a]->Material	= 1;
 			Particles[a]->Cs		= Particles[AddPart[i].second]->Cs;
+			Particles[a]->InOut		= true;
 			BC.InPart.Push(a);
 		}
 		DelPart.Clear();
@@ -1351,7 +1351,8 @@ inline void Domain::InFlowBCLeave()
 			Particles[a]->ID 		= Particles[AddPart[i].second]->ID;
 			Particles[a]->Mass 		= Particles[AddPart[i].second]->Mass;
 			Particles[a]->h			= Particles[AddPart[i].second]->h;
-			BC.InPart.Push(a);
+			Particles[a]->InOut		= true;
+//			BC.InPart.Push(a);
 		}
 		for (size_t i=AddPart.Size() ; i<DelPart.Size() ; i++)
 		{
@@ -1386,7 +1387,10 @@ inline void Domain::InFlowBCFresh()
 					while (temp != -1)
 					{
 						if (Particles[temp]->IsFree && (Particles[temp]->x(0) <= BC.InFlowLoc1) )
+						{
 							BC.InPart.Push(temp);
+							Particles[temp]->InOut = true;
+						}
 						temp = Particles[temp]->LL;
 					}
 				}
@@ -1421,7 +1425,7 @@ inline void Domain::InFlowBCFresh()
 				temp = HOC[q1][q2][q3];
 				while (temp != -1)
 				{
-					if (Particles[temp]->IsFree && (Particles[temp]->x(0) <= BC.InFlowLoc1) )
+					if (Particles[temp]->IsFree && (Particles[temp]->x(0) <= BC.InFlowLoc1) && Particles[temp]->InOut)
 						BC.InPart.Push(temp);
 					temp = Particles[temp]->LL;
 				}
@@ -1446,7 +1450,10 @@ inline void Domain::InFlowBCFresh()
 				while (temp != -1)
 				{
 					if (Particles[temp]->IsFree && (Particles[temp]->x(0) >= BC.OutFlowLoc) )
+					{
 						BC.OutPart.Push(temp);
+						Particles[temp]->InOut = true;
+					}
 					temp = Particles[temp]->LL;
 				}
 			}
@@ -1461,7 +1468,6 @@ inline void Domain::InFlowBCFresh()
 		for (size_t i=0 ; i<BC.InPart.Size() ; i++)
 		{
 			InCon(Particles[BC.InPart[i]]->x,vel,den,BC);
-			Particles[BC.InPart[i]]->InOut		= true;
 			Particles[BC.InPart[i]]->Material	= 1;
 			if (norm(BC.inv)>0.0)
 			{
@@ -1473,7 +1479,7 @@ inline void Domain::InFlowBCFresh()
 				Particles[BC.InPart[i]]->Density  = den;
 				Particles[BC.InPart[i]]->Densityb = den;
 				Particles[BC.InPart[i]]->RefDensity = BC.inDensity;
-    			Particles[BC.InPart[i]]->Pressure = EOS(Particles[i]->PresEq, Particles[BC.InPart[i]]->Cs, Particles[BC.InPart[i]]->P0,Particles[BC.InPart[i]]->Density, Particles[BC.InPart[i]]->RefDensity);
+    			Particles[BC.InPart[i]]->Pressure = EOS(Particles[BC.InPart[i]]->PresEq, Particles[BC.InPart[i]]->Cs, Particles[BC.InPart[i]]->P0,Particles[BC.InPart[i]]->Density, Particles[BC.InPart[i]]->RefDensity);
 			}
 		}
 
@@ -1485,7 +1491,6 @@ inline void Domain::InFlowBCFresh()
 		for (size_t i=0 ; i<BC.OutPart.Size() ; i++)
 		{
 			OutCon(Particles[BC.OutPart[i]]->x,vel,den,BC);
-			Particles[BC.OutPart[i]]->InOut		= true;
 			if (temp11<vel(0) && BC.MassConservation) vel(0) = temp11;
 			if (norm(BC.outv)>0.0)
 			{
@@ -1520,8 +1525,10 @@ inline void Domain::WholeVelocity()
     		}
     		if (Particles[i]->IsFree && BC.allDensity>0.0)
     		{
-				Particles[i]->Density = den;
-				Particles[i]->RefDensity = BC.allDensity;
+				Particles[i]->Density  = den;
+				Particles[i]->Densityb = den;
+				Particles[i]->RefDensity = BC.outDensity;
+    			Particles[i]->Pressure = EOS(Particles[BC.OutPart[i]]->PresEq, Particles[BC.OutPart[i]]->Cs, Particles[BC.OutPart[i]]->P0,Particles[BC.OutPart[i]]->Density, Particles[BC.OutPart[i]]->RefDensity);
     		}
     	}
     }
@@ -1724,7 +1731,7 @@ inline void Domain::PrintInput(char const * FileKey)
     }
     oss << "External Acceleration = "<<Gravity<< " m/s2\n";
     oss << "No of Thread = "<<Nproc<<"\n";
-    oss << "Shepard Filter for Density = " << (Shepard ? "True" : "False") << "\n";
+//    oss << "Shepard Filter for Density = " << (Shepard ? "True" : "False") << "\n";
     oss << "Periodic Boundary Condition X dir= " << (BC.Periodic[0] ? "True" : "False") << "\n";
     oss << "Periodic Boundary Condition Y dir= " << (BC.Periodic[1] ? "True" : "False") << "\n";
     oss << "Periodic Boundary Condition Z dir= " << (BC.Periodic[2] ? "True" : "False") << "\n";
