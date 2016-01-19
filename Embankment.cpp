@@ -39,17 +39,23 @@ void UserDamping(SPH::Domain & domi)
 	}
 	tim = domi.Time;
 
-	if (domi.Time>30.0 && check==0)
+	if (domi.Time>0.0 && check==0)
 	{
 		#pragma omp parallel for schedule (static) num_threads(domi.Nproc)
 		for (size_t i=0; i<domi.Particles.Size(); i++)
-			if (domi.Particles[i]->IsFree && domi.Particles[i]->Material == 3)
-	    		domi.Particles[i]->c = 1.0e3;
+		{
+			if (domi.Particles[i]->ID == 6 && domi.Particles[i]->Material == 3)
+			{
+	    		domi.Particles[i]->c 	= 0.0;
+	    		domi.Particles[i]->phi	= 15.0/180.0*M_PI;
+				domi.Particles[i]->k 	= 10.0;
+			}
+//			if (domi.Particles[i]->ID == 3 && domi.Particles[i]->Material == 3)
+//	    		domi.Particles[i]->c	= 5.0e3;
+		}
 
 		check = 1;
 	}
-
-
 }
 
 void UserInFlowCon(Vec3_t & position, Vec3_t & Vel, double & Den, SPH::Boundary & bdry)
@@ -107,7 +113,7 @@ int main(int argc, char **argv) try
 
 	double xb,yb,h,dx,T;
 
-	dx		= 0.1;
+	dx		= 0.15;
 	h		= dx*1.3;
 	dom.InitialDist	= dx;
 
@@ -115,7 +121,7 @@ int main(int argc, char **argv) try
 	rhoF	= 998.21;
 	Mu		= 1.002e-3;
 	CsF		= 10.0*sqrt(2.0*9.81*4.5);
-	CsF		= 10.0*4.0;
+	CsF		= 10.0*5.0;
 	Tf		= (0.2*h/CsF);
 	DampF 	= 0.04*CsF/h;
 	dom.VisEq= 1;
@@ -160,13 +166,13 @@ int main(int argc, char **argv) try
 	Phi		= 25.0;
 	Psi		= 0.0;
 	k		= 1.0;
-	c		= 10.0e3;
+	c		= 5.0e3;
 	E		= 25.0e6;
 	Nu		= 0.3;
 	K		= E/(3.0*(1.0-2.0*Nu));
 	G		= E/(2.0*(1.0+Nu));
     CsS		= sqrt(E/rhoS);
-    CsS		= 100.0;
+    CsS		= 200.0;
     Ts		= (0.2*h/CsS);
    	DampS	= 0.05*sqrt(E/(rhoS*h*h));
 
@@ -203,6 +209,9 @@ int main(int argc, char **argv) try
 				dom.Particles[a]->ID	= 5;
 			if (yb>( 0.5*(xb+11.0)) && dom.Particles[a]->ID == 3)
 				dom.Particles[a]->ID	= 5;
+			if (yb>=1.0 && yb<=1.5 && xb>0.0 && dom.Particles[a]->ID == 3)
+				dom.Particles[a]->ID	= 6;
+
 		}
 	}
 	dom.DelParticles(5);
@@ -212,7 +221,7 @@ int main(int argc, char **argv) try
     std::cout<<"Ts = "<<Ts<<std::endl;
     std::cout<<"T  = "<<T<<std::endl;
 
-	dom.Solve(/*tf*/50000.0,/*dt*/T,/*dtOut*/0.2,"test06",10000);
+	dom.Solve(/*tf*/50000.0,/*dt*/T,/*dtOut*/0.2,"test06",2000);
 	return 0;
 }
 MECHSYS_CATCH
