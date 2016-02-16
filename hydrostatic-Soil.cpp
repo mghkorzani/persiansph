@@ -57,7 +57,7 @@ int main(int argc, char **argv) try
 	double xb,yb,h,rhoF,rhoS,CsF,CsS;
 	double dx,HF,HS,L,K,G,Nu,E,T1,T2,T;
 
-	HF				= 0.6;
+	HF				= 1.4;
 	HS				= 1.0;
 	L				= 0.4;
 	rhoF			= 998.21;

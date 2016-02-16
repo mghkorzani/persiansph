@@ -35,19 +35,20 @@ int main(int argc, char **argv) try
 	dom.Scheme		= 0;
 	dom.Gravity		= 0.0,-9.81,0.0;
 	dom.BC.Periodic[0] = true;
+	dom.BC.Periodic[1] = true;
 
 	double h,rhoF,rhoS,CsF;
 	double dx,HF,HS,L,T,k,n;
 
-	HF		= 4.0;
-	HS		= 4.0;
+	HF		= 3.0;
+	HS		= 3.0;
 	L		= 0.6;
 	rhoF	= 998.21;
 	rhoS	= 2038.7;
 	dx		= 0.05;
 	h		= dx*1.3;
 	CsF		= 10.0*sqrt(1.0*9.81*HF);
-	k		= 8.6e-3;
+	k		= 5.0e-2;
 	n		= 1.0;
 	T		= (0.1*h/CsF);
 	dom.InitialDist	= dx;
