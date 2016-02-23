@@ -161,6 +161,7 @@ public:
 
     size_t					VisEq;				///< Selecting variable to choose an equation for viscosity
     size_t					KernelType;			///< Selecting variable to choose a kernel
+    size_t					SeepageType;		///< Selecting variable to choose a Seepage method
 
     double 					XSPH;				///< Velocity correction factor
     double 					InitialDist;		///< Initial distance of particles for calculation of tensile instability
@@ -217,6 +218,7 @@ inline Domain::Domain ()
     DomSize	= 0.0,0.0,0.0;
 
     Gravity	= 0.0,0.0,0.0;
+    SeepageType = 0;
 
     Cellfac = 2.0;
 

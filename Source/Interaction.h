@@ -316,73 +316,47 @@ inline void Domain::CalcForce13(Particle * P1, Particle * P2)
     double rij	= norm(xij);
     double K	= Kernel(Dimension, KernelType, rij, h);
 
-    double k,n,Mu,Rho;
-	Vec3_t fs, fs1, fs2 ,v;
+    double k,n,Mu,Rho,d,SF1,SF2;
+	Vec3_t SFt ,v;
 
     if (P1->Material == 3 )
     {
-    	k = P1->k;
-    	n = P1->n;
-    	Mu = P2->Mu;
+    	k	= P1->k;
+    	n	= P1->n;
+    	d	= P1->d;
+    	Mu	= P2->Mu;
     	Rho = P2->RefDensity;
-    	fs1 = Mu*(P2->v-P1->v)/k;
-    	fs2 = 1.75*Rho/(sqrt(150.0*k*n*n*n))*norm((P2->v-P1->v))*(P2->v-P1->v);
-    	fs	= fs1 + fs2;
+
+    	Seepage(SeepageType, n, k, d, Mu, Rho, SF1, SF2);
+    	SFt = SF1*(P2->v-P1->v) + SF2*norm((P2->v-P1->v))*(P2->v-P1->v);
+
     	omp_set_lock(&P1->my_lock);
-    		P1->a += P2->Mass*fs/(di*dj)*K;
+    		P1->a += P2->Mass*SFt/(di*dj)*K;
         omp_unset_lock(&P1->my_lock);
 
         omp_set_lock(&P2->my_lock);
-    		P2->a -= P1->Mass*fs/(di*dj)*K;
+    		P2->a -= P1->Mass*SFt/(di*dj)*K;
         omp_unset_lock(&P2->my_lock);
     }
     else
     {
-    	k = P2->k;
-    	n = P2->n;
-    	Mu = P1->Mu;
+    	k	= P2->k;
+    	n	= P2->n;
+    	d	= P2->d;
+    	Mu	= P1->Mu;
     	Rho = P1->RefDensity;
-    	fs1 = Mu*(P1->v-P2->v)/k;
-    	fs2 = 1.75*Rho/(sqrt(150.0*k*n*n*n))*norm((P1->v-P2->v))*(P1->v-P2->v);
-    	fs	= fs1 + fs2;
+
+    	Seepage(SeepageType, n, k, d, Mu, Rho, SF1, SF2);
+    	SFt = SF1*(P1->v-P2->v) + SF2*norm((P1->v-P2->v))*(P1->v-P2->v);
+
         omp_set_lock(&P1->my_lock);
-    		P1->a -= P2->Mass*fs/(di*dj)*K;
+    		P1->a -= P2->Mass*SFt/(di*dj)*K;
         omp_unset_lock(&P1->my_lock);
 
         omp_set_lock(&P2->my_lock);
-    		P2->a += P1->Mass*fs/(di*dj)*K;
+    		P2->a += P1->Mass*SFt/(di*dj)*K;
         omp_unset_lock(&P2->my_lock);
     }
-
-//    double k,Gammaw;
-//	Vec3_t fs;
-//
-//    if (P1->Material == 3 )
-//    {
-//    	k = P1->k;
-//    	Gammaw = P2->RefDensity * 9.81;
-//    	fs = Gammaw*(P2->v-P1->v)/k;
-//    	omp_set_lock(&P1->my_lock);
-//    		P1->a += P2->Mass*fs/(di*dj)*K;
-//        omp_unset_lock(&P1->my_lock);
-//
-//        omp_set_lock(&P2->my_lock);
-//    		P2->a -= P1->Mass*fs/(di*dj)*K;
-//        omp_unset_lock(&P2->my_lock);
-//    }
-//    else
-//    {
-//    	k = P2->k;
-//    	Gammaw = P1->RefDensity * 9.81;
-//    	fs = Gammaw*(P1->v-P2->v)/k;
-//        omp_set_lock(&P1->my_lock);
-//    		P1->a -= P2->Mass*fs/(di*dj)*K;
-//        omp_unset_lock(&P1->my_lock);
-//
-//        omp_set_lock(&P2->my_lock);
-//    		P2->a += P1->Mass*fs/(di*dj)*K;
-//        omp_unset_lock(&P2->my_lock);
-//    }
 }
 
 }; // namespace SPH

@@ -110,8 +110,9 @@ public:
     double	phi;			///< Friction angel
     double	psi;			///< Dilation angel
     double	Sigmay;			///< Tensile yield stress
-    double	n;
-    double	k;
+    double	n;				///< Prosity
+    double	k;				///< Permeability
+    double  d;				///< effective particle size
 
     double 	h;				///< Smoothing length of the particle
 
@@ -192,6 +193,7 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
     c = 0.0;
     phi = 0.0;
     psi = 0.0;
+    d =0.0;
     Sigmay = 0.0;
     NoSlip = false;
     Shepard = false;

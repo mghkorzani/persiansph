@@ -42,7 +42,7 @@ void UserDamping(SPH::Domain & domi)
 void UserInFlowCon(Vec3_t & position, Vec3_t & Vel, double & Den, SPH::Boundary & bdry)
 {
 	Vel = u,0.0,0.0;
-	Den = 998.21*((1+9.81*(0.35-position(1))/(Cs*Cs)));
+	Den = 998.21*pow((1+7.0*9.81*(0.4-position(1))/(Cs*Cs)),(1.0/7.0));
 }
 
 int main(int argc, char **argv) try
@@ -51,6 +51,7 @@ int main(int argc, char **argv) try
 	dom.Dimension	= 2;
 
 	dom.KernelType	= 0;
+	dom.SeepageType = 2;
 	dom.Nproc		= 24;
 
 //	dom.XSPH		= 0.5;
@@ -72,22 +73,22 @@ int main(int argc, char **argv) try
 	dom.InitialDist	= dx;
 
 	double rhoF,Mu,CsF,Tf;
-	rhoF	= 998.21;
-	Mu		= 1.002e-3;
-	CsF		= 10.0*6.0;
+	rhoF	= 998.23;
+	Mu		= 1.0e-3;
+	CsF		= 10.0*4.0;
 	Tf		= (0.25*h/CsF);
 	dom.VisEq= 1;
 
 	Cs = CsF;
 
 
-	dom.AddBoxLength(1 ,Vec3_t ( -2.6 - 4.0*h , -3.0*dx , 0.0 ), 5.2 + 4.0*h + dx/10.0 , 1.0 + 3.0*dx + dx/10.0  ,  0 , dx/2.0 ,rhoF, h,1 , 0 , false,false);
+	dom.AddBoxLength(1 ,Vec3_t ( -2.6 - 4.0*h , -3.0*dx , 0.0 ), 6.6 + 4.0*h + dx/10.0 , 1.0 + 3.0*dx + dx/10.0  ,  0 , dx/2.0 ,rhoF, h,1 , 0 , false,false);
 
 	for (size_t a=0; a<dom.Particles.Size(); a++)
 	{
-		dom.Particles[a]->PresEq	= 0;
+		dom.Particles[a]->PresEq	= 1;
 		dom.Particles[a]->Alpha		= 0.05;
-		dom.Particles[a]->Beta		= 0.05;
+//		dom.Particles[a]->Beta		= 0.05;
 		dom.Particles[a]->Mu		= Mu;
 		dom.Particles[a]->MuRef		= Mu;
 		dom.Particles[a]->Material	= 1;
@@ -98,21 +99,23 @@ int main(int argc, char **argv) try
 		if (yb<0.0)
 		{
 			dom.Particles[a]->ID	= 2;
-			dom.Particles[a]->NoSlip= false;
+			dom.Particles[a]->NoSlip= true;
 			dom.Particles[a]->IsFree= false;
 		}
-		if (yb>0.1 && xb<=-2.6)
+		if (yb>0.1 && xb<=-2.5)
 		{
 			dom.Particles[a]->ID	= 2;
-			dom.Particles[a]->NoSlip= false;
+			dom.Particles[a]->NoSlip= true;
 			dom.Particles[a]->IsFree= false;
 		}
-		if (xb>-2.6 && yb>0.3 && dom.Particles[a]->ID == 1)
+		if (xb>-2.6 && yb>0.1 && dom.Particles[a]->ID == 1)
 			dom.Particles[a]->ID	= 5;
-		if (yb>(-(1.0/1.5)*(xb-1.6)) && dom.Particles[a]->ID == 1)
+		if (xb>-1.6 && dom.Particles[a]->ID == 1)
 			dom.Particles[a]->ID	= 5;
+//		if (yb>(-(1.0/1.5)*(xb-1.6)) && dom.Particles[a]->ID == 1)
+//			dom.Particles[a]->ID	= 5;
 
-		if (dom.Particles[a]->ID==1) dom.Particles[a]->Density  = rhoF*((1+9.81*(0.3-dom.Particles[a]->x(1))/(CsF*CsF)));
+		if (dom.Particles[a]->ID==1) dom.Particles[a]->Density  = rhoF*pow((1+7.0*9.81*(0.1-dom.Particles[a]->x(1))/(CsF*CsF)),(1.0/7.0));
 	}
 
 	double K,G,Nu,E,rhoS,CsS,Phi,c,Psi,k,Ts,n,de;
@@ -120,10 +123,10 @@ int main(int argc, char **argv) try
 	rhoS	= 2038.7;
 	Phi		= 25.0;
 	Psi		= 0.0;
-	de		= 0.03504;
+	de		= 0.03409;
 	n		= 0.41;
 	// Pearmeability
-	k		= n*n*n*de*de/(150*(1-n)*(1-n));
+	k		= n*n*n*de*de/(75.0*(1-n)*(1-n));
 	std::cout<<k<<std::endl;
 	c		= 5.0e3;
 	E		= 25.0e6;
@@ -135,12 +138,13 @@ int main(int argc, char **argv) try
     Ts		= (0.2*h/CsS);
    	DampS	= 0.05*sqrt(E/(rhoS*h*h));
 
-	dom.AddBoxLength(3 ,Vec3_t ( -2.6 , -3.0*dx , 0.0 ), 5.2 + dx/10.0 , 1.0 + 3.0*dx + dx/10.0  ,  0 , dx/2.0 ,rhoS, h,1 , 0 , false,false);
+	dom.AddBoxLength(3 ,Vec3_t ( -2.6  - 4.0*h , -3.0*dx , 0.0 ), 5.2 + dx/10.0 , 1.0 + 3.0*dx + dx/10.0  ,  0 , dx/2.0 ,rhoS, h,1 , 0 , false,false);
 
 	for (size_t a=0; a<dom.Particles.Size(); a++)
 	{
 		if (dom.Particles[a]->ID==3)
 		{
+			dom.Particles[a]->d			= de;
 			dom.Particles[a]->n			= n;
 			dom.Particles[a]->k			= k;
 			dom.Particles[a]->Material	= 3;
@@ -172,6 +176,8 @@ int main(int argc, char **argv) try
 			if (yb>(-(1.0/1.5)*(xb-1.6)) && dom.Particles[a]->ID == 3)
 				dom.Particles[a]->ID	= 5;
 			if (yb>( (1.0/1.5)*(xb+1.6)) && dom.Particles[a]->ID == 3)
+				dom.Particles[a]->ID	= 5;
+			if (dom.Particles[a]->ID == 4)
 				dom.Particles[a]->ID	= 5;
 		}
 	}
