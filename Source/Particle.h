@@ -43,7 +43,8 @@ class Particle
 {
 public:
     // Data
-    bool   	Shepard;		///< Shepard Filter for thr density
+    bool   	Shepard;		///< Shepard Filter for the density
+    size_t	ShepardCounter;	///< Count number of contributing particles
     bool   	IsFree;			///< Check the particle if it is free to move or not
     bool   	InOut;			///< Check the particle if it is in-flow or out-flow or not
     bool   	IsSat;			///< Check the particle if it is Saturated or not
@@ -203,6 +204,7 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
     RhoF = 0.0;
     IsSat = false;
     SatCheck = false;
+    ShepardCounter = 0;
 
     set_to_zero(Strainb);
     set_to_zero(Strain);
@@ -276,15 +278,19 @@ inline void Particle::Move_MVerlet (double dt)
 
 	if (ct == 30)
 	{
-		if (Shepard && !FirstStep)
+		if (Shepard)
 		{
-			if (!isnan(SumDen/ZWab))
+			if (ShepardCounter>2)
 			{
 				Densityb	= Density;
 				Density		= SumDen/ZWab;
 			}
 			else
+			{
 				Densityb	= Density;
+				Density		+=dt*dDensity;
+			}
+			ShepardCounter = 0;
 		}
 		else
 		{

@@ -75,14 +75,14 @@ int main(int argc, char **argv) try
 	double rhoF,Mu,CsF,Tf;
 	rhoF	= 998.23;
 	Mu		= 1.0e-3;
-	CsF		= 10.0*4.0;
+	CsF		= 10.0*2.0;
 	Tf		= (0.25*h/CsF);
-	dom.VisEq= 1;
+	dom.VisEq= 0;
 
 	Cs = CsF;
 
 
-	dom.AddBoxLength(1 ,Vec3_t ( -2.6 - 4.0*h , -3.0*dx , 0.0 ), 6.6 + 4.0*h + dx/10.0 , 1.0 + 3.0*dx + dx/10.0  ,  0 , dx/2.0 ,rhoF, h,1 , 0 , false,false);
+	dom.AddBoxLength(1 ,Vec3_t ( -2.6 - 4.0*h , -3.0*dx , 0.0 ), 5.2 + 4.0*h + dx/10.0 , 1.0 + 3.0*dx + dx/10.0  ,  0 , dx/2.0 ,rhoF, h,1 , 0 , false,false);
 
 	for (size_t a=0; a<dom.Particles.Size(); a++)
 	{
@@ -93,19 +93,19 @@ int main(int argc, char **argv) try
 		dom.Particles[a]->MuRef		= Mu;
 		dom.Particles[a]->Material	= 1;
 		dom.Particles[a]->Cs		= CsF;
-//		dom.Particles[a]->Shepard	= true;
+		dom.Particles[a]->Shepard	= true;
 		xb=dom.Particles[a]->x(0);
 		yb=dom.Particles[a]->x(1);
 		if (yb<0.0)
 		{
 			dom.Particles[a]->ID	= 2;
-			dom.Particles[a]->NoSlip= true;
+			dom.Particles[a]->NoSlip= false;
 			dom.Particles[a]->IsFree= false;
 		}
-		if (yb>0.1 && xb<=-2.5)
+		if (yb>0.1 && xb<=-2.6)
 		{
 			dom.Particles[a]->ID	= 2;
-			dom.Particles[a]->NoSlip= true;
+			dom.Particles[a]->NoSlip= false;
 			dom.Particles[a]->IsFree= false;
 		}
 		if (xb>-2.6 && yb>0.1 && dom.Particles[a]->ID == 1)
@@ -123,7 +123,7 @@ int main(int argc, char **argv) try
 	rhoS	= 2038.7;
 	Phi		= 25.0;
 	Psi		= 0.0;
-	de		= 0.03409;
+	de		= 0.03408;
 	n		= 0.41;
 	// Pearmeability
 	k		= n*n*n*de*de/(75.0*(1-n)*(1-n));
@@ -177,8 +177,8 @@ int main(int argc, char **argv) try
 				dom.Particles[a]->ID	= 5;
 			if (yb>( (1.0/1.5)*(xb+1.6)) && dom.Particles[a]->ID == 3)
 				dom.Particles[a]->ID	= 5;
-			if (dom.Particles[a]->ID == 4)
-				dom.Particles[a]->ID	= 5;
+//			if (dom.Particles[a]->ID == 4)
+//				dom.Particles[a]->ID	= 5;
 		}
 	}
 	dom.DelParticles(5);
