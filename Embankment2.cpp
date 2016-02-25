@@ -52,7 +52,9 @@ int main(int argc, char **argv) try
 
 	dom.KernelType	= 0;
 	dom.SeepageType = 2;
+	dom.VisEq		= 0;
 	dom.Nproc		= 24;
+	dom.TimestepConstrain1 = false;
 
 //	dom.XSPH		= 0.5;
 	dom.Scheme		= 0;
@@ -77,7 +79,6 @@ int main(int argc, char **argv) try
 	Mu		= 1.0e-3;
 	CsF		= 10.0*2.0;
 	Tf		= (0.25*h/CsF);
-	dom.VisEq= 0;
 
 	Cs = CsF;
 
@@ -108,14 +109,14 @@ int main(int argc, char **argv) try
 			dom.Particles[a]->NoSlip= false;
 			dom.Particles[a]->IsFree= false;
 		}
-		if (xb>-2.6 && yb>0.1 && dom.Particles[a]->ID == 1)
+		if (xb>-2.6 && yb>0.3 && dom.Particles[a]->ID == 1)
 			dom.Particles[a]->ID	= 5;
-		if (xb>-1.6 && dom.Particles[a]->ID == 1)
-			dom.Particles[a]->ID	= 5;
+//		if (xb>-1.6 && dom.Particles[a]->ID == 1)
+//			dom.Particles[a]->ID	= 5;
 //		if (yb>(-(1.0/1.5)*(xb-1.6)) && dom.Particles[a]->ID == 1)
 //			dom.Particles[a]->ID	= 5;
 
-		if (dom.Particles[a]->ID==1) dom.Particles[a]->Density  = rhoF*pow((1+7.0*9.81*(0.1-dom.Particles[a]->x(1))/(CsF*CsF)),(1.0/7.0));
+		if (dom.Particles[a]->ID==1) dom.Particles[a]->Density  = rhoF*pow((1+7.0*9.81*(0.3-dom.Particles[a]->x(1))/(CsF*CsF)),(1.0/7.0));
 	}
 
 	double K,G,Nu,E,rhoS,CsS,Phi,c,Psi,k,Ts,n,de;
@@ -123,7 +124,7 @@ int main(int argc, char **argv) try
 	rhoS	= 2038.7;
 	Phi		= 25.0;
 	Psi		= 0.0;
-	de		= 0.03408;
+	de		= 0.026;
 	n		= 0.41;
 	// Pearmeability
 	k		= n*n*n*de*de/(75.0*(1-n)*(1-n));

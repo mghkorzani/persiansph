@@ -179,6 +179,7 @@ public:
     PtDom					GeneralBefore;		///< Pointer to a function: to modify particles properties before CalcForce function
     PtDom					GeneralAfter;		///< Pointer to a function: to modify particles properties after CalcForce function
     size_t					Scheme;				///< Integration scheme: 0 = Modified Verlet, 1 = Leapfrog
+    bool					TimestepConstrain1; ///< Acceleration check for timestep size
 
     Array<Array<std::pair<size_t,size_t> > >	Pairs;
     Array< size_t > 							FixedParticles;
@@ -250,6 +251,7 @@ inline Domain::Domain ()
     DomMax = -100000000000.0;
     DomMin = 100000000000.0;
     I = OrthoSys::I;
+    TimestepConstrain1 = true;
 }
 
 inline Domain::~Domain ()
@@ -1243,14 +1245,17 @@ inline void Domain::LastComputeAcceleration ()
 	Pairs.Clear();
 //	FixedPairs.Clear();
 
-	//Min time step check based on the acceleration
-	#pragma omp parallel for schedule (static) num_threads(Nproc)
-	for (size_t i=0; i<Particles.Size(); i++)
-		if (deltat > (0.25*sqrt(Particles[i]->h/norm(Particles[i]->a))) )
-		{
-			std::cout << "Please decrease the time step to"<< (0.25*sqrt(Particles[i]->h/norm(Particles[i]->a))) << std::endl;
-			abort();
-		}
+//	//Min time step check based on the acceleration
+	if (TimestepConstrain1)
+	{
+		#pragma omp parallel for schedule (static) num_threads(Nproc)
+		for (size_t i=0; i<Particles.Size(); i++)
+			if (deltat > (0.25*sqrt(Particles[i]->h/norm(Particles[i]->a))) )
+			{
+				std::cout << "Please decrease the time step to"<< (0.25*sqrt(Particles[i]->h/norm(Particles[i]->a))) << std::endl;
+				abort();
+			}
+	}
 }
 
 inline void Domain::Move (double dt)

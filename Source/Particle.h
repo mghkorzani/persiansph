@@ -45,6 +45,8 @@ public:
     // Data
     bool   	Shepard;		///< Shepard Filter for the density
     size_t	ShepardCounter;	///< Count number of contributing particles
+    size_t	ShepardStep;
+    size_t	ShepardNeighbourNo;
     bool   	IsFree;			///< Check the particle if it is free to move or not
     bool   	InOut;			///< Check the particle if it is in-flow or out-flow or not
     bool   	IsSat;			///< Check the particle if it is Saturated or not
@@ -204,7 +206,10 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
     RhoF = 0.0;
     IsSat = false;
     SatCheck = false;
+    ShepardNeighbourNo = 0;
+    ShepardStep = 40;
     ShepardCounter = 0;
+
 
     set_to_zero(Strainb);
     set_to_zero(Strain);
@@ -278,9 +283,9 @@ inline void Particle::Move_MVerlet (double dt)
 
 	if (ct == 30)
 	{
-		if (Shepard)
+		if (Shepard && ShepardCounter == ShepardStep)
 		{
-			if (ShepardCounter>2)
+			if (ShepardNeighbourNo>=3)
 			{
 				Densityb	= Density;
 				Density		= SumDen/ZWab;
@@ -290,7 +295,7 @@ inline void Particle::Move_MVerlet (double dt)
 				Densityb	= Density;
 				Density		+=dt*dDensity;
 			}
-			ShepardCounter = 0;
+			ShepardNeighbourNo = 0;
 		}
 		else
 		{
@@ -303,9 +308,27 @@ inline void Particle::Move_MVerlet (double dt)
 	}
 	else
 	{
-		double dens	= Density;
-		Density		= Densityb + 2.0*dt*dDensity;
-		Densityb	= dens;
+		if (Shepard && ShepardCounter == ShepardStep)
+		{
+			if (ShepardNeighbourNo>=3)
+			{
+				Densityb	= Density;
+				Density		= SumDen/ZWab;
+			}
+			else
+			{
+				double dens	= Density;
+				Density		= Densityb + 2.0*dt*dDensity;
+				Densityb	= dens;
+			}
+			ShepardNeighbourNo = 0;
+		}
+		else
+		{
+			double dens	= Density;
+			Density		= Densityb + 2.0*dt*dDensity;
+			Densityb	= dens;
+		}
 
 		Vec3_t temp;
 		temp	= v;
@@ -332,6 +355,7 @@ inline void Particle::Move_MVerlet (double dt)
 	    break;
     }
 	if (ct == 30) ct = 0; else ct++;
+	if (ShepardCounter == ShepardStep) ShepardCounter = 0; else ShepardCounter++;
 }
 
 inline void Particle::Mat2MVerlet(double dt)

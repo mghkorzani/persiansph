@@ -135,11 +135,11 @@ inline void Domain::CalcForce11(Particle * P1, Particle * P2)
 		P1->a   += -mj * ( P1->Pressure/(di*di) + P2->Pressure/(dj*dj) + PIij + TIij ) * GK*xij + mj*VI;
 	//    P1->Vis +=  mj * VI;
 		if (P1->IsFree) P1->StrainRate = P1->StrainRate + mj/dj*StrainRate; else P1->StrainRate = 0.0;
-		if (P1->ct==30 && P1->Shepard && (P1->IsFree*P2->IsFree))
+		if (P1->ShepardCounter == P1->ShepardStep && P1->Shepard && (P1->IsFree*P2->IsFree))
 		{
 			P1->SumDen += mj*    K;
 			P1->ZWab   += mj/dj* K;
-			P1->ShepardCounter++;
+			P1->ShepardNeighbourNo++;
 		}
 		P1->dDensity += di * (mj/dj) * dot( vij , GK*xij );
 		omp_unset_lock(&P1->my_lock);
@@ -149,11 +149,11 @@ inline void Domain::CalcForce11(Particle * P1, Particle * P2)
 		P2->a   -= -mi * ( P1->Pressure/(di*di) + P2->Pressure/(dj*dj) + PIij + TIij ) * GK*xij + mi*VI;
 	//    P2->Vis -=  mi * VI;
 		if (P2->IsFree) P2->StrainRate = P2->StrainRate + mi/di*StrainRate; else P2->StrainRate = 0.0;
-		if (P2->ct==30 && P2->Shepard && (P1->IsFree*P2->IsFree))
+		if (P2->ShepardCounter == P2->ShepardStep && P2->Shepard && (P1->IsFree*P2->IsFree))
 		{
 			P2->SumDen += mi*    K;
 			P2->ZWab   += mi/di* K;
-			P2->ShepardCounter++;
+			P2->ShepardNeighbourNo++;
 		}
 		P2->dDensity += dj * (mi/di) * dot( -vij , -GK*xij );
 		omp_unset_lock(&P2->my_lock);
@@ -282,11 +282,11 @@ inline void Domain::CalcForce2233(Particle * P1, Particle * P2)
 		omp_set_lock(&P1->my_lock);
 			P1->a += temp;
 			P1->dDensity+= di * (mj/dj) * dot( vij , GK*xij );
-			if (P1->ct==30 && P1->Shepard && (P1->IsFree*P2->IsFree))
+			if (P1->ShepardCounter == P1->ShepardStep && P1->Shepard && (P1->IsFree*P2->IsFree))
 			{
 				P1->SumDen += mj*    K;
 				P1->ZWab   += mj/dj* K;
-				P1->ShepardCounter++;
+				P1->ShepardNeighbourNo++;
 			}
 			if (P1->IsFree)
 			{
@@ -300,11 +300,11 @@ inline void Domain::CalcForce2233(Particle * P1, Particle * P2)
 		omp_set_lock(&P2->my_lock);
 			P2->a -= temp;
 			P2->dDensity+= dj * (mi/di) * dot( -vij , -GK*xij );
-			if (P2->ct==30 && P2->Shepard && (P1->IsFree*P2->IsFree))
+			if (P2->ShepardCounter == P2->ShepardStep && P2->Shepard && (P1->IsFree*P2->IsFree))
 			{
 				P2->SumDen += mi*    K;
 				P2->ZWab   += mi/di* K;
-				P2->ShepardCounter++;
+				P2->ShepardNeighbourNo++;
 			}
 			if (P2->IsFree)
 			{
