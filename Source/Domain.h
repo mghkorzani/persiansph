@@ -1267,7 +1267,7 @@ inline void Domain::Move (double dt)
 		if (Particles[i]->IsFree)
 		{
 			if (!Particles[i]->InOut)
-				Particles[i]->Move(dt,DomSize,TRPR,BLPF,Scheme);
+				Particles[i]->Move(dt,DomSize,TRPR,BLPF,Scheme,I);
 			else
 				Particles[i]->x(0) += dt*Particles[i]->v(0);
 		}

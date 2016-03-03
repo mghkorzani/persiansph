@@ -137,15 +137,15 @@ public:
 
     // Methods
     void Move			(double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3_t domainmin,
-    						size_t Scheme);	///< Update the important quantities of a particle
-    void Move_MVerlet	(double dt);	///< Update the important quantities of a particle
-    void Move_Leapfrog	(double dt);	///< Update the important quantities of a particle
+    						size_t Scheme, Mat3_t I);	///< Update the important quantities of a particle
+    void Move_MVerlet	(Mat3_t I, double dt);	///< Update the important quantities of a particle
+    void Move_Leapfrog	(Mat3_t I, double dt);	///< Update the important quantities of a particle
     void translate		(double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3_t domainmin);
     void Mat1			(double dt);
     void Mat2MVerlet	(double dt);
-    void Mat3MVerlet	(double dt);
+    void Mat3MVerlet	(Mat3_t I, double dt);
     void Mat2Leapfrog	(double dt);
-    void Mat3Leapfrog	(double dt);
+    void Mat3Leapfrog	(Mat3_t I, double dt);
 };
 
 inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double Mass0, double Density0, double h0,bool Fixed)
@@ -225,12 +225,12 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
 
 }
 
-inline void Particle::Move(double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3_t domainmin, size_t Scheme)
+inline void Particle::Move(double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3_t domainmin, size_t Scheme, Mat3_t I)
 {
 	if (Scheme == 0)
-		Move_MVerlet(dt);
+		Move_MVerlet(I, dt);
 	else
-		Move_Leapfrog(dt);
+		Move_Leapfrog(I, dt);
 
 
 	//Periodic BC particle position update
@@ -271,7 +271,7 @@ inline void Particle::Mat1(double dt)
 }
 
 
-inline void Particle::Move_MVerlet (double dt)
+inline void Particle::Move_MVerlet (Mat3_t I, double dt)
 {
 	if (FirstStep)
 	{
@@ -346,7 +346,7 @@ inline void Particle::Move_MVerlet (double dt)
     	Mat2MVerlet(dt);
     	break;
     case 3:
-    	Mat3MVerlet(dt);
+    	Mat3MVerlet(I,dt);
     	break;
    default:
 	   	std::cout << "Material Type No is out of range. Please correct it and run again" << std::endl;
@@ -404,7 +404,7 @@ inline void Particle::Mat2MVerlet(double dt)
 	}
 }
 
-inline void Particle::Mat3MVerlet(double dt)
+inline void Particle::Mat3MVerlet(Mat3_t I, double dt)
 {
 	Mat3_t RotationRateT, Stress, SRT,RS;
 	double I1,J2,alpha,k,I1strain;
@@ -471,11 +471,11 @@ inline void Particle::Mat3MVerlet(double dt)
 				{
 				case 2:
 					dLanda	= 1.0/(9.0*alpha*alpha*K+G)*( (3.0*alpha*K*I1strain) + (G/sqrt(J2))*sum );
-					Plastic	= 3.0*alpha*K*OrthoSys::I + G/sqrt(J2)*ShearStress;
+					Plastic	= 3.0*alpha*K*I + G/sqrt(J2)*ShearStress;
 					break;
 				case 3:
 					dLanda	= 1.0/(9.0*alpha*K*3.0*sin(psi)+G)*( (3.0*alpha*K*I1strain) + (G/sqrt(J2))*sum );
-					Plastic	= 3.0*3.0*sin(psi)*K*OrthoSys::I + G/sqrt(J2)*ShearStress;
+					Plastic	= 3.0*3.0*sin(psi)*K*I + G/sqrt(J2)*ShearStress;
 					break;
 				default:
 					std::cout << "Failure Type No is out of range. Please correct it and run again" << std::endl;
@@ -520,7 +520,7 @@ inline void Particle::Mat3MVerlet(double dt)
 
 }
 
-inline void Particle::Move_Leapfrog(double dt)
+inline void Particle::Move_Leapfrog(Mat3_t I, double dt)
 {
 	if (FirstStep)
 	{
@@ -543,7 +543,7 @@ inline void Particle::Move_Leapfrog(double dt)
     	Mat2Leapfrog(dt);
     	break;
     case 3:
-    	Mat3Leapfrog(dt);
+    	Mat3Leapfrog(I,dt);
     	break;
    default:
 	   	std::cout << "Material Type No is out of range. Please correct it and run again" << std::endl;
@@ -600,7 +600,7 @@ inline void Particle::Mat2Leapfrog(double dt)
 	}
 }
 
-inline void Particle::Mat3Leapfrog(double dt)
+inline void Particle::Mat3Leapfrog(Mat3_t I, double dt)
 {
 	Mat3_t RotationRateT, Stress, SRT,RS;
 	double I1,J2,alpha,k,I1strain;
@@ -666,11 +666,11 @@ inline void Particle::Mat3Leapfrog(double dt)
 				{
 				case 2:
 					dLanda	= 1.0/(9.0*alpha*alpha*K+G)*( (3.0*alpha*K*I1strain) + (G/sqrt(J2))*sum );
-					Plastic	= 3.0*alpha*K*OrthoSys::I + G/sqrt(J2)*ShearStress;
+					Plastic	= 3.0*alpha*K*I + G/sqrt(J2)*ShearStress;
 					break;
 				case 3:
 					dLanda	= 1.0/(9.0*alpha*K*3.0*sin(psi)+G)*( (3.0*alpha*K*I1strain) + (G/sqrt(J2))*sum );
-					Plastic	= 3.0*3.0*sin(psi)*K*OrthoSys::I + G/sqrt(J2)*ShearStress;
+					Plastic	= 3.0*3.0*sin(psi)*K*I + G/sqrt(J2)*ShearStress;
 					break;
 				default:
 					std::cout << "Failure Type No is out of range. Please correct it and run again" << std::endl;
