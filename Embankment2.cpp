@@ -120,8 +120,8 @@ int main(int argc, char **argv) try
 
 	double K,G,Nu,E,rhoS,CsS,Phi,c,Psi,k,Ts,n,de,Rho;
 
-	rhoS	= 1910.0;
-   	Rho		= rhoF;
+	rhoS	= 1490.0;
+   	Rho		= 578.0;
 	Phi		= 42.5;
 	Psi		= 0.0;
 	de		= 0.0255;
@@ -129,7 +129,7 @@ int main(int argc, char **argv) try
 	// Pearmeability
 	k		= n*n*n*de*de/(75.0*(1-n)*(1-n));
 	c		= 1.0e3;
-	E		= 30.0e6;
+	E		= 25.0e6;
 	Nu		= 0.3;
 	K		= E/(3.0*(1.0-2.0*Nu));
 	G		= E/(2.0*(1.0+Nu));
