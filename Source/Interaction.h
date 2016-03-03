@@ -328,8 +328,9 @@ inline void Domain::CalcForce13(Particle * P1, Particle * P2)
 
     double rij	= norm(xij);
 
-    if ((rij/h)<=Cellfac)
+    if ((rij/h)<=Cellfac && (P1->ID*P2->ID != Excemption))
     {
+//    	if (P1->ID*P2->ID == Excemption) std::cout<<"yes"<<std::endl;
 		double K	= Kernel(Dimension, KernelType, rij, h);
 		double di = P1->Density;
 		double dj = P2->Density;

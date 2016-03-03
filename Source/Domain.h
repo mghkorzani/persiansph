@@ -185,6 +185,7 @@ public:
     Array< size_t > 							FixedParticles;
     Array<std::pair<size_t,size_t> >			FixedPairs;
     Mat3_t I;
+    int						Excemption;
 };
 /////////////////////////////////////////////////////////////////////////////////////////// Implementation /////
 void General(Domain & dom)
@@ -212,6 +213,7 @@ void AllFlowCon(Vec3_t & position, Vec3_t & Vel, double & Den, Boundary & bdry)
 // Constructor
 inline Domain::Domain ()
 {
+    Excemption = 0;
     Time    = 0.0;
     AutoSaveInt = 0.0;
 
@@ -1582,6 +1584,7 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
     ListGenerate();
     PrintInput(TheFileKey);
     WholeVelocity();
+//    std::cout<< Excemption<<std::endl;
 
     while (Time<tf && idx_out<=maxidx)
     {

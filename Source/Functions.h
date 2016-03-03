@@ -372,7 +372,7 @@ inline void Seepage(size_t ST,double n, double k, double d, double mu,  double r
     case 2:
     	// Den Adel
     	SF1 = mu/k;
-    	SF2 = 0.9*rho/(n*n*d);
+    	SF2 = 0.4*rho/(n*n*d);
     	break;
    default:
 	   	std::cout << "Seepage Type No is out of range. Please correct it and run again" << std::endl;
