@@ -53,7 +53,7 @@ int main(int argc, char **argv) try
 	dom.KernelType	= 0;
 	dom.SeepageType = 2;
 	dom.VisEq		= 0;
-	dom.Nproc		= 24;
+	dom.Nproc		= 8;
 	dom.Excemption	= 4;
 //	dom.TimestepConstrain1 = false;
 
@@ -128,7 +128,7 @@ int main(int argc, char **argv) try
 	n		= 0.41;
 	// Pearmeability
 	k		= n*n*n*de*de/(75.0*(1-n)*(1-n));
-	c		= 1.0e3;
+	c		= 0.75e3;
 	E		= 25.0e6;
 	Nu		= 0.3;
 	K		= E/(3.0*(1.0-2.0*Nu));
