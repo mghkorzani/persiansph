@@ -122,13 +122,13 @@ int main(int argc, char **argv) try
 
 	rhoS	= 1490.0;
    	Rho		= 578.0;
-	Phi		= 42.5;
+	Phi		= 37.0;
 	Psi		= 0.0;
 	de		= 0.0255;
 	n		= 0.41;
 	// Pearmeability
 	k		= n*n*n*de*de/(75.0*(1-n)*(1-n));
-	c		= 0.75e3;
+	c		= 0.5e3;
 	E		= 25.0e6;
 	Nu		= 0.3;
 	K		= E/(3.0*(1.0-2.0*Nu));
@@ -137,7 +137,10 @@ int main(int argc, char **argv) try
 //    CsS		= 120.0;
     Ts		= (0.2*h/CsS);
     std::cout<<CsS<<std::endl;
-   	DampS	= 0.05*sqrt(E/(rhoS*h*h));
+    std::cout<<c<<std::endl;
+    std::cout<<Phi<<std::endl;
+    std::cout<<Psi<<std::endl;
+  	DampS	= 0.05*sqrt(E/(rhoS*h*h));
 
 	dom.AddBoxLength(3 ,Vec3_t ( -2.0 , -3.0*dx , 0.0 ), 4.0 + dx/10.0 , 1.0 + 3.0*dx + dx/10.0  ,  0 , dx/2.0 ,rhoS, h,1 , 0 , false,false);
 
