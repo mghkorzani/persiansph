@@ -159,8 +159,8 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
     Cs		= 0.0;
     P0		= 0.0;
     PresEq	= 0;
-    Alpha = 0.0;
-    Beta = 0.0;
+    Alpha	= 0.0;
+    Beta	= 0.0;
 
     va = 0.0;
     vb = 0.0;

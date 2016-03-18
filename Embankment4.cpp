@@ -29,7 +29,8 @@ double DampF,DampS,Cs,u;
 double t = 2.0;
 double tim = 0.0;
 Array< size_t > Forced;
-double tout = t,dtout=0.5;
+double tforce = 50.0;
+double tout = tforce,dtout=0.5;
 Vec3_t force,loc;
 
 void UserDamping(SPH::Domain & domi)
@@ -41,35 +42,42 @@ void UserDamping(SPH::Domain & domi)
 			if (domi.Particles[i]->IsFree && domi.Particles[i]->Material == 3) domi.Particles[i]->a -= DampS * domi.Particles[i]->v;
 
 		}
-//	if (domi.Time>t)
-//	{
-//        if (domi.Time>=tout)
-//        {
-//
-//        	force = 0.0;
-//        	loc = 0.0;
-//    		for (size_t i=0; i<Forced.Size(); i++)
-//    		{
-//    			force += domi.Particles[Forced[i]]->a*domi.Particles[Forced[i]]->Mass;
-//    			loc += domi.Particles[Forced[i]]->x;
-//    		}
-//    		std::fstream Force ("Force.txt", std::ios::out | std::ios::app );
-//    		std::fstream X ("Loc.txt", std::ios::out | std::ios::app );
-//    		Force << force(1) <<std::endl;
-//    		X << (loc(1)/Forced.Size()) <<std::endl;
-//    		Force.close();
-//    		X.close();
-//            tout += dtout;
-//        }
-//		for (size_t i=0; i<Forced.Size(); i++)
-//			domi.Particles[Forced[i]]->a = Vec3_t(0.0 , -0.0001 , 0.0);
-//	}
+
+	if (domi.Time>tforce)
+	{
+    	force = 0.0;
+    	loc = 0.0;
+    	Forced.Clear();
+		for (size_t i=0; i<domi.Particles.Size(); i++)
+		{
+			if (domi.Particles[i]->ID == 7)
+			{
+				Forced.Push(i);
+				force += domi.Particles[i]->a*domi.Particles[i]->Mass;
+				loc += domi.Particles[i]->x;
+				domi.Particles[i]->v = 0.0;
+				domi.Particles[i]->vb = 0.0;
+			}
+		}
+        if (domi.Time>=tout)
+        {
+    		std::fstream Force ("Force.txt", std::ios::out | std::ios::app );
+    		Force << force(1) <<std::endl;
+    		Force.close();
+    		std::fstream X ("Loc.txt", std::ios::out | std::ios::app );
+    		X << (loc(1)/Forced.Size()) <<std::endl;
+    		X.close();
+            tout += dtout;
+        }
+		for (size_t i=0; i<Forced.Size(); i++)
+			domi.Particles[Forced[i]]->a = Vec3_t(0.0, -0.0001, 0.0);
+	}
 }
 
 void UserInFlowCon(Vec3_t & position, Vec3_t & Vel, double & Den, SPH::Boundary & bdry)
 {
 	Vel = u,0.0,0.0;
-	Den = 998.21*pow((1+7.0*9.81*(3.25-position(1))/(Cs*Cs)),(1.0/7.0));
+	Den = 998.21*pow((1+7.0*9.81*(3.6-position(1))/(Cs*Cs)),(1.0/7.0));
 }
 
 int main(int argc, char **argv) try
@@ -90,7 +98,7 @@ int main(int argc, char **argv) try
 
 	double xb,yb,h,dx,T;
 
-	dx		= 0.125;
+	dx		= 0.15;
 	h		= dx*1.3;
 	dom.InitialDist	= dx;
 
@@ -162,7 +170,7 @@ int main(int argc, char **argv) try
 	G1		= E1/(2.0*(1.0+Nu));
 	rhoS1	= 18.0e3/9.81;
     CsS1	= sqrt(K1/rhoS1);
-    c1		= 6.0e3;
+    c1		= 8.0e3;
     Phi1	= 30.0;
     Psi1	= 0.0;
     d1		= 0.02;
@@ -266,12 +274,11 @@ int main(int argc, char **argv) try
 		yb=dom.Particles[a]->x(1);
 		if (dom.Particles[a]->ID == 4 && xb<1.0 && xb>-1.0 && yb>=4.0)
 		{
-			Forced.Push(a);
 			dom.Particles[a]->ID	= 7;
+			dom.Particles[a]->Fail	= 0;
+
 		}
 	}
-	std::cout<<Forced<<std::endl;
-
 
 	dom.Solve(/*tf*/50000.0,/*dt*/T,/*dtOut*/0.5,"test06",2000);
 	return 0;

@@ -38,26 +38,28 @@ void UserDamping(SPH::Domain & domi)
 		#pragma omp parallel for schedule (static) num_threads(domi.Nproc)
 		for (size_t i=0; i<domi.Particles.Size(); i++)
 		{
-			if (domi.Particles[i]->IsFree && (domi.Particles[i]->Material == 3 || domi.Particles[i]->Material == 4)) domi.Particles[i]->a -= DampS * domi.Particles[i]->v;
+			if (domi.Particles[i]->IsFree && domi.Particles[i]->Material == 3) domi.Particles[i]->a -= DampS * domi.Particles[i]->v;
+			if (domi.Particles[i]->IsFree && domi.Particles[i]->Material == 1) domi.Particles[i]->a -= DampF * domi.Particles[i]->v;
 
 		}
-
 	if (domi.Time>t)
 	{
-    	force = 0.0;
-    	loc = 0.0;
-    	Forced.Clear();
-		for (size_t i=0; i<domi.Particles.Size(); i++)
-		{
-			if (domi.Particles[i]->ID == 7)
-			{
-				Forced.Push(i);
-				force += domi.Particles[i]->a*domi.Particles[i]->Mass;
-				loc += domi.Particles[i]->x;
-			}
-		}
+//		if (check == 0)
+//		{
+//			for (size_t i=0; i<domi.Particles.Size(); i++)
+//				if (domi.Particles[i]->IsFree && domi.Particles[i]->Material == 1) domi.Particles[i]->IsFree = false;;
+//			check = 1;
+//		}
         if (domi.Time>=tout)
         {
+
+        	force = 0.0;
+        	loc = 0.0;
+    		for (size_t i=0; i<Forced.Size(); i++)
+    		{
+    			force += domi.Particles[Forced[i]]->a*domi.Particles[Forced[i]]->Mass;
+    			loc += domi.Particles[Forced[i]]->x;
+    		}
     		std::fstream Force ("Force.txt", std::ios::out | std::ios::app );
     		std::fstream X ("Loc.txt", std::ios::out | std::ios::app );
     		Force << force(1) <<std::endl;
@@ -87,17 +89,58 @@ int main(int argc, char **argv) try
 	dom.Gravity		= 0.0,-9.81,0.0;
 	dom.GeneralAfter= & UserDamping;
 
-	double xb,yb,h,dx;
+	double xb,yb,h,dx,T;
 
 	dx		= 0.125;
 	h		= dx*1.3;
 	dom.InitialDist	= dx;
 
-	double Nu,CsS,Ts;
-	double E1,K1,G1,CsS1,rhoS1,c1,Phi1,Psi1;
-	double E2,K2,G2,CsS2,rhoS2,c2,Phi2,Psi2;
+	double rhoF,Mu,CsF,Tf;
+	rhoF	= 998.23;
+	Mu		= 1.0e-3;
+	CsF		= 10.0*5.0;
+	Tf		= (0.25*h/CsF);
+	Cs		= CsF;
+  	cout <<"Tf = " << Tf <<endl;
+	DampF 			= 0.02*CsF/h;
+
+	dom.AddBoxLength(1 ,Vec3_t (-12.5 - 2.0*dx ,-3.0 - 3.0*dx , 0.0 ), 25.0 + 7.0*dx + dx/10.0 , 6.5 + 3.0*dx + dx/10.0  ,  0 , dx/2.0 ,rhoF, h,1 , 0 , false,false);
+
+	for (size_t a=0; a<dom.Particles.Size(); a++)
+	{
+		dom.Particles[a]->PresEq	= 1;
+		dom.Particles[a]->Alpha		= 0.05;
+		dom.Particles[a]->Mu		= Mu;
+		dom.Particles[a]->MuRef		= Mu;
+		dom.Particles[a]->Material	= 1;
+		dom.Particles[a]->Cs		= CsF;
+//		dom.Particles[a]->Shepard	= true;
+//		dom.Particles[a]->ShepardStep = 20;
+		xb=dom.Particles[a]->x(0);
+		yb=dom.Particles[a]->x(1);
+		if (yb<-3.0)
+		{
+			dom.Particles[a]->ID	= 2;
+			dom.Particles[a]->IsFree= false;
+			dom.Particles[a]->NoSlip= true;
+		}
+		if ((xb>12.5 || xb<-12.5))
+		{
+			dom.Particles[a]->ID	= 2;
+			dom.Particles[a]->IsFree= false;
+			dom.Particles[a]->NoSlip= false;
+		}
+
+
+		dom.Particles[a]->Density  = rhoF*pow((1+7.0*9.81*(3.6-dom.Particles[a]->x(1))/(CsF*CsF)),(1.0/7.0));
+	}
+
+	double Nu,CsS,Ts,RhoF;
+	double E1,K1,G1,CsS1,rhoS1,c1,Phi1,Psi1,d1,n1,k1;
+	double E2,K2,G2,CsS2,rhoS2,c2,Phi2,Psi2,d2,n2,k2;
 
 	Nu		= 0.3;
+	RhoF	= 8.0e3/9.81;
 
 	E1		= 25.0e6;
 	K1		= E1/(3.0*(1.0-2.0*Nu));
@@ -107,6 +150,9 @@ int main(int argc, char **argv) try
     c1		= 8.0e3;
     Phi1	= 30.0;
     Psi1	= 0.0;
+    d1		= 0.02;
+    n1		= 0.35;
+	k1		= n1*n1*n1*d1*d1/(150.0*(1-n1)*(1-n1));
 
 	E2		= 50.0e6;
 	K2		= E2/(3.0*(1.0-2.0*Nu));
@@ -116,11 +162,17 @@ int main(int argc, char **argv) try
     c2		= 10.0e3;
     Phi2	= 20.0;
     Psi2	= 0.0;
+    d2		= 0.01;
+    n2		= 0.25;
+	k2		= n1*n1*n1*d1*d1/(150.0*(1-n1)*(1-n1));
 
     CsS		= std::max(CsS1,CsS2);
     Ts		= (0.25*h/CsS);
   	DampS	= 0.02*sqrt(E1/(rhoS1*h*h));
+  	cout <<"Ts = " << Ts <<endl;
 
+  	T		= std::min(Tf,Ts);
+  	cout <<"T = " << T <<endl;
 	dom.AddBoxLength(3 ,Vec3_t (-12.5 - 3.0*dx ,-3.0 - 3.0*dx , 0.0 ), 25.0 + 7.0*dx + dx/10.0 , 7.0 + 7.0*dx + dx/10.0  ,  0 , dx/2.0 ,rhoS1, h,1 , 0 , false,false);
 
 	for (size_t a=0; a<dom.Particles.Size(); a++)
@@ -155,6 +207,10 @@ int main(int argc, char **argv) try
 
 			if (yb<=0.0)
 			{
+				dom.Particles[a]->d			= d2;
+				dom.Particles[a]->n			= n2;
+				dom.Particles[a]->k			= k2;
+				dom.Particles[a]->RhoF		= RhoF;
 				dom.Particles[a]->Density	= rhoS2;
 				dom.Particles[a]->Densitya	= rhoS2;
 				dom.Particles[a]->Densityb	= rhoS2;
@@ -171,6 +227,10 @@ int main(int argc, char **argv) try
 			{
 				if (dom.Particles[a]->ID == 3)
 					dom.Particles[a]->ID	= 4;
+				dom.Particles[a]->d			= d1;
+				dom.Particles[a]->n			= n1;
+				dom.Particles[a]->k			= k1;
+				dom.Particles[a]->RhoF		= RhoF;
 				dom.Particles[a]->Cs		= CsS1;
 				dom.Particles[a]->G			= G1;
 				dom.Particles[a]->K			= K1;
@@ -190,11 +250,15 @@ int main(int argc, char **argv) try
 		xb=dom.Particles[a]->x(0);
 		yb=dom.Particles[a]->x(1);
 		if (dom.Particles[a]->ID == 4 && xb<1.0 && xb>-1.0 && yb>=4.0)
+		{
+			Forced.Push(a);
 			dom.Particles[a]->ID	= 7;
+		}
 	}
+	std::cout<<Forced<<std::endl;
 
 
-	dom.Solve(/*tf*/50000.0,/*dt*/Ts,/*dtOut*/0.5,"test06",2000);
+	dom.Solve(/*tf*/50000.0,/*dt*/T,/*dtOut*/0.5,"test06",2000);
 	return 0;
 }
 MECHSYS_CATCH
