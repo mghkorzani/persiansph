@@ -31,6 +31,7 @@ double tim = 0.0;
 Array< size_t > Forced;
 double tout = t,dtout=0.5;
 Vec3_t force,loc;
+double tforce = t;
 
 void UserDamping(SPH::Domain & domi)
 {
@@ -42,34 +43,34 @@ void UserDamping(SPH::Domain & domi)
 			if (domi.Particles[i]->IsFree && domi.Particles[i]->Material == 1) domi.Particles[i]->a -= DampF * domi.Particles[i]->v;
 
 		}
-	if (domi.Time>t)
+
+	if (domi.Time>tforce)
 	{
-//		if (check == 0)
-//		{
-//			for (size_t i=0; i<domi.Particles.Size(); i++)
-//				if (domi.Particles[i]->IsFree && domi.Particles[i]->Material == 1) domi.Particles[i]->IsFree = false;;
-//			check = 1;
-//		}
+    	force = 0.0;
+    	loc = 0.0;
+    	Forced.Clear();
+		for (size_t i=0; i<domi.Particles.Size(); i++)
+		{
+			if (domi.Particles[i]->ID == 7)
+			{
+				Forced.Push(i);
+				force += domi.Particles[i]->a*domi.Particles[i]->Mass;
+				loc += domi.Particles[i]->x;
+				domi.Particles[i]->v	= 0.0, (domi.Time-tforce)>50.0 ? -0.005 : -0.001 , 0.0;
+				domi.Particles[i]->vb	= 0.0, (domi.Time-tforce)>50.0 ? -0.005 : -0.001 , 0.0;
+				domi.Particles[i]->a	= 0.0,  0.0 , 0.0;
+			}
+		}
         if (domi.Time>=tout)
         {
-
-        	force = 0.0;
-        	loc = 0.0;
-    		for (size_t i=0; i<Forced.Size(); i++)
-    		{
-    			force += domi.Particles[Forced[i]]->a*domi.Particles[Forced[i]]->Mass;
-    			loc += domi.Particles[Forced[i]]->x;
-    		}
     		std::fstream Force ("Force.txt", std::ios::out | std::ios::app );
-    		std::fstream X ("Loc.txt", std::ios::out | std::ios::app );
     		Force << force(1) <<std::endl;
-    		X << (loc(1)/Forced.Size()) <<std::endl;
     		Force.close();
+    		std::fstream X ("Loc.txt", std::ios::out | std::ios::app );
+    		X << (loc(1)/Forced.Size()) <<std::endl;
     		X.close();
             tout += dtout;
         }
-		for (size_t i=0; i<Forced.Size(); i++)
-			domi.Particles[Forced[i]]->a = Vec3_t(0.0, -0.0001, 0.0);
 	}
 }
 

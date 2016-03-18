@@ -29,7 +29,7 @@ double DampF,DampS,Cs,u;
 double t = 2.0;
 double tim = 0.0;
 Array< size_t > Forced;
-double tforce = 50.0;
+double tforce = 250.0;
 double tout = tforce,dtout=0.5;
 Vec3_t force,loc;
 
@@ -55,8 +55,9 @@ void UserDamping(SPH::Domain & domi)
 				Forced.Push(i);
 				force += domi.Particles[i]->a*domi.Particles[i]->Mass;
 				loc += domi.Particles[i]->x;
-				domi.Particles[i]->v = 0.0;
-				domi.Particles[i]->vb = 0.0;
+				domi.Particles[i]->v	= 0.0, (domi.Time-tforce)>50.0 ? -0.005 : -0.001 , 0.0;
+				domi.Particles[i]->vb	= 0.0, (domi.Time-tforce)>50.0 ? -0.005 : -0.001 , 0.0;
+				domi.Particles[i]->a	= 0.0,  0.0 , 0.0;
 			}
 		}
         if (domi.Time>=tout)
@@ -69,15 +70,13 @@ void UserDamping(SPH::Domain & domi)
     		X.close();
             tout += dtout;
         }
-		for (size_t i=0; i<Forced.Size(); i++)
-			domi.Particles[Forced[i]]->a = Vec3_t(0.0, -0.0001, 0.0);
 	}
 }
 
 void UserInFlowCon(Vec3_t & position, Vec3_t & Vel, double & Den, SPH::Boundary & bdry)
 {
 	Vel = u,0.0,0.0;
-	Den = 998.21*pow((1+7.0*9.81*(3.6-position(1))/(Cs*Cs)),(1.0/7.0));
+	Den = 998.21*pow((1+7.0*9.81*(3.5-position(1))/(Cs*Cs)),(1.0/7.0));
 }
 
 int main(int argc, char **argv) try
@@ -98,7 +97,7 @@ int main(int argc, char **argv) try
 
 	double xb,yb,h,dx,T;
 
-	dx		= 0.15;
+	dx		= 0.125;
 	h		= dx*1.3;
 	dom.InitialDist	= dx;
 
@@ -275,8 +274,6 @@ int main(int argc, char **argv) try
 		if (dom.Particles[a]->ID == 4 && xb<1.0 && xb>-1.0 && yb>=4.0)
 		{
 			dom.Particles[a]->ID	= 7;
-			dom.Particles[a]->Fail	= 0;
-
 		}
 	}
 
