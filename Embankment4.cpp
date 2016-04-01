@@ -87,7 +87,7 @@ int main(int argc, char **argv) try
 	dom.KernelType	= 0;
 	dom.SeepageType = 2;
 	dom.VisEq		= 0;
-	dom.Nproc		= 8;
+	dom.Nproc		= 12;
 //	dom.Excemption	= 4;
 //	dom.TimestepConstrain1 = false;
 //	dom.XSPH		= 0.5;
@@ -169,7 +169,7 @@ int main(int argc, char **argv) try
 	G1		= E1/(2.0*(1.0+Nu));
 	rhoS1	= 18.0e3/9.81;
     CsS1	= sqrt(K1/rhoS1);
-    c1		= 8.0e3;
+    c1		= 4.0e3;
     Phi1	= 30.0;
     Psi1	= 0.0;
     d1		= 0.02;

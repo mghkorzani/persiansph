@@ -133,7 +133,7 @@ int main(int argc, char **argv) try
 		}
 
 
-		dom.Particles[a]->Density  = rhoF*pow((1+7.0*9.81*(3.6-dom.Particles[a]->x(1))/(CsF*CsF)),(1.0/7.0));
+		dom.Particles[a]->Density  = rhoF*pow((1+7.0*9.81*(3.5-dom.Particles[a]->x(1))/(CsF*CsF)),(1.0/7.0));
 	}
 
 	double Nu,CsS,Ts,RhoF;
@@ -148,7 +148,7 @@ int main(int argc, char **argv) try
 	G1		= E1/(2.0*(1.0+Nu));
 	rhoS1	= 18.0e3/9.81;
     CsS1	= sqrt(K1/rhoS1);
-    c1		= 8.0e3;
+    c1		= 2.0e3;
     Phi1	= 30.0;
     Psi1	= 0.0;
     d1		= 0.02;
