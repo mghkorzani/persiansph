@@ -28,9 +28,8 @@ namespace SPH {
 
 inline void Domain::CalcForce11(Particle * P1, Particle * P2)
 {
-	double h = (P1->h+P2->h)/2;
-
-    Vec3_t xij = P1->x - P2->x;
+	double h	= (P1->h+P2->h)/2;
+    Vec3_t xij	= P1->x - P2->x;
 
     // Correction of xij for Periodic BC
     if (DomSize(0)>0.0) {if (xij(0)>2*Cellfac*h || xij(0)<-2*Cellfac*h) {(P1->CC[0]>P2->CC[0]) ? xij(0) -= DomSize(0) : xij(0) += DomSize(0);}}
@@ -41,18 +40,33 @@ inline void Domain::CalcForce11(Particle * P1, Particle * P2)
 
     if ((rij/h)<=Cellfac)
     {
-		double di,dj;
+		double di,dj,mi,mj;
 		double Alpha = (P1->Alpha + P2->Alpha)/2.0;
 		double Beta = (P1->Beta + P2->Beta)/2.0;
-		double mi = P1->Mass;
-		double mj = P2->Mass;
-		double Mui = P1->Mu;
-		double Muj = P2->Mu;
-		Vec3_t vij = P1->v - P2->v;
+		Vec3_t vij		= P1->v - P2->v;
 
 
-		if (!P1->IsFree) di = DensitySolid(P2->PresEq, P2->Cs, P2->P0,P1->Pressure, P2->RefDensity); else di = P1->Density;
-		if (!P2->IsFree) dj = DensitySolid(P1->PresEq, P1->Cs, P1->P0,P2->Pressure, P1->RefDensity); else dj = P2->Density;
+		if (!P1->IsFree)
+		{
+			di = DensitySolid(P2->PresEq, P2->Cs, P2->P0,P1->Pressure, P2->RefDensity);
+			mi = P2->Mass;
+		}
+		else
+		{
+			di = P1->Density;
+			mi = P1->Mass;
+		}
+
+		if (!P2->IsFree)
+		{
+			dj = DensitySolid(P1->PresEq, P1->Cs, P1->P0,P2->Pressure, P1->RefDensity);
+			mj = P1->Mass;
+		}
+		else
+		{
+			dj = P2->Density;
+			mj = P2->Mass;
+		}
 
 		double GK	= GradKernel(Dimension, KernelType, rij, h);
 		double K	= Kernel(Dimension, KernelType, rij, h);
@@ -61,9 +75,11 @@ inline void Domain::CalcForce11(Particle * P1, Particle * P2)
 		double PIij = 0.0;
 		if (Alpha!=0.0 || Beta!=0.0)
 		{
+			double Ci,Cj;
+			if (!P1->IsFree) Ci = SoundSpeed(P2->PresEq, P2->Cs, di, P2->RefDensity); else Ci = SoundSpeed(P1->PresEq, P1->Cs, di, P1->RefDensity);
+			if (!P2->IsFree) Cj = SoundSpeed(P1->PresEq, P1->Cs, dj, P1->RefDensity); else Cj = SoundSpeed(P2->PresEq, P2->Cs, dj, P2->RefDensity);
 			double MUij = h*dot(vij,xij)/(rij*rij+0.01*h*h);                                                ///<(2.75) Li, Liu Book
-			double Cij = 0.5*(SoundSpeed(P1->PresEq, P1->Cs, di, P1->RefDensity)+SoundSpeed(P2->PresEq, P2->Cs, dj, P2->RefDensity));
-			if (dot(vij,xij)<0) PIij = (-Alpha*Cij*MUij+Beta*MUij*MUij)/(0.5*(di+dj));                          ///<(2.74) Li, Liu Book
+			if (dot(vij,xij)<0) PIij = (-Alpha*0.5*(Ci+Cj)*MUij+Beta*MUij*MUij)/(0.5*(di+dj));                          ///<(2.74) Li, Liu Book
 		}
 
 		//Tensile Instability
@@ -84,14 +100,18 @@ inline void Domain::CalcForce11(Particle * P1, Particle * P2)
 		if ((P1->NoSlip || P2->NoSlip) || P1->IsFree*P2->IsFree)
 		{
 			Vec3_t vab;
+			double Mu = 0.0;
 			if (P1->IsFree*P2->IsFree)
 			{
-				vab = vij;
+				vab	= vij;
+				Mu	= 2.0*P1->Mu*P2->Mu/(P1->Mu+P2->Mu);
 			}
 			else
 			{
 				// No-Slip velocity correction
 				if (P1->IsFree)	vab = P1->v - (2.0*P2->v-P2->vb); else vab = (2.0*P1->v-P1->vb) - P2->v;
+				if (!P1->IsFree) Mu	= P2->Mu;
+				if (!P2->IsFree) Mu = P1->Mu;
 			}
 
 			StrainRate = 2.0*vab(0)*xij(0)           , vab(0)*xij(1)+vab(1)*xij(0) , vab(0)*xij(2)+vab(2)*xij(0) ,
@@ -99,13 +119,10 @@ inline void Domain::CalcForce11(Particle * P1, Particle * P2)
 						 vab(0)*xij(2)+vab(2)*xij(0) , vab(1)*xij(2)+vab(2)*xij(1) , 2.0*vab(2)*xij(2)           ;
 			StrainRate = -GK * StrainRate;
 
-			if (!P1->IsFree) Mui = Muj;
-			if (!P2->IsFree) Muj = Mui;
-
-			if (VisEq==0) VI = (Mui+Muj)/(di*dj)*GK*vab;																		//Morris et al 1997
-			if (VisEq==1) VI = 4.0*(Mui+Muj)/((di+dj)*(di+dj))*GK*vab;																//Shao et al 2003
-			if (VisEq==2) VI = -(Mui+Muj)/2.0/(di*dj)*LaplaceKernel(Dimension, KernelType, rij, h)*vab;								//Real Viscosity (considering incompressible fluid)
-			if (VisEq==3) VI = -(Mui+Muj)/2.0/(di*dj)*( LaplaceKernel(Dimension, KernelType, rij, h)*vab +
+			if (VisEq==0) VI =  2.0*Mu / (di*dj)          * GK*vab;																		//Morris et al 1997
+			if (VisEq==1) VI =  8.0*Mu / ((di+dj)*(di+dj))* GK*vab;																//Shao et al 2003
+			if (VisEq==2) VI = -Mu     / (di*dj)      * LaplaceKernel(Dimension, KernelType, rij, h)*vab;								//Real Viscosity (considering incompressible fluid)
+			if (VisEq==3) VI = -Mu     / (di*dj)      *( LaplaceKernel(Dimension, KernelType, rij, h)*vab +
 					1.0/3.0*(GK*vij + dot(vij,xij) * xij / (rij*rij) * (-GK+SecDerivativeKernel(Dimension, KernelType, rij, h) ) ) );	//Takeda et al 1994 (Real viscosity considering 1/3Mu for compressibility as per Navier Stokes but ignore volumetric viscosity)
 			if ((VisEq<0 || VisEq>3))
 			{
@@ -132,8 +149,9 @@ inline void Domain::CalcForce11(Particle * P1, Particle * P2)
 
 
 		omp_set_lock(&P1->my_lock);
-		P1->a   += -mj * ( P1->Pressure/(di*di) + P2->Pressure/(dj*dj) + PIij + TIij ) * GK*xij + mj*VI;
-	//    P1->Vis +=  mj * VI;
+//		P1->a   += -mj * ( P1->Pressure/(di*di) + P2->Pressure/(dj*dj) + PIij + TIij ) * GK*xij + mj*VI;
+		P1->a   += -mj * ( P1->Pressure/(di*dj) + P2->Pressure/(di*dj) + PIij + TIij ) * GK*xij + mj*VI;
+//		P1->Vis +=  mj * VI;
 		if (P1->IsFree) P1->StrainRate = P1->StrainRate + mj/dj*StrainRate; else P1->StrainRate = 0.0;
 		if (P1->ShepardCounter == P1->ShepardStep && P1->Shepard && (P1->IsFree*P2->IsFree))
 		{
@@ -146,8 +164,9 @@ inline void Domain::CalcForce11(Particle * P1, Particle * P2)
 
 
 		omp_set_lock(&P2->my_lock);
-		P2->a   -= -mi * ( P1->Pressure/(di*di) + P2->Pressure/(dj*dj) + PIij + TIij ) * GK*xij + mi*VI;
-	//    P2->Vis -=  mi * VI;
+//		P2->a   -= -mi * ( P1->Pressure/(di*di) + P2->Pressure/(dj*dj) + PIij + TIij ) * GK*xij + mi*VI;
+		P2->a   -= -mi * ( P1->Pressure/(di*dj) + P2->Pressure/(di*dj) + PIij + TIij ) * GK*xij + mi*VI;
+//		P2->Vis -=  mi * VI;
 		if (P2->IsFree) P2->StrainRate = P2->StrainRate + mi/di*StrainRate; else P2->StrainRate = 0.0;
 		if (P2->ShepardCounter == P2->ShepardStep && P2->Shepard && (P1->IsFree*P2->IsFree))
 		{
@@ -175,22 +194,38 @@ inline void Domain::CalcForce2233(Particle * P1, Particle * P2)
 
 	if ((rij/h)<=Cellfac)
     {
-		double di,dj;
-		double mi = P1->Mass;
-		double mj = P2->Mass;
+		double di,dj,mi,mj;
 		double Alpha = (P1->Alpha + P2->Alpha)/2.0;
 		double Beta = (P1->Beta + P2->Beta)/2.0;
 		Mat3_t Sigmaj,Sigmai;
 
 		if (P1->Material*P2->Material == 9)
 		{
-			if (!P1->IsFree) di = P2->Density; else di = P1->Density;
-			if (!P2->IsFree) dj = P1->Density; else dj = P2->Density;
+			if (!P1->IsFree) {di = P2->Density;mi = P2->Mass;} else {di = P1->Density;mi = P1->Mass;}
+			if (!P2->IsFree) {dj = P1->Density;mj = P1->Mass;} else {dj = P2->Density;mj = P2->Mass;}
 		}
 		else
 		{
-			if (!P1->IsFree) di = DensitySolid(P2->PresEq, P2->Cs,P2-> P0,P1->Pressure, P2->RefDensity); else di = P1->Density;
-			if (!P2->IsFree) dj = DensitySolid(P1->PresEq, P1->Cs, P1->P0,P2->Pressure, P1->RefDensity); else dj = P2->Density;
+			if (!P1->IsFree)
+			{
+				di = DensitySolid(P2->PresEq, P2->Cs, P2->P0,P1->Pressure, P2->RefDensity);
+				mi = P2->Mass;
+			}
+			else
+			{
+				di = P1->Density;
+				mi = P1->Mass;
+			}
+			if (!P2->IsFree)
+			{
+				dj = DensitySolid(P1->PresEq, P1->Cs, P1->P0,P2->Pressure, P1->RefDensity);
+				mj = P1->Mass;
+			}
+			else
+			{
+				dj = P2->Density;
+				mj = P2->Mass;
+			}
 		}
 
 		Vec3_t vij = P1->v - P2->v;
@@ -207,8 +242,12 @@ inline void Domain::CalcForce2233(Particle * P1, Particle * P2)
 			if (P1->Material*P2->Material == 9)
 				Cij = 0.5*(P1->Cs+P2->Cs);
 			else
-				Cij = 0.5*(SoundSpeed(P1->PresEq, P1->Cs, di, P1->RefDensity)+SoundSpeed(P2->PresEq, P2->Cs, dj, P2->RefDensity));
-			if (dot(vij,xij)<0) PIij = (Alpha*Cij*MUij+Beta*MUij*MUij)/(0.5*(di+dj)) * I;                          ///<(2.74) Li, Liu Book
+			{
+				double Ci,Cj;
+				if (!P1->IsFree) Ci = SoundSpeed(P2->PresEq, P2->Cs, di, P2->RefDensity); else Ci = SoundSpeed(P1->PresEq, P1->Cs, di, P1->RefDensity);
+				if (!P2->IsFree) Cj = SoundSpeed(P1->PresEq, P1->Cs, dj, P1->RefDensity); else Cj = SoundSpeed(P2->PresEq, P2->Cs, dj, P2->RefDensity);
+				Cij = 0.5*(Ci+Cj);
+			}
 			if (dot(vij,xij)<0) PIij = (Alpha*Cij*MUij+Beta*MUij*MUij)/(0.5*(di+dj)) * I;                          ///<(2.74) Li, Liu Book
 		}
 

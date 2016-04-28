@@ -1151,21 +1151,24 @@ inline void Domain::PrimaryComputeAcceleration ()
 		#pragma omp parallel for schedule (static) num_threads(Nproc)
 		for (size_t i=0; i<Particles.Size(); i++)
 		{
-			if (Particles[i]->SatCheck && !Particles[i]->IsSat)
+			if (Particles[i]->Material == 3)
 			{
-				Particles[i]->Mass			= Particles[i]->V*(Particles[i]->RefDensity - Particles[i]->RhoF);
-				Particles[i]->Density		= Particles[i]->Density - Particles[i]->RhoF;
-				Particles[i]->Densityb		= Particles[i]->Densityb - Particles[i]->RhoF;
-				Particles[i]->RefDensity	= Particles[i]->RefDensity - Particles[i]->RhoF;
-				Particles[i]->IsSat			= true;
-			}
-			if (!Particles[i]->SatCheck && Particles[i]->IsSat)
-			{
-				Particles[i]->Mass			= Particles[i]->V*(Particles[i]->RefDensity + Particles[i]->RhoF);
-				Particles[i]->Density		= Particles[i]->Density + Particles[i]->RhoF;
-				Particles[i]->Densityb		= Particles[i]->Densityb + Particles[i]->RhoF;
-				Particles[i]->RefDensity	= Particles[i]->RefDensity + Particles[i]->RhoF;
-				Particles[i]->IsSat			= false;
+				if (Particles[i]->SatCheck && !Particles[i]->IsSat)
+				{
+					Particles[i]->Mass			= Particles[i]->V*(Particles[i]->RefDensity - Particles[i]->RhoF);
+					Particles[i]->Density		= Particles[i]->Density - Particles[i]->RhoF;
+					Particles[i]->Densityb		= Particles[i]->Densityb - Particles[i]->RhoF;
+					Particles[i]->RefDensity	= Particles[i]->RefDensity - Particles[i]->RhoF;
+					Particles[i]->IsSat			= true;
+				}
+				if (!Particles[i]->SatCheck && Particles[i]->IsSat)
+				{
+					Particles[i]->Mass			= Particles[i]->V*(Particles[i]->RefDensity + Particles[i]->RhoF);
+					Particles[i]->Density		= Particles[i]->Density + Particles[i]->RhoF;
+					Particles[i]->Densityb		= Particles[i]->Densityb + Particles[i]->RhoF;
+					Particles[i]->RefDensity	= Particles[i]->RefDensity + Particles[i]->RhoF;
+					Particles[i]->IsSat			= false;
+				}
 			}
 		}
 
@@ -1316,8 +1319,10 @@ inline void Domain::InFlowBCLeave()
 			Particles[a]->Beta		= Particles[AddPart[i].second]->Beta;
 			Particles[a]->Mu		= Particles[AddPart[i].second]->Mu;
 			Particles[a]->MuRef		= Particles[AddPart[i].second]->MuRef;
+			Particles[a]->m			= Particles[AddPart[i].second]->m;
+			Particles[a]->T0		= Particles[AddPart[i].second]->T0;
+			Particles[a]->RefDensity= Particles[AddPart[i].second]->RefDensity;
 			Particles[a]->Material	= 1;
-			Particles[a]->T0		= 0.0;
 			Particles[a]->Cs		= Particles[AddPart[i].second]->Cs;
 			Particles[a]->x 		= AddPart[i].first;
 			Particles[a]->ID 		= Particles[AddPart[i].second]->ID;
@@ -1335,6 +1340,9 @@ inline void Domain::InFlowBCLeave()
 			Particles[a]->Beta		= Particles[AddPart[i].second]->Beta;
 			Particles[a]->Mu		= Particles[AddPart[i].second]->Mu;
 			Particles[a]->MuRef		= Particles[AddPart[i].second]->MuRef;
+			Particles[a]->m			= Particles[AddPart[i].second]->m;
+			Particles[a]->T0		= Particles[AddPart[i].second]->T0;
+			Particles[a]->RefDensity= Particles[AddPart[i].second]->RefDensity;
 			Particles[a]->Material	= 1;
 			Particles[a]->Cs		= Particles[AddPart[i].second]->Cs;
 			Particles[a]->InOut		= true;
@@ -1355,8 +1363,10 @@ inline void Domain::InFlowBCLeave()
 			Particles[a]->Beta		= Particles[AddPart[i].second]->Beta;
 			Particles[a]->Mu		= Particles[AddPart[i].second]->Mu;
 			Particles[a]->MuRef		= Particles[AddPart[i].second]->MuRef;
+			Particles[a]->m			= Particles[AddPart[i].second]->m;
+			Particles[a]->T0		= Particles[AddPart[i].second]->T0;
+			Particles[a]->RefDensity= Particles[AddPart[i].second]->RefDensity;
 			Particles[a]->Material	= 1;
-			Particles[a]->T0		= 0.0;
 			Particles[a]->Cs		= Particles[AddPart[i].second]->Cs;
 			Particles[a]->x 		= AddPart[i].first;
 			Particles[a]->ID 		= Particles[AddPart[i].second]->ID;
