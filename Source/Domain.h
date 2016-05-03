@@ -920,6 +920,7 @@ inline void Domain::YZPlaneCellsNeighbourSearch(int q1)
 {
 	int q3,q2;
 	Array<std::pair<size_t,size_t> > LocalPairs;
+	Array<std::pair<size_t,size_t> > FixedLocalPairs;
 
 	for (BC.Periodic[2] ? q3=1 : q3=0;BC.Periodic[2] ? (q3<(CellNo[2]-1)) : (q3<CellNo[2]); q3++)
 	for (BC.Periodic[1] ? q2=1 : q2=0;BC.Periodic[1] ? (q2<(CellNo[1]-1)) : (q2<CellNo[1]); q2++)
@@ -936,7 +937,8 @@ inline void Domain::YZPlaneCellsNeighbourSearch(int q1)
 				temp2 = Particles[temp1]->LL;
 				while (temp2 != -1)
 				{
-					LocalPairs.Push(std::make_pair(temp1, temp2));
+					if (Particles[temp1]->IsFree || Particles[temp2]->IsFree)
+						LocalPairs.Push(std::make_pair(temp1, temp2));
 					temp2 = Particles[temp2]->LL;
 				}
 
@@ -946,7 +948,8 @@ inline void Domain::YZPlaneCellsNeighbourSearch(int q1)
 					temp2 = HOC[q1+1][q2][q3];
 					while (temp2 != -1)
 					{
-						LocalPairs.Push(std::make_pair(temp1, temp2));
+						if (Particles[temp1]->IsFree || Particles[temp2]->IsFree)
+							LocalPairs.Push(std::make_pair(temp1, temp2));
 						temp2 = Particles[temp2]->LL;
 					}
 				}
@@ -961,7 +964,8 @@ inline void Domain::YZPlaneCellsNeighbourSearch(int q1)
 							temp2 = HOC[i][q2+1][q3];
 							while (temp2 != -1)
 							{
-								LocalPairs.Push(std::make_pair(temp1, temp2));
+								if (Particles[temp1]->IsFree || Particles[temp2]->IsFree)
+									LocalPairs.Push(std::make_pair(temp1, temp2));
 								temp2 = Particles[temp2]->LL;
 							}
 						}
@@ -979,7 +983,8 @@ inline void Domain::YZPlaneCellsNeighbourSearch(int q1)
 							temp2 = HOC[i][j][q3+1];
 							while (temp2 != -1)
 							{
-								LocalPairs.Push(std::make_pair(temp1, temp2));
+								if (Particles[temp1]->IsFree || Particles[temp2]->IsFree)
+									LocalPairs.Push(std::make_pair(temp1, temp2));
 								temp2 = Particles[temp2]->LL;
 							}
 						}
@@ -1073,76 +1078,73 @@ inline void Domain::PrimaryComputeAcceleration ()
 		{
 			for (size_t a=0; a<Pairs[k].Size();a++)
 			{
-				if ((Particles[Pairs[k][a].first]->IsFree || Particles[Pairs[k][a].second]->IsFree))
+				if (Particles[Pairs[k][a].first]->Material == Particles[Pairs[k][a].second]->Material)
 				{
-					if (Particles[Pairs[k][a].first]->Material == Particles[Pairs[k][a].second]->Material)
+					if (!Particles[Pairs[k][a].first]->IsFree)
 					{
-						if (!Particles[Pairs[k][a].first]->IsFree)
-						{
-							size_t i	= Pairs[k][a].first;
-							size_t j	= Pairs[k][a].second;
-							Vec3_t xij	= Particles[i]->x-Particles[j]->x;
-							double h	= (Particles[i]->h+Particles[j]->h)/2.0;
+						size_t i	= Pairs[k][a].first;
+						size_t j	= Pairs[k][a].second;
+						Vec3_t xij	= Particles[i]->x-Particles[j]->x;
+						double h	= (Particles[i]->h+Particles[j]->h)/2.0;
 
-							// Correction of xij for Periodic BC
-							if (DomSize(0)>0.0) {if (xij(0)>2*Cellfac*h || xij(0)<-2*Cellfac*h) {(Particles[i]->CC[0]>Particles[j]->CC[0]) ? xij(0) -= DomSize(0) : xij(0) += DomSize(0);}}
-							if (DomSize(1)>0.0) {if (xij(1)>2*Cellfac*h || xij(1)<-2*Cellfac*h) {(Particles[i]->CC[1]>Particles[j]->CC[1]) ? xij(1) -= DomSize(1) : xij(1) += DomSize(1);}}
-							if (DomSize(2)>0.0) {if (xij(2)>2*Cellfac*h || xij(2)<-2*Cellfac*h) {(Particles[i]->CC[2]>Particles[j]->CC[2]) ? xij(2) -= DomSize(2) : xij(2) += DomSize(2);}}
+						// Correction of xij for Periodic BC
+						if (DomSize(0)>0.0) {if (xij(0)>2*Cellfac*h || xij(0)<-2*Cellfac*h) {(Particles[i]->CC[0]>Particles[j]->CC[0]) ? xij(0) -= DomSize(0) : xij(0) += DomSize(0);}}
+						if (DomSize(1)>0.0) {if (xij(1)>2*Cellfac*h || xij(1)<-2*Cellfac*h) {(Particles[i]->CC[1]>Particles[j]->CC[1]) ? xij(1) -= DomSize(1) : xij(1) += DomSize(1);}}
+						if (DomSize(2)>0.0) {if (xij(2)>2*Cellfac*h || xij(2)<-2*Cellfac*h) {(Particles[i]->CC[2]>Particles[j]->CC[2]) ? xij(2) -= DomSize(2) : xij(2) += DomSize(2);}}
 
-							double K = Kernel(Dimension, KernelType, norm(xij), h);
+						double K = Kernel(Dimension, KernelType, norm(xij), h);
 
-							omp_set_lock(&Particles[i]->my_lock);
-								Particles[i]->SumKernel									+= K;
-								if (Particles[i]->Material < 3)	Particles[i]->Pressure	+= Particles[j]->Pressure * K + dot(Gravity,xij)*Particles[j]->Density*K;
-								if (Particles[i]->Material > 1)	Particles[i]->Sigma		=  Particles[i]->Sigma + K * Particles[j]->Sigma;
-								Particles[i]->vb += Particles[j]->v * K;
-							omp_unset_lock(&Particles[i]->my_lock);
+						omp_set_lock(&Particles[i]->my_lock);
+							Particles[i]->SumKernel									+= K;
+							if (Particles[i]->Material < 3)	Particles[i]->Pressure	+= Particles[j]->Pressure * K + dot(Gravity,xij)*Particles[j]->Density*K;
+							if (Particles[i]->Material > 1)	Particles[i]->Sigma		=  Particles[i]->Sigma + K * Particles[j]->Sigma;
+							Particles[i]->vb += Particles[j]->v * K;
+						omp_unset_lock(&Particles[i]->my_lock);
 
-		//					omp_set_lock(&dom_lock);
-		//		        	FixedPairs.Push(Pairs[k][a]);
-		//					omp_unset_lock(&dom_lock);
-						}
-						if (!Particles[Pairs[k][a].second]->IsFree)
-						{
-							size_t i	= Pairs[k][a].first;
-							size_t j	= Pairs[k][a].second;
-							Vec3_t xij	= Particles[i]->x-Particles[j]->x;
-							double h	= (Particles[i]->h+Particles[j]->h)/2.0;
-
-							// Correction of xij for Periodic BC
-							if (DomSize(0)>0.0) {if (xij(0)>2*Cellfac*h || xij(0)<-2*Cellfac*h) {(Particles[i]->CC[0]>Particles[j]->CC[0]) ? xij(0) -= DomSize(0) : xij(0) += DomSize(0);}}
-							if (DomSize(1)>0.0) {if (xij(1)>2*Cellfac*h || xij(1)<-2*Cellfac*h) {(Particles[i]->CC[1]>Particles[j]->CC[1]) ? xij(1) -= DomSize(1) : xij(1) += DomSize(1);}}
-							if (DomSize(2)>0.0) {if (xij(2)>2*Cellfac*h || xij(2)<-2*Cellfac*h) {(Particles[i]->CC[2]>Particles[j]->CC[2]) ? xij(2) -= DomSize(2) : xij(2) += DomSize(2);}}
-
-							double K = Kernel(Dimension, KernelType, norm(xij), h);
-							omp_set_lock(&Particles[j]->my_lock);
-								Particles[j]->SumKernel									+= K;
-								if (Particles[j]->Material < 3)	Particles[j]->Pressure	+= Particles[i]->Pressure * K + dot(Gravity,xij)*Particles[i]->Density*K;
-								if (Particles[j]->Material > 1)	Particles[j]->Sigma		=  Particles[j]->Sigma + K * Particles[i]->Sigma;
-								Particles[j]->vb += Particles[i]->v * K;
-							omp_unset_lock(&Particles[j]->my_lock);
-
-		//					omp_set_lock(&dom_lock);
-		//		        	FixedPairs.Push(Pairs[k][a]);
-		//					omp_unset_lock(&dom_lock);
-						}
+	//					omp_set_lock(&dom_lock);
+	//		        	FixedPairs.Push(Pairs[k][a]);
+	//					omp_unset_lock(&dom_lock);
 					}
-					else
+					if (!Particles[Pairs[k][a].second]->IsFree)
 					{
-						if (Particles[Pairs[k][a].first]->Material == 3)
-						{
-							if (!Particles[Pairs[k][a].first]->SatCheck)
-								if (Particles[Pairs[k][a].second]->CC[1] >= Particles[Pairs[k][a].first]->CC[1])
-									if (Particles[Pairs[k][a].second]->x(1) >= Particles[Pairs[k][a].first]->x(1))
-										Particles[Pairs[k][a].first]->SatCheck = true;
-						}
-						if (Particles[Pairs[k][a].second]->Material == 3)
-						{
-							if (!Particles[Pairs[k][a].second]->SatCheck)
-								if (Particles[Pairs[k][a].first]->CC[1] >= Particles[Pairs[k][a].second]->CC[1])
-									if (Particles[Pairs[k][a].first]->x(1) >= Particles[Pairs[k][a].second]->x(1))
-										Particles[Pairs[k][a].second]->SatCheck = true;
-						}
+						size_t i	= Pairs[k][a].first;
+						size_t j	= Pairs[k][a].second;
+						Vec3_t xij	= Particles[i]->x-Particles[j]->x;
+						double h	= (Particles[i]->h+Particles[j]->h)/2.0;
+
+						// Correction of xij for Periodic BC
+						if (DomSize(0)>0.0) {if (xij(0)>2*Cellfac*h || xij(0)<-2*Cellfac*h) {(Particles[i]->CC[0]>Particles[j]->CC[0]) ? xij(0) -= DomSize(0) : xij(0) += DomSize(0);}}
+						if (DomSize(1)>0.0) {if (xij(1)>2*Cellfac*h || xij(1)<-2*Cellfac*h) {(Particles[i]->CC[1]>Particles[j]->CC[1]) ? xij(1) -= DomSize(1) : xij(1) += DomSize(1);}}
+						if (DomSize(2)>0.0) {if (xij(2)>2*Cellfac*h || xij(2)<-2*Cellfac*h) {(Particles[i]->CC[2]>Particles[j]->CC[2]) ? xij(2) -= DomSize(2) : xij(2) += DomSize(2);}}
+
+						double K = Kernel(Dimension, KernelType, norm(xij), h);
+						omp_set_lock(&Particles[j]->my_lock);
+							Particles[j]->SumKernel									+= K;
+							if (Particles[j]->Material < 3)	Particles[j]->Pressure	+= Particles[i]->Pressure * K + dot(Gravity,xij)*Particles[i]->Density*K;
+							if (Particles[j]->Material > 1)	Particles[j]->Sigma		=  Particles[j]->Sigma + K * Particles[i]->Sigma;
+							Particles[j]->vb += Particles[i]->v * K;
+						omp_unset_lock(&Particles[j]->my_lock);
+
+	//					omp_set_lock(&dom_lock);
+	//		        	FixedPairs.Push(Pairs[k][a]);
+	//					omp_unset_lock(&dom_lock);
+					}
+				}
+				else
+				{
+					if (Particles[Pairs[k][a].first]->Material == 3)
+					{
+						if (!Particles[Pairs[k][a].first]->SatCheck)
+							if (Particles[Pairs[k][a].second]->CC[1] >= Particles[Pairs[k][a].first]->CC[1])
+								if (Particles[Pairs[k][a].second]->x(1) >= Particles[Pairs[k][a].first]->x(1))
+									Particles[Pairs[k][a].first]->SatCheck = true;
+					}
+					if (Particles[Pairs[k][a].second]->Material == 3)
+					{
+						if (!Particles[Pairs[k][a].second]->SatCheck)
+							if (Particles[Pairs[k][a].first]->CC[1] >= Particles[Pairs[k][a].second]->CC[1])
+								if (Particles[Pairs[k][a].first]->x(1) >= Particles[Pairs[k][a].second]->x(1))
+									Particles[Pairs[k][a].second]->SatCheck = true;
 					}
 				}
 			}
@@ -1224,26 +1226,23 @@ inline void Domain::LastComputeAcceleration ()
 	{
 		for (size_t i=0; i<Pairs[k].Size();i++)
 		{
-			if (Particles[Pairs[k][i].first]->IsFree || Particles[Pairs[k][i].second]->IsFree)
-			{
-				switch (Particles[Pairs[k][i].first]->Material*Particles[Pairs[k][i].second]->Material)
-			    {case 1:
-			    	CalcForce11(Particles[Pairs[k][i].first],Particles[Pairs[k][i].second]);
-					break;
-			    case 4:
-			    	CalcForce2233(Particles[Pairs[k][i].first],Particles[Pairs[k][i].second]);
-			    	break;
-			    case 9:
-			    	CalcForce2233(Particles[Pairs[k][i].first],Particles[Pairs[k][i].second]);
-			    	break;
-			    case 3:
-			    	CalcForce13(Particles[Pairs[k][i].first],Particles[Pairs[k][i].second]);
-			    	break;
-			   default:
-			    	std::cout<<"Out of Interaction types"<<std::endl;
-				    abort();
-				    break;
-			    }
+			switch (Particles[Pairs[k][i].first]->Material*Particles[Pairs[k][i].second]->Material)
+			{case 1:
+				CalcForce11(Particles[Pairs[k][i].first],Particles[Pairs[k][i].second]);
+				break;
+			case 4:
+				CalcForce2233(Particles[Pairs[k][i].first],Particles[Pairs[k][i].second]);
+				break;
+			case 9:
+				CalcForce2233(Particles[Pairs[k][i].first],Particles[Pairs[k][i].second]);
+				break;
+			case 3:
+				CalcForce13(Particles[Pairs[k][i].first],Particles[Pairs[k][i].second]);
+				break;
+		   default:
+				std::cout<<"Out of Interaction types"<<std::endl;
+				abort();
+				break;
 			}
 		}
 	}

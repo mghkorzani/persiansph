@@ -54,9 +54,9 @@ void UserAllFlowCon(Vec3_t & position, Vec3_t & Vel, double & Den, SPH::Boundary
 
 void UserOutFlowCon(Vec3_t & position, Vec3_t & Vel, double & Den, SPH::Boundary & bdry)
 {
-	if (position(1)<=D)
+	if (position(1)<=(D+4*0.005))
 		Vel = 0.0 , 0.0 , 0.0;
-	if (position(1)<(0.514*H+D) && position(1)>D)
+	if (position(1)<(0.514*H+D) && position(1)>(D+4*0.005))
 		Vel = pow(((position(1)-D)/(0.32*H)),(1.0/7.0))*U , 0.0 , 0.0;
 	if (position(1)>=(0.514*H+D))
 		Vel = 1.07*U , 0.0 , 0.0;
@@ -139,8 +139,8 @@ int main(int argc, char **argv) try
 		Muw = 1.002e-3;
 		Mus = 0.002;
 		CsS = 30.0;
-		T0	= 0.38;
-		m	= 300.0;
+		T0	= 3.79;
+		m	= 100.0;
 		RhoS= 2650.0;
 
         t1	= (0.25*h/(CsW));
@@ -148,7 +148,6 @@ int main(int argc, char **argv) try
         t3	= 0.125*h*h*(RhoS-RhoF)/(Mus+m*T0);
         t	= std::min(t1,t2);
         t	= std::min(t,t3);
-        t	= t/2.0;
         std::cout<<"t1 = "<<t1<<std::endl;
         std::cout<<"t2 = "<<t2<<std::endl;
         std::cout<<"t3 = "<<t3<<std::endl;
@@ -177,6 +176,9 @@ int main(int argc, char **argv) try
 
     	for (size_t a=0; a<dom.Particles.Size(); a++)
     	{
+    		xb=dom.Particles[a]->x(0);
+    		yb=dom.Particles[a]->x(1);
+
     		dom.Particles[a]->Cs		= CsW;
     		dom.Particles[a]->Alpha		= 0.05;
     		dom.Particles[a]->PresEq	= 1;
@@ -188,18 +190,6 @@ int main(int argc, char **argv) try
     		dom.Particles[a]->Densityb	= RhoF*pow((1+7.0*g*(H+D-yb)/(CsW*CsW)),(1.0/7.0));
 
 
-    		xb=dom.Particles[a]->x(0);
-    		yb=dom.Particles[a]->x(1);
-
-//    		if (yb>(5.0*D))
-//    		{
-//    			dom.Particles[a]->ID		= 3;
-//    			dom.Particles[a]->IsFree	= false;
-//    			dom.Particles[a]->NoSlip	= false;
-////        		dom.Particles[a]->v			= 1.07*U , 0.0 , 0.0 ;
-////        		dom.Particles[a]->vb		= 1.07*U , 0.0 , 0.0 ;
-//    		}
-
     		if (yb<0.0)
     		{
     			dom.Particles[a]->ID		= 3;
@@ -207,7 +197,14 @@ int main(int argc, char **argv) try
     			dom.Particles[a]->NoSlip	= true;
     		}
 
-    		if (yb>=0.0 && yb<=(1.0*D))
+//    		if ((xb<=(10.0*dx) || xb>=(10.0*D-10.0*dx)) && yb<=(1.0*D))
+//    		{
+//    			dom.Particles[a]->ID		= 5;
+//    			dom.Particles[a]->IsFree	= false;
+//    			dom.Particles[a]->NoSlip	= false;
+//    		}
+
+    		if (yb>=0.0 && yb<=(1.0*D) && dom.Particles[a]->ID == 1)
     		{
     			dom.Particles[a]->ID		= 2;
         		dom.Particles[a]->Cs		= CsS;
@@ -219,13 +216,6 @@ int main(int argc, char **argv) try
         		dom.Particles[a]->Densityb	= (RhoS-RhoF)*pow((1+7.0*g/(CsS*CsS*(RhoS-RhoF))*(RhoF*H+(RhoS-RhoF)*(D-yb))),(1.0/7.0));
         		dom.Particles[a]->RefDensity= RhoS-RhoF;
         		dom.Particles[a]->Mass		= dom.Particles[a]->Mass/RhoF*dom.Particles[a]->RefDensity;
-    		}
-
-    		if ((xb<=(10.0*dx) || xb>=(10.0*D-10.0*dx)) && dom.Particles[a]->ID == 2)
-    		{
-    			dom.Particles[a]->ID		= 5;
-    			dom.Particles[a]->IsFree	= false;
-    			dom.Particles[a]->NoSlip	= false;
     		}
 
        		if ((pow((xb-x),2)+pow((yb-y),2))<pow((D/2.0+dx/2.0),2.0))
@@ -259,7 +249,7 @@ int main(int argc, char **argv) try
     	}
 
 
-    	dom.Solve(/*tf*/50000.0,/*dt*/t,/*dtOut*/0.02,"test06",1500);
+    	dom.Solve(/*tf*/50000.0,/*dt*/t,/*dtOut*/0.1,"test06",15000);
         return 0;
 }
 MECHSYS_CATCH
