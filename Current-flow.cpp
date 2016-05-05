@@ -140,7 +140,7 @@ int main(int argc, char **argv) try
 		Mus = 0.002;
 		CsS = 30.0;
 		T0	= 3.79;
-		m	= 100.0;
+		m	= 300.0;
 		RhoS= 2650.0;
 
         t1	= (0.25*h/(CsW));

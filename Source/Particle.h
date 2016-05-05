@@ -21,7 +21,6 @@
 
 // Std lib
 #include <iostream>
-#include <cstring>
 #include <cmath>
 #include <omp.h>
 
