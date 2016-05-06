@@ -20,6 +20,8 @@
 
 #!/bin/bash
 
+echo ""
+
 #checking Mercurial
 command -v hg >/dev/null && 
 	echo "Mercurial has been found." ||
@@ -38,7 +40,7 @@ command -v hg >/dev/null &&
 	}
 
 #checking g++ and cmake
-for $Compulsory_Software in g++ cmake
+for Compulsory_Software in g++ cmake
 do
 	command -v $Compulsory_Software >/dev/null && 
 		echo "$Compulsory_Software has been found." ||
@@ -57,6 +59,8 @@ do
 		}
 done
 
+echo ""
+
 #using the current directory as the main installation directory
 Current_Address=$(pwd)
 
@@ -72,6 +76,7 @@ if [ -d "$Current_Address/sph" ]; then
 		esac
 	done
 else
+	echo "... Downloading PersianSPH code ..."
 	hg clone https://mghkorzani@bitbucket.org/persiansph/sph
 fi
 
@@ -83,6 +88,8 @@ if [ -z "${SPH_Address}" ]; then
 	SPH_Address="$Current_Address/sph"
 	source $HOME/.bashrc
 fi
+
+echo ""
 
 #copying packages on this pc 
 if [ -d "$Current_Address/pkg" ]; then
@@ -96,6 +103,7 @@ if [ -d "$Current_Address/pkg" ]; then
 		esac
 	done
 else
+	echo "... Downloading required libraries ..."
 	hg clone https://mghkorzani@bitbucket.org/persiansph/pkg
 fi
 
@@ -119,7 +127,7 @@ fi
 while true; do
 	read -p "Do you have sudo access to install libraries?(y/n)"  yn;
 	case $yn in
-		[Yy]* ) echo "... Installing Blas, Lapacke, Gsl, HDF5, g++ and Cmake libraries ..."
+		[Yy]* ) echo "... Installing Blas, Lapack, Gsl and HDF5 libraries ..."
 			sudo apt-get install libblas-dev liblapack-dev libgsl0-dev libhdf5-serial-dev;
 			break;;
 		[Nn]* ) echo "... Unpacking libraries ...";
@@ -145,9 +153,13 @@ while true; do
 done
 
 echo ""
+echo ""
 echo "Installation is completed."
 echo "Close all terminal windows and open a new one to take effect the defined environment variables" 
 echo "Please refer to the tutorial to run a simulation."
+echo ""
+echo ""
+
 
 
 
