@@ -16,8 +16,8 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>  *
  ************************************************************************/
 
-#include "./Source/Domain.h"
-#include "./Source/Interaction.h"
+#include "Domain.h"
+#include "Interaction.h"
 
 double H,U,RhoF,RhoS,g,D,CsW,CsS,Damp,DampTime;
 int Check=0;

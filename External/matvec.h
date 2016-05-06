@@ -23,14 +23,12 @@
 // Std Lib
 #include <iostream>
 #include <sstream>   // for istringstream, ostringstream
-#include <cstring>   // for strcmp
 #include <cmath>     // for sqrt, pow
 #include <algorithm> // for min, max
 
 // Blitz++
-#include <tinyvec-et.h>
-//#include <tinyvec.h>
-#include <tinymat.h>
+#include <blitz/tinyvec-et.h>
+#include <blitz/tinymat.h>
 
 // GSL
 #include <gsl/gsl_math.h>
@@ -1816,23 +1814,6 @@ inline void OctInvs (Vec3_t const & L, double & p, double & q, double & t, Vec3_
     }
 }
 
-/** Calc principal values given octahedral invariants. (-pi <= th(rad) <= pi) */
-inline void pqth2L (double p, double q, double th, Vec3_t & L, char const * Type="oct")
-{
-    if (strcmp(Type,"cam")==0)
-    {
-        L(0) = -p + 2.0*q*sin(th-2.0*Util::PI/3.0)/3.0;
-        L(1) = -p + 2.0*q*sin(th)                 /3.0;
-        L(2) = -p + 2.0*q*sin(th+2.0*Util::PI/3.0)/3.0;
-    }
-    else if (strcmp(Type,"oct")==0) // oct
-    {
-        L(0) = -p/Util::SQ3 + 2.0*q*sin(th-2.0*Util::PI/3.0)/Util::SQ6;
-        L(1) = -p/Util::SQ3 + 2.0*q*sin(th)                 /Util::SQ6;
-        L(2) = -p/Util::SQ3 + 2.0*q*sin(th+2.0*Util::PI/3.0)/Util::SQ6;
-    }
-    else throw new Fatal("pqTh2L: Method is not available for invariant Type==%s",Type);
-}
 
 inline void OctDerivs (Vec3_t const & L, double & p, double & q, double & t, Mat3_t & dpqthdL, double qTol=1.0e-8)
 {
@@ -1869,45 +1850,8 @@ inline void InvOctDerivs (Vec3_t const & Lsorted, double & p, double & q, double
               -1./Util::SQ3, (2.*sin(th+(2.*Util::PI)/3.))/Util::SQ6, (2.*q*cos(th+(2.*Util::PI)/3.))/Util::SQ6;
 }
 
-#ifdef USE_BOOST_PYTHON
-inline BPy::tuple Pypqth2L (double p, double q, double th, BPy::str const & Type)
-{
-    Vec3_t l;
-    pqth2L (p, q, th, l, BPy::extract<char const *>(Type)());
-    return BPy::make_tuple (l(0), l(1), l(2));
-}
-#endif
-
 
 /////////////////////////////////////////////////////////////////////////////////// Model functions //////////////
-
-
-/** Calculate M = max q/p at compression (phi: friction angle at compression (degrees)). */
-inline double Phi2M (double Phi, char const * Type="oct")
-{
-    double sphi = sin(Phi*Util::PI/180.0);
-    if      (strcmp(Type,"oct")==0) return 2.0*Util::SQ2*sphi/(3.0-sphi);
-    else if (strcmp(Type,"cam")==0) return 6.0*sphi/(3.0-sphi);
-    else if (strcmp(Type,"smp")==0)
-    {
-        double eta = 2.0*Util::SQ2*sphi/(3.0-sphi);
-        double c   = sqrt((2.0+Util::SQ2*eta-2.0*eta*eta)/(3.0*Util::SQ3*(Util::SQ2*eta+2.0)));
-        double a   = sqrt((2.0*eta+Util::SQ2)/Util::SQ6);
-        double b   = sqrt((Util::SQ2-eta)/Util::SQ6);
-        return sqrt((eta*eta+1.0)/(c*c*pow(a+2.0*b,2.0))-1.0);
-    }
-    else throw new Fatal("Phi2M: Method is not available for invariant Type==%s",Type);
-}
-
-/** Calculate phi (friction angle at compression (degrees)) given M (max q/p at compression). */
-inline double M2Phi (double M, char const * Type="oct")
-{
-    double sphi;
-    if      (strcmp(Type,"oct")==0) sphi = 3.0*M/(M+2.0*Util::SQ2);
-    else if (strcmp(Type,"cam")==0) sphi = 3.0*M/(M+6.0);
-    else throw new Fatal("M2Phi: Method is not available for invariant Type==%s",Type);
-    return asin(sphi)*180.0/Util::PI;
-}
 
 /** Calculate K given E and nu. */
 inline double Calc_K (double E, double nu) { return E/(3.0*(1.0-2.0*nu)); }
