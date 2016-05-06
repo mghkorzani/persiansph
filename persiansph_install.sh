@@ -81,7 +81,11 @@ else
 fi
 
 #setting a permanent environmental variable for the main code 
-SPH_Address=$SPH
+if [ $SPH!="$Current_Address/sph" ]; then 
+	SPH_Address="" 
+else 
+	SPH_Address=$SPH 
+fi
 if [ -z "${SPH_Address}" ]; then
 	echo "Creating an environment variable for the path of the SPH code as \$SPH"
 	echo "export SPH=$Current_Address/sph" >> $HOME/.bashrc
@@ -108,7 +112,11 @@ else
 fi
 
 #setting a permanent environmental variable for the packages 
-PKG_Address=$PKG
+if [ $PKG!="$Current_Address/pkg" ]; then 
+	PKG_Address="" 
+else 
+	PKG_Address=$PKG 
+fi
 if [ -z "${PKG_Address}" ]; then
 	echo "Creating an environment variable for the path of required packages as \$PKG"
 	echo "export PKG=$Current_Address/pkg" >> $HOME/.bashrc
@@ -159,7 +167,3 @@ echo "Close all terminal windows and open a new one to take effect the defined e
 echo "Please refer to the tutorial to run a simulation."
 echo ""
 echo ""
-
-
-
-
