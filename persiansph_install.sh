@@ -145,10 +145,8 @@ while true; do
 			tar -xzf lapack-3.5.0.tgz;
 			echo "... Compiling libraries ...";
 			read -p "It takes a few minutes, press any key to continue ..."
-			cd $PKG_Address/hdf5-1.8.11;
-			./configure --prefix=$PKG_Address/hdf5-1.8.11;
-			make;
-			make install;
+			cd $PKG_Address/CMake-hdf5-1.8.16;
+			source build-unix.sh;
 			cd $PKG_Address/gsl-2.1;
 			./configure --prefix=$PKG_Address/gsl-2.1;
 			make;

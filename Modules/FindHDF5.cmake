@@ -19,26 +19,28 @@
 #####################################################################################
 
 SET(HDF5_INCLUDE_SEARCH_PATH
-    $ENV{PKG}/hdf5-1.8.11/src
-    $ENV{PKG}/hdf5-1.8.11/include
-    $ENV{PKG}/hdf5-1.8.11/hl/src
+    $ENV{PKG}/CMake-hdf5-1.8.16/hdf5-1.8.16/src
+    $ENV{PKG}/CMake-hdf5-1.8.16/build/_CPack_Packages/Linux/STGZ/HDF5-1.8.16-Linux/HDF_Group/HDF5/1.8.16/include
+    $ENV{PKG}/CMake-hdf5-1.8.16/build/_CPack_Packages/Linux/TGZ/HDF5-1.8.16-Linux/HDF_Group/HDF5/1.8.16/include
     /usr/include)
 
 SET(HDF5_LIBRARY_SEARCH_PATH
-    $ENV{PKG}/hdf5-1.8.11/lib
-    $ENV{PKG}/hdf5-1.8.11/src/.libs
-    $ENV{PKG}/hdf5-1.8.11/hl/src/.libs
+    $ENV{PKG}/CMake-hdf5-1.8.16/build/bin
+    $ENV{PKG}/CMake-hdf5-1.8.16/build/_CPack_Packages/Linux/STGZ/HDF5-1.8.16-Linux/HDF_Group/HDF5/1.8.16/lib
+    $ENV{PKG}/CMake-hdf5-1.8.16/build/_CPack_Packages/Linux/TGZ/HDF5-1.8.16-Linux/HDF_Group/HDF5/1.8.16/lib
     /usr/lib/x86_64-linux-gnu
     /usr/lib)
 
 FIND_PATH(HDF5_H    hdf5.h    ${HDF5_INCLUDE_SEARCH_PATH})
 FIND_PATH(HDF5_HL_H hdf5_hl.h ${HDF5_INCLUDE_SEARCH_PATH})
 
+FIND_LIBRARY(Z       NAMES z       PATHS ${HDF5_LIBRARY_SEARCH_PATH})
+FIND_LIBRARY(SZ      NAMES szip    PATHS ${HDF5_LIBRARY_SEARCH_PATH})
 FIND_LIBRARY(HDF5    NAMES hdf5    PATHS ${HDF5_LIBRARY_SEARCH_PATH})
 FIND_LIBRARY(HDF5_HL NAMES hdf5_hl PATHS ${HDF5_LIBRARY_SEARCH_PATH})
 
 SET(HDF5_FOUND 1)
-FOREACH(var HDF5_H HDF5_HL_H HDF5 HDF5_HL)
+FOREACH(var HDF5_H HDF5_HL_H Z SZ HDF5 HDF5_HL)
   IF(NOT ${var})
 	SET(HDF5_FOUND 0)
   ENDIF(NOT ${var})
@@ -46,6 +48,6 @@ ENDFOREACH(var)
 
 IF(HDF5_FOUND)
   SET(HDF5_INCLUDE_DIR  ${HDF5_H} ${HDF5_HL_H})
-  SET(HDF5_LIBRARIES    ${HDF5_HL} ${HDF5})
+  SET(HDF5_LIBRARIES    ${HDF5_HL} ${HDF5} ${SZ} ${Z})
 ENDIF(HDF5_FOUND)
 
