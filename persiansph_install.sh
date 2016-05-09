@@ -22,23 +22,6 @@
 
 echo ""
 
-#checking Mercurial
-command -v hg >/dev/null && 
-	echo "Mercurial has been found." ||
-	{
-	echo "Mercurial is not installed."; 
-	while true; do
-		read -p "Do you wish to install this program (sudo access required)?(y/n)" yn;
-    		case $yn in
-			[Yy]* ) sudo apt-get install mercurial;
-				command -v hg >/dev/null || { echo "You do not have sudo access."; exit; }
-				break;;
-			[Nn]* ) echo "Mercurial is compulsory to download PersianSPH code."; exit;;
-			* ) echo "Please answer yes or no.";;
-		esac
-	done
-	}
-
 #checking g++ and cmake
 for Compulsory_Software in g++ cmake
 do
@@ -76,6 +59,24 @@ if [ -d "$Current_Address/sph" ]; then
 		esac
 	done
 else
+
+	#checking Mercurial
+	command -v hg >/dev/null && 
+		echo "Mercurial has been found." ||
+		{
+		echo "Mercurial is not installed."; 
+		while true; do
+			read -p "Do you wish to install this program (sudo access required)?(y/n)" yn;
+	    		case $yn in
+				[Yy]* ) sudo apt-get install mercurial;
+					command -v hg >/dev/null || { echo "You do not have sudo access."; exit; }
+					break;;
+				[Nn]* ) echo "Mercurial is compulsory to download PersianSPH code."; exit;;
+				* ) echo "Please answer yes or no.";;
+			esac
+		done
+		}
+
 	echo "... Downloading PersianSPH code ..."
 	hg clone https://mghkorzani@bitbucket.org/persiansph/sph
 fi
@@ -107,6 +108,24 @@ if [ -d "$Current_Address/pkg" ]; then
 		esac
 	done
 else
+
+	#checking Mercurial
+	command -v hg >/dev/null && 
+		echo "Mercurial has been found." ||
+		{
+		echo "Mercurial is not installed."; 
+		while true; do
+			read -p "Do you wish to install this program (sudo access required)?(y/n)" yn;
+	    		case $yn in
+				[Yy]* ) sudo apt-get install mercurial;
+					command -v hg >/dev/null || { echo "You do not have sudo access."; exit; }
+					break;;
+				[Nn]* ) echo "Mercurial is compulsory to download PersianSPH code."; exit;;
+				* ) echo "Please answer yes or no.";;
+			esac
+		done
+		}
+
 	echo "... Downloading required libraries ..."
 	hg clone https://mghkorzani@bitbucket.org/persiansph/pkg
 fi
@@ -129,6 +148,7 @@ if [ ! -d "$Current_Address/pkg/blitz-0.9" ]; then
 	echo "... Installing Blitz library ..."
 	cd $PKG_Address
 	tar -xzf blitz-0.9.tar.gz
+	rm -f blitz-0.9.tar.gz
 fi
 
 # installing other libraries
@@ -140,13 +160,17 @@ while true; do
 			break;;
 		[Nn]* ) echo "... Unpacking libraries ...";
 			cd $PKG_Address;
-			tar -xzf CMake-hdf5-1.8.16.tar.gz;
+			tar -xzf hdf5-1.8.16.tar.gz;
 			tar -xzf gsl-2.1.tar.gz;
 			tar -xzf lapack-3.5.0.tgz;
+			rm -f hdf5-1.8.16.tar.gz;
+			rm -f gsl-2.1.tar.gz;
+			rm -f lapack-3.5.0.tgz;
 			echo "... Compiling libraries ...";
 			read -p "It takes a few minutes, press any key to continue ..."
-			cd $PKG_Address/CMake-hdf5-1.8.16;
-			source build-unix.sh;
+			cd $PKG_Address/hdf5-1.8.16;
+			./configure;
+			make;
 			cd $PKG_Address/gsl-2.1;
 			./configure --prefix=$PKG_Address/gsl-2.1;
 			make;

@@ -45,7 +45,7 @@ IF(A_MAKE_OPTIMIZED)
 ENDIF(A_MAKE_OPTIMIZED)
 
 ADD_DEFINITIONS(-fmessage-length=0) # Each error message will appear on a single line; no line-wrapping will be done.
-ADD_DEFINITIONS(-std=c++11)         # New C++ standard
+#ADD_DEFINITIONS(-std=c++11)         # New C++ standard
 ADD_DEFINITIONS(-fpermissive)       # New C++ standard
 
 INCLUDE ($ENV{SPH}/Modules/FindHDF5.cmake)
