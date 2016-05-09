@@ -140,7 +140,7 @@ while true; do
 			break;;
 		[Nn]* ) echo "... Unpacking libraries ...";
 			cd $PKG_Address;
-			tar -xzf hdf5-1.8.11.tar.gz;
+			tar -xzf CMake-hdf5-1.8.16.tar.gz;
 			tar -xzf gsl-2.1.tar.gz;
 			tar -xzf lapack-3.5.0.tgz;
 			echo "... Compiling libraries ...";
