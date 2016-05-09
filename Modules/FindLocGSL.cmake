@@ -18,34 +18,34 @@
 # PersianSPH; if not, see <http://www.gnu.org/licenses/>                            #
 #####################################################################################
 
-SET(GSL_INCLUDE_SEARCH_PATH
+SET(LocGSL_INCLUDE_SEARCH_PATH
   $ENV{PKG}/gsl-2.1
+  $ENV{PKG}/gsl-2.1/gsl
+  $ENV{PKG}/gsl-2.1/eigen
   /usr/include
   /usr/local/include)
 
-SET(GSL_LIBRARY_SEARCH_PATH
-  $ENV{MECHSYS_ROOT}/pkg/gsl-2.1/.libs
-  $ENV{HOME}/pkg/gsl-2.1/.libs
-  $ENV{MECHSYS_ROOT}/pkg/gsl-2.1/cblas/.libs
-  $ENV{HOME}/pkg/gsl-2.1/cblas/.libs
+SET(LocGSL_LIBRARY_SEARCH_PATH
+  $ENV{PKG}/gsl-2.1/.libs
+  $ENV{PKG}/gsl-2.1/cblas/.libs
   /usr/lib
   /usr/local/lib)
 
-FIND_PATH(GSL_MONTE_H gsl/gsl_monte.h       ${GSL_INCLUDE_SEARCH_PATH})
-FIND_PATH(GSL_INTEG_H gsl/gsl_integration.h ${GSL_INCLUDE_SEARCH_PATH})
+FIND_PATH(GSL_MATH_H  gsl/gsl_math.h  ${LocGSL_INCLUDE_SEARCH_PATH})
+FIND_PATH(GSL_EIGEN_H gsl/gsl_eigen.h ${LocGSL_INCLUDE_SEARCH_PATH})
 
-FIND_LIBRARY(GSL_GSL NAMES gsl PATHS ${GSL_LIBRARY_SEARCH_PATH})
-FIND_LIBRARY(GSL_CBLASGSL NAMES gslcblas PATHS ${GSL_LIBRARY_SEARCH_PATH})
+FIND_LIBRARY(GSL_GSL      NAMES gsl      PATHS ${LocGSL_LIBRARY_SEARCH_PATH})
+FIND_LIBRARY(GSL_CBLASGSL NAMES gslcblas PATHS ${LocGSL_LIBRARY_SEARCH_PATH})
 
 
-SET(GSL_FOUND 1)
-FOREACH(var GSL_MONTE_H GSL_INTEG_H GSL_GSL)
+SET(LocGSL_FOUND 1)
+FOREACH(var GSL_MATH_H GSL_EIGEN_H GSL_GSL GSL_CBLASGSL)
   IF(NOT ${var})
-	SET(GSL_FOUND 0)
+	SET(LocGSL_FOUND 0)
   ENDIF(NOT ${var})
 ENDFOREACH(var)
 
 IF(GSL_FOUND)
-  SET(GSL_INCLUDE_DIRS ${GSL_INTEG_H})
-  SET(GSL_LIBRARIES    ${GSL_GSL} ${GSL_CBLASGSL})
+  SET(LocGSL_INCLUDE_DIRS ${GSL_MATH_H} ${GSL_EIGEN_H})
+  SET(LocGSL_LIBRARIES    ${GSL_GSL} ${GSL_CBLASGSL})
 ENDIF(GSL_FOUND)

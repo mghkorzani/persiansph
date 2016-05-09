@@ -48,7 +48,7 @@ ADD_DEFINITIONS(-fmessage-length=0) # Each error message will appear on a single
 #ADD_DEFINITIONS(-std=c++11)         # New C++ standard
 ADD_DEFINITIONS(-fpermissive)       # New C++ standard
 
-INCLUDE ($ENV{SPH}/Modules/FindHDF5.cmake)
+INCLUDE      ($ENV{SPH}/Modules/FindHDF5.cmake)
 INCLUDE      (FindOpenMP)
 INCLUDE      (FindLAPACK)
 INCLUDE      (FindGSL)
@@ -90,7 +90,13 @@ if(GSL_FOUND)
 	INCLUDE_DIRECTORIES (${GSL_INCLUDE_DIRS})
 	SET (LIBS ${LIBS} ${GSL_LIBRARIES})
 else(GSL_FOUND)
-    SET (MISSING "${MISSING} GSL")
+     INCLUDE ($ENV{SPH}/Modules/FindLocGSL.cmake)
+    if(LocGSL_FOUND)
+	INCLUDE_DIRECTORIES (${LocGSL_INCLUDE_DIRS})
+        SET (LIBS ${LIBS} ${LocGSL_LIBRARIES})
+    else(LocGSL_FOUND)
+        SET (MISSING "${MISSING} Gsl & GslcBlas")
+    endif(LocGSL_FOUND)
 endif(GSL_FOUND)
 
 

@@ -172,7 +172,7 @@ while true; do
 			./configure;
 			make;
 			cd $PKG_Address/gsl-2.1;
-			./configure --prefix=$PKG_Address/gsl-2.1;
+			./configure;
 			make;
 			cd $PKG_Address/lapack-3.5.0;
 			cmake .;
