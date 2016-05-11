@@ -44,40 +44,40 @@ class Particle
 {
 public:
     // Data
-    bool   	Shepard;		///< Shepard Filter for the density
+    bool   	Shepard;	///< Shepard Filter for the density
     size_t	ShepardCounter;	///< Count number of contributing particles
     size_t	ShepardStep;
     size_t	ShepardNeighbourNo;
-    bool   	IsFree;			///< Check the particle if it is free to move or not
-    bool   	InOut;			///< Check the particle if it is in-flow or out-flow or not
-    bool   	IsSat;			///< Check the particle if it is Saturated or not
-    bool   	SatCheck;		///< Check the particle Saturation at each time step
-    bool   	NoSlip;			///< No-Slip BC
+    bool   	IsFree;		///< Check the particle if it is free to move or not
+    bool   	InOut;		///< Check the particle if it is in-flow or out-flow or not
+    bool   	IsSat;		///< Check the particle if it is Saturated or not
+    bool   	SatCheck;	///< Check the particle Saturation at each time step
+    bool   	NoSlip;		///< No-Slip BC
     int    	ID;				///< an Integer value to identify the particle set
-    int    	Material;		///< an Integer value to identify the particle material type: 1 = Fluid, 2 = Solid, 3 = Soil
+    int    	Material;	///< an Integer value to identify the particle material type: 1 = Fluid, 2 = Solid, 3 = Soil
 
-    Vec3_t  x;				///< Position of the particle n
-    Vec3_t  vb;				///< Velocity of the particle n-1 (Modified Verlet)
-    Vec3_t  va;				///< Velocity of the particle n+1/2 (Leapfrog)
-    Vec3_t  v;				///< Velocity of the particle n+1,
-    Vec3_t	VXSPH;			///< Mean Velocity of neighbor particles for updating the particle position (XSPH)
-    Vec3_t  a;				///< Acceleration of the particle n
-    Vec3_t  Vis;			///< Acceleration of the particle due to viscosity effect n
+    Vec3_t  x;			///< Position of the particle n
+    Vec3_t  vb;			///< Velocity of the particle n-1 (Modified Verlet)
+    Vec3_t  va;			///< Velocity of the particle n+1/2 (Leapfrog)
+    Vec3_t  v;			///< Velocity of the particle n+1,
+    Vec3_t	VXSPH;		///< Mean Velocity of neighbor particles for updating the particle position (XSPH)
+    Vec3_t  a;			///< Acceleration of the particle n
+    Vec3_t  Vis;		///< Acceleration of the particle due to viscosity effect n
 
-    double	ZWab;			///< Summation of mb/db*Wab for neighbour particles of the particle a (for Shepard filter)
-    double	SumDen;			///< Summation of mb*Wab for neighbour particles of the particle a (for Shepard filter)
+    double	ZWab;		///< Summation of mb/db*Wab for neighbour particles of the particle a (for Shepard filter)
+    double	SumDen;		///< Summation of mb*Wab for neighbour particles of the particle a (for Shepard filter)
 
-    double 	Pressure;		///< Pressure of the particle n+1
-    double	Density;		///< Density of the particle n+1
-    double 	Densitya;		///< Density of the particle n+1/2 (Leapfrog)
-    double 	Densityb;		///< Density of the particle n-1 (Modified Verlet)
-    double 	dDensity;		///< Rate of density change in time based on state equations n
+    double 	Pressure;	///< Pressure of the particle n+1
+    double	Density;	///< Density of the particle n+1
+    double 	Densitya;	///< Density of the particle n+1/2 (Leapfrog)
+    double 	Densityb;	///< Density of the particle n-1 (Modified Verlet)
+    double 	dDensity;	///< Rate of density change in time based on state equations n
 
-    double	V;				///< Volume of a particle
-    double	RhoF;			///< Density of water or any other fluids
+    double	V;			///< Volume of a particle
+    double	RhoF;		///< Density of water or any other fluids
 
-    double 	RefDensity;		///< Reference Density of Particle
-    double 	Mass;			///< Mass of the particle
+    double 	RefDensity;	///< Reference Density of Particle
+    double 	Mass;		///< Mass of the particle
 
     Mat3_t  StrainRate;		///< Global shear Strain rate tensor n
     Mat3_t  RotationRate;		///< Global rotation tensor n
@@ -86,52 +86,53 @@ public:
     Mat3_t  ShearStress;	///< Deviatoric shear stress tensor (deviatoric part of the Cauchy stress tensor) n+1
     Mat3_t  ShearStressa;	///< Deviatoric shear stress tensor (deviatoric part of the Cauchy stress tensor) n+1/2 (Leapfrog)
     Mat3_t  ShearStressb;	///< Deviatoric shear stress tensor (deviatoric part of the Cauchy stress tensor) n-1 (Modified Verlet)
-    Mat3_t  Sigma;			///< Cauchy stress tensor (Total Stress) n+1
-    Mat3_t  Sigmaa;			///< Cauchy stress tensor (Total Stress) n+1/2 (Leapfrog)
-    Mat3_t  Sigmab;			///< Cauchy stress tensor (Total Stress) n-1 (Modified Verlet)
+    Mat3_t  Sigma;		///< Cauchy stress tensor (Total Stress) n+1
+    Mat3_t  Sigmaa;		///< Cauchy stress tensor (Total Stress) n+1/2 (Leapfrog)
+    Mat3_t  Sigmab;		///< Cauchy stress tensor (Total Stress) n-1 (Modified Verlet)
 
-    Mat3_t  TIR;			///< Tensile Instability stress tensor R
+    Mat3_t  TIR;		///< Tensile Instability stress tensor R
 
-    Mat3_t  Strain;			///< Total Strain n+1
+    Mat3_t  Strain;		///< Total Strain n+1
     Mat3_t  Straina;		///< Total Strain n+1/2 (Leapfrog)
     Mat3_t  Strainb;		///< Total Strain n-1 (Modified Verlet)
 
-    double 	Alpha;			///< Dynamic viscosity coefficient of the fluid particle
-    double 	Beta;			///< Dynamic viscosity coefficient of the fluid particle
-    double 	Mu;				///< Dynamic viscosity coefficient of the fluid particle
-    double 	MuRef;			///< Reference Dynamic viscosity coefficient
-    double 	T0;		  		///< Yield stress for Bingham fluids
-    double 	m;		  		///< Normalization value for Bingham fluids
+    double 	Alpha;		///< Dynamic viscosity coefficient of the fluid particle
+    double 	Beta;		///< Dynamic viscosity coefficient of the fluid particle
+    double 	Mu;		///< Dynamic viscosity coefficient of the fluid particle
+    double 	MuRef;		///< Reference Dynamic viscosity coefficient
+    double 	T0;		///< Yield stress for Bingham fluids
+    double 	m;		///< Normalization value for Bingham fluids
+    size_t	VisM;		///< Non-Newtonian viscosity method
+	
+    double 	G;		///< Shear modulus
+    double 	K;		///< Bulk modulus
 
-    double 	G;				///< Shear modulus
-    double 	K;				///< Bulk modulus
+    double	TI;		///< Tensile instability factor
+    double	TIn;		///< Tensile instability power
 
-    double	TI;				///< Tensile instability factor
-    double	TIn;			///< Tensile instability power
-
-    size_t	Fail;			///< Failure criteria
+    size_t	Fail;		///< Failure criteria
     double	c;				///< Cohesion
-    double	phi;			///< Friction angel
-    double	psi;			///< Dilation angel
-    double	Sigmay;			///< Tensile yield stress
-    double	n;				///< Prosity
-    double	k;				///< Permeability
-    double  d;				///< effective particle size
+    double	phi;		///< Friction angel
+    double	psi;		///< Dilation angel
+    double	Sigmay;		///< Tensile yield stress
+    double	n;		///< Prosity
+    double	k;		///< Permeability
+    double	d;		///< effective particle size
 
-    double 	h;				///< Smoothing length of the particle
+    double 	h;		///< Smoothing length of the particle
 
-    int    	LL;				///< Linked-List variable to show the next particle in the list of a cell
-    int    	CC[3];			///< Current cell No for the particle (linked-list)
+    int    	LL;		///< Linked-List variable to show the next particle in the list of a cell
+    int    	CC[3];		///< Current cell No for the particle (linked-list)
 
-    int		ct;				///< Correction step for the Modified Verlet Algorithm and Shepard filter
+    int		ct;		///< Correction step for the Modified Verlet Algorithm and Shepard filter
 
     omp_lock_t my_lock;		///< Open MP lock
 
-    double	SumKernel;		///< Summation of the kernel value for neighbour particles
-    bool	FirstStep;		///< to initialize the integration scheme
-    size_t	PresEq;			///< Selecting variable to choose an equation of state
-    double	Cs;				///< Speed of sound
-    double	P0;				///< background pressure for equation of state
+    double	SumKernel;	///< Summation of the kernel value for neighbour particles
+    bool	FirstStep;	///< to initialize the integration scheme
+    size_t	PresEq;		///< Selecting variable to choose an equation of state
+    double	Cs;		///< Speed of sound
+    double	P0;		///< background pressure for equation of state
 
     // Constructor
     Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double Mass0, double Density0, double h0, bool Fixed=false);
@@ -187,6 +188,7 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
     dDensity=0.0;
     ShearRate = 0.0;
     MuRef = Mu = 0.0;
+    VisM = 0;
     T0 = 0.0;
     m = 300.0;
     SumKernel = 0.0;
@@ -264,10 +266,26 @@ inline void Particle::Mat1(double dt)
 	// Bingham viscosity calculation
 	if (T0>0.0)
 	{
-		if (ShearRate !=0.0)
-			Mu = MuRef + T0*(1-exp(-m*ShearRate))/ShearRate;
-		else
-			Mu = MuRef + T0*m;
+		switch (VisM)
+		{
+			case 0:
+			// Bingham
+				if (ShearRate !=0.0)
+					Mu = MuRef + T0*(1-exp(-m*ShearRate))/ShearRate;
+				else
+					Mu = MuRef + T0*m;
+				break;
+			case 1:
+			// Cross
+				Mu = (1000.0*MuRef + MuRef^2*1000.0/T0*ShearRate)/(1+1000.0*MuRef/T0*ShearRate);
+				break;
+			default:
+				std::cout << "Non-Newtonian Viscosity Type No is out of range. Please correct it and run again" << std::endl;
+				std::cout << "0 => Bingham" << std::endl;
+				std::cout << "1 => Cross" << std::endl;
+				abort();
+				break;
+		}
 	}
 }
 
