@@ -114,9 +114,18 @@ void UserDamping(SPH::Domain & domi)
 
 using std::cout;
 using std::endl;
+using std::ifstream;
 
 int main(int argc, char **argv) try
 {
+	if (argc<2) throw new Fatal("This program must be called with one argument: the name of the data input file without the '.inp' suffix.\nExample:\t %s filekey\n",argv[0]);
+	String filekey  (argv[1]);
+	String filename (filekey+".inp");
+	ifstream infile(filename.CStr());
+	double IT0;
+	double Im;
+	infile >> IT0;	infile.ignore(200,'\n');
+	infile >> Im;	infile.ignore(200,'\n');
         SPH::Domain	dom;
 
         dom.Dimension	= 2;
@@ -128,21 +137,25 @@ int main(int argc, char **argv) try
 //    	dom.XSPH	= 0.5;
 
     	double x,y,Muw,Mus,T0,h,t,t1,t2,t3,m;
-    	dx	= 0.005;
+    	dx	= 0.004;
     	h	= dx*1.1;
 	D	= 0.1;
 	g	= norm(dom.Gravity);
 	H	= 4.0*D;
 	U	= 0.4;
 	RhoF	= 998.21;
-	CsW	= 30.0;
+	CsW	= 20.0;
 	x	= 4.0*D;
-	y	= 1.5*D + 1.0*dx;
+	y	= 1.5*D;
 	Muw	= 1.002e-3;
-	Mus	= 0.002;
-	CsS	= 30.0;
-	T0	= 3.79;
-	m	= 300.0;
+	Mus	= 0.07;
+	CsS	= 20.0;
+	T0	= IT0;
+	m	= Im;
+
+        std::cout<<"IT0 = "<<IT0<<std::endl;
+        std::cout<<"Im  = "<<Im<<std::endl;
+
 	RhoS	= 2650.0;
         t1	= (0.25*h/(CsW));
         t2	= (0.25*h/(CsS));
@@ -164,7 +177,7 @@ int main(int argc, char **argv) try
 //	dom.BC.out		= 0.000001,0.0,0.0;
 	dom.BC.inDensity	= RhoF;
 	dom.BC.outDensity	= RhoF;
-	dom.BC.MassConservation = true;
+//	dom.BC.MassConservation = true;
 
 	dom.InCon		= & UserInFlowCon;
 	dom.OutCon		= & UserOutFlowCon;
@@ -198,7 +211,7 @@ int main(int argc, char **argv) try
     			dom.Particles[a]->NoSlip	= true;
     		}
 
-//    		if ((xb<=(10.0*dx) || xb>=(10.0*D-10.0*dx)) && yb<=(1.0*D))
+//    		if ((xb<=(D) || xb>=(10.0*D-D)) && yb<=(1.0*D))
 //    		{
 //    			dom.Particles[a]->ID		= 5;
 //    			dom.Particles[a]->IsFree	= false;
@@ -250,7 +263,7 @@ int main(int argc, char **argv) try
     	}
 
 
-    	dom.Solve(/*tf*/50000.0,/*dt*/t,/*dtOut*/0.001,"test06",15000);
+   	dom.Solve(/*tf*/700.0,/*dt*/t,/*dtOut*/0.1,"Bin_Sed",10000);
         return 0;
 }
 MECHSYS_CATCH
