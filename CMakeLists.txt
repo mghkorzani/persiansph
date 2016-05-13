@@ -24,9 +24,8 @@ PROJECT                (New_Test)
 INCLUDE ($ENV{SPH}/Modules/FindPKG.cmake)
 
 SET(EXES
-    Current-flow
+	Current-flow_elstoplastic
 )
-
 
 FOREACH(var ${EXES})
     ADD_EXECUTABLE        (${var} "${var}.cpp")

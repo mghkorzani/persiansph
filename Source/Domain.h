@@ -883,7 +883,7 @@ inline void Domain::ListGenerate ()
 inline void Domain::CellReset ()
 {
 
-	#pragma omp parallel for schedule (static) num_threads(Nproc)
+    #pragma omp parallel for schedule (static) num_threads(Nproc)
     for(int i =0; i<CellNo[0]; i++)
     {
 		for(int j =0; j<CellNo[1]; j++)
@@ -908,12 +908,12 @@ inline void Domain::MainNeighbourSearch()
 
     if (BC.Periodic[0])
     {
-		#pragma omp parallel for schedule (dynamic) num_threads(Nproc)
-		for (q1=1;q1<(CellNo[0]-1); q1++)	YZPlaneCellsNeighbourSearch(q1);
-	}
+	#pragma omp parallel for schedule (dynamic) num_threads(Nproc)
+	for (q1=1;q1<(CellNo[0]-1); q1++)	YZPlaneCellsNeighbourSearch(q1);
+    }
     else
     {
-		#pragma omp parallel for schedule (dynamic) num_threads(Nproc)
+	#pragma omp parallel for schedule (dynamic) num_threads(Nproc)
     	for (q1=0;q1<CellNo[0]; q1++)	YZPlaneCellsNeighbourSearch(q1);
     }
 }
@@ -1484,13 +1484,14 @@ inline void Domain::InFlowBCFresh()
 
 	Vec3_t vel;
 	double den;
-
+	double fluxin=0.0, fluxout=0.0;
 	if (BC.InPart.Size()>0)
 		#pragma omp parallel for schedule(static) private(vel,den) num_threads(Nproc)
 		for (size_t i=0 ; i<BC.InPart.Size() ; i++)
 		{
 			InCon(Particles[BC.InPart[i]]->x,vel,den,BC);
 			Particles[BC.InPart[i]]->Material	= 1;
+			if (BC.MassConservation) fluxin += norm(Particles[BC.InPart[i]]->v);
 			if (norm(BC.inv)>0.0)
 			{
 				Particles[BC.InPart[i]]->v  = vel;
@@ -1501,12 +1502,18 @@ inline void Domain::InFlowBCFresh()
 				Particles[BC.InPart[i]]->Density  = den;
 				Particles[BC.InPart[i]]->Densityb = den;
 //				Particles[BC.InPart[i]]->RefDensity = BC.inDensity;
-    			Particles[BC.InPart[i]]->Pressure = EOS(Particles[BC.InPart[i]]->PresEq, Particles[BC.InPart[i]]->Cs, Particles[BC.InPart[i]]->P0,Particles[BC.InPart[i]]->Density, Particles[BC.InPart[i]]->RefDensity);
+	    			Particles[BC.InPart[i]]->Pressure = EOS(Particles[BC.InPart[i]]->PresEq, Particles[BC.InPart[i]]->Cs, Particles[BC.InPart[i]]->P0,Particles[BC.InPart[i]]->Density, Particles[BC.InPart[i]]->RefDensity);
 			}
 		}
 
 	double temp11;
-	if (BC.MassConservation) temp11 = (BC.InPart.Size()*1.0)/(BC.OutPart.Size()*1.0); else temp11 = 1.0;
+	if (BC.MassConservation) 
+	{
+                for (size_t i=0 ; i<BC.OutPart.Size() ; i++)
+			fluxout += norm(Particles[BC.OutPart[i]]->v);	
+		temp11 = fluxin/fluxout;
+	} 
+	else temp11 = 1.0;
 //	std::cout<<temp11<<std::endl;
 
 	if (BC.OutPart.Size()>0)
@@ -1524,7 +1531,7 @@ inline void Domain::InFlowBCFresh()
 				Particles[BC.OutPart[i]]->Density  = den;
 				Particles[BC.OutPart[i]]->Densityb = den;
 //				Particles[BC.OutPart[i]]->RefDensity = BC.outDensity;
-    			Particles[BC.OutPart[i]]->Pressure = EOS(Particles[BC.OutPart[i]]->PresEq, Particles[BC.OutPart[i]]->Cs, Particles[BC.OutPart[i]]->P0,Particles[BC.OutPart[i]]->Density, Particles[BC.OutPart[i]]->RefDensity);
+    				Particles[BC.OutPart[i]]->Pressure = EOS(Particles[BC.OutPart[i]]->PresEq, Particles[BC.OutPart[i]]->Cs, Particles[BC.OutPart[i]]->P0,Particles[BC.OutPart[i]]->Density, Particles[BC.OutPart[i]]->RefDensity);
 			}
 		}
 }

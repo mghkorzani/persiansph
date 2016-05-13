@@ -193,7 +193,7 @@ int main(int argc, char **argv) try
 //	dom.BC.out		= 0.000001,0.0,0.0;
 	dom.BC.inDensity	= RhoF;
 	dom.BC.outDensity	= RhoF;
-//	dom.BC.MassConservation = true;
+	dom.BC.MassConservation = true;
 
 	dom.InCon		= & UserInFlowCon;
 	dom.OutCon		= & UserOutFlowCon;

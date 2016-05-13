@@ -277,7 +277,7 @@ inline void Particle::Mat1(double dt)
 				break;
 			case 1:
 			// Cross
-				Mu = (1000.0*MuRef + MuRef^2*1000.0/T0*ShearRate)/(1+1000.0*MuRef/T0*ShearRate);
+				Mu = (1000.0*MuRef + MuRef*MuRef*1000.0/T0*ShearRate)/(1+1000.0*MuRef/T0*ShearRate);
 				break;
 			default:
 				std::cout << "Non-Newtonian Viscosity Type No is out of range. Please correct it and run again" << std::endl;
