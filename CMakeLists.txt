@@ -19,12 +19,14 @@
 #####################################################################################
 
 CMAKE_MINIMUM_REQUIRED (VERSION 3.2.2)
+#CMAKE_MINIMUM_REQUIRED (VERSION 2.8.1)
+
 PROJECT                (New_Test)
 
 INCLUDE ($ENV{SPH}/Modules/FindPKG.cmake)
 
 SET(EXES
-	Current-flow_elstoplastic
+	Poiseuille
 )
 
 FOREACH(var ${EXES})

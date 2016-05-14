@@ -184,8 +184,9 @@ public:
     bool					TimestepConstrain1; ///< Acceleration check for timestep size
 
     Array<Array<std::pair<size_t,size_t> > >	Pairs;
-    Array< size_t > 							FixedParticles;
-    Array<std::pair<size_t,size_t> >			FixedPairs;
+    Array< size_t > 				FixedParticles;
+    Array<std::pair<size_t,size_t> >		FixedPairs;
+    Array<std::pair<size_t,size_t> >		Initial;
     Mat3_t I;
     int						Excemption;
 };
@@ -754,6 +755,10 @@ inline void Domain::CellInitiate ()
            }
        }
     }
+	for(size_t i=0 ; i<Nproc ; i++)
+		Pairs.Push(Initial);
+//        std::cout<<"Pairs Size = "<<Pairs.Size()<<std::endl;
+//        std::cout<<"Initial Size = "<<Initial.Size()<<std::endl;
 }
 
 inline void Domain::ListGenerate ()
@@ -908,12 +913,12 @@ inline void Domain::MainNeighbourSearch()
 
     if (BC.Periodic[0])
     {
-	#pragma omp parallel for schedule (dynamic) num_threads(Nproc)
+	#pragma omp parallel for schedule (static) num_threads(Nproc)
 	for (q1=1;q1<(CellNo[0]-1); q1++)	YZPlaneCellsNeighbourSearch(q1);
     }
     else
     {
-	#pragma omp parallel for schedule (dynamic) num_threads(Nproc)
+	#pragma omp parallel for schedule (static) num_threads(Nproc)
     	for (q1=0;q1<CellNo[0]; q1++)	YZPlaneCellsNeighbourSearch(q1);
     }
 }
@@ -921,9 +926,10 @@ inline void Domain::MainNeighbourSearch()
 inline void Domain::YZPlaneCellsNeighbourSearch(int q1)
 {
 	int q3,q2;
-	Array<std::pair<size_t,size_t> > LocalPairs;
-	Array<std::pair<size_t,size_t> > FixedLocalPairs;
-
+	size_t T = omp_get_thread_num();
+//	Array<std::pair<size_t,size_t> > LocalPairs;
+//	Array<std::pair<size_t,size_t> > FixedLocalPairs;
+	
 	for (BC.Periodic[2] ? q3=1 : q3=0;BC.Periodic[2] ? (q3<(CellNo[2]-1)) : (q3<CellNo[2]); q3++)
 	for (BC.Periodic[1] ? q2=1 : q2=0;BC.Periodic[1] ? (q2<(CellNo[1]-1)) : (q2<CellNo[1]); q2++)
 	{
@@ -940,7 +946,7 @@ inline void Domain::YZPlaneCellsNeighbourSearch(int q1)
 				while (temp2 != -1)
 				{
 					if (Particles[temp1]->IsFree || Particles[temp2]->IsFree)
-						LocalPairs.Push(std::make_pair(temp1, temp2));
+						Pairs[T].Push(std::make_pair(temp1, temp2));
 					temp2 = Particles[temp2]->LL;
 				}
 
@@ -951,7 +957,7 @@ inline void Domain::YZPlaneCellsNeighbourSearch(int q1)
 					while (temp2 != -1)
 					{
 						if (Particles[temp1]->IsFree || Particles[temp2]->IsFree)
-							LocalPairs.Push(std::make_pair(temp1, temp2));
+							Pairs[T].Push(std::make_pair(temp1, temp2));
 						temp2 = Particles[temp2]->LL;
 					}
 				}
@@ -967,7 +973,7 @@ inline void Domain::YZPlaneCellsNeighbourSearch(int q1)
 							while (temp2 != -1)
 							{
 								if (Particles[temp1]->IsFree || Particles[temp2]->IsFree)
-									LocalPairs.Push(std::make_pair(temp1, temp2));
+									Pairs[T].Push(std::make_pair(temp1, temp2));
 								temp2 = Particles[temp2]->LL;
 							}
 						}
@@ -986,7 +992,7 @@ inline void Domain::YZPlaneCellsNeighbourSearch(int q1)
 							while (temp2 != -1)
 							{
 								if (Particles[temp1]->IsFree || Particles[temp2]->IsFree)
-									LocalPairs.Push(std::make_pair(temp1, temp2));
+									Pairs[T].Push(std::make_pair(temp1, temp2));
 								temp2 = Particles[temp2]->LL;
 							}
 						}
@@ -998,9 +1004,9 @@ inline void Domain::YZPlaneCellsNeighbourSearch(int q1)
 	}
 
 	//Transferring LocalPairs array in each thread to Pairs (a global array)
-	omp_set_lock(&dom_lock);
-	Pairs.Push(LocalPairs);
-	omp_unset_lock(&dom_lock);
+//	omp_set_lock(&dom_lock);
+//	Pairs.Push(LocalPairs);
+//	omp_unset_lock(&dom_lock);
 
 }
 
@@ -1075,7 +1081,7 @@ inline void Domain::PrimaryComputeAcceleration ()
 {
 	if (FixedParticles.Size()>0)
 	{
-		#pragma omp parallel for schedule (dynamic) num_threads(Nproc)
+		#pragma omp parallel for schedule (static) num_threads(Nproc)
 		for (size_t k=0; k<Pairs.Size();k++)
 		{
 			for (size_t a=0; a<Pairs[k].Size();a++)
@@ -1223,7 +1229,7 @@ inline void Domain::PrimaryComputeAcceleration ()
 
 inline void Domain::LastComputeAcceleration ()
 {
-    #pragma omp parallel for schedule (dynamic) num_threads(Nproc)
+	#pragma omp parallel for schedule (static) num_threads(Nproc)
 	for (size_t k=0; k<Pairs.Size();k++)
 	{
 		for (size_t i=0; i<Pairs[k].Size();i++)
@@ -1248,7 +1254,11 @@ inline void Domain::LastComputeAcceleration ()
 			}
 		}
 	}
-	Pairs.Clear();
+
+	for (size_t i=0 ; i<Nproc ; i++)
+		Pairs[i].Clear();
+
+//	Pairs.Clear();
 //	FixedPairs.Clear();
 
 //	//Min time step check based on the acceleration
