@@ -362,29 +362,30 @@ inline double DensitySolid(size_t EQ, double Cs0, double P00, double Pressure, d
 inline void Seepage(size_t ST,double n, double k, double d, double mu,  double rho, double& SF1, double& SF2)
 {
 	switch (ST)
-    {case 0:
-    	// Darcy
-    	SF1 = mu/k;
-    	SF2 = 0.0;
+	{
+	case 0:
+		// Darcy
+		SF1 = mu/k;
+		SF2 = 0.0;
 		break;
-    case 1:
-    	// Ergun
-    	SF1 = mu/k;
-    	SF2 = 1.75*rho/(sqrt(150.0*k*n*n*n));
-    	break;
-    case 2:
-    	// Den Adel
-    	SF1 = mu/k;
-    	SF2 = 0.4*rho/(n*n*d);
-    	break;
-   default:
-	   	std::cout << "Seepage Type No is out of range. Please correct it and run again" << std::endl;
+	case 1:
+		// Ergun
+		SF1 = mu/k;
+		SF2 = 1.75*rho/(sqrt(150.0*k*n*n*n));
+		break;
+	case 2:
+		// Den Adel
+		SF1 = mu/k;
+		SF2 = 0.4*rho/(n*n*d);
+		break;
+	default:
+		std::cout << "Seepage Type No is out of range. Please correct it and run again" << std::endl;
 		std::cout << "0 => Darcy" << std::endl;
 		std::cout << "1 => Ergun" << std::endl;
 		std::cout << "2 => Den Adel" << std::endl;
-	    abort();
-	    break;
-    }
+		abort();
+		break;
+	}
 }
 
 }; // namespace SPH

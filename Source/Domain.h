@@ -46,23 +46,23 @@ public:
 
     Vec3_t 	inv;		///< Apply a certain velocity to inflow particles
     Vec3_t 	outv;		///< Apply a certain velocity to outflow particles
-    Vec3_t  allv;		///< Apply a certain velocity to all particle
+    Vec3_t	allv;		///< Apply a certain velocity to all particle
 
-    bool 	Periodic[3];///< Considering periodic in all directions => 0=X, 1=Y, 2=Z
+    bool 	Periodic[3];	///< Considering periodic in all directions => 0=X, 1=Y, 2=Z
 
     int 	InOutFlow;	///< Considering inflow in all directions  by adding and deleting particles=> [0]=X, [1]=Y, [2]=Z and 0=none, 1=-
-    double  InFlowLoc1;
-    double  InFlowLoc2;
-    double  InFlowLoc3;
-   double  OutFlowLoc;
+    double	InFlowLoc1;
+    double	InFlowLoc2;
+    double	InFlowLoc3;
+    double	OutFlowLoc;
     double	cellfac;
     int		inoutcounter;
     bool	MassConservation;
 
-    Array <int>				OutPart;
-	Array <int>				InPart;
+    Array <int>	OutPart;
+    Array <int>	InPart;
 
-	Boundary();
+    Boundary();
 };
 
 inline Boundary::Boundary()
@@ -98,90 +98,89 @@ public:
     ~Domain ();
 
     // Domain Part
-    void AddSingleParticle			(int tag, Vec3_t const & x, double Mass, double Density, double h, bool Fixed);						///< Add one particle
-    void AddBoxLength				(int tag, Vec3_t const &V, double Lx, double Ly, double Lz,double r, double Density, double h,
-    									int type, int rotation, bool random, bool Fixed);												///< Add a cube of particles with a defined dimensions
-    void AddBoxNo					(int tag, Vec3_t const & V, size_t nx, size_t ny, size_t nz, double r, double Density, double h,
-    									int type, int rotation, bool random, bool Fixed);												///< Add a cube of particles with a defined numbers
+    void AddSingleParticle			(int tag, Vec3_t const & x, double Mass, double Density, double h, bool Fixed);		///< Add one particle
+    void AddBoxLength				(int tag, Vec3_t const &V, double Lx, double Ly, double Lz,double r, double Density,
+							double h,int type, int rotation, bool random, bool Fixed);			///< Add a cube of particles with a defined dimensions
+    void AddBoxNo				(int tag, Vec3_t const &V, size_t nx, size_t ny, size_t nz,double r, double Density,
+							double h,int type, int rotation, bool random, bool Fixed);			///< Add a cube of particles with a defined numbers
+    void DelParticles				(int const & Tags);									///< Delete particles by tag
+    void CheckParticleLeave			();											///< Check if any particles leave the domain, they will be deleted
 
-    void DelParticles				(int const & Tags);																					///< Delete particles by tag
-    void CheckParticleLeave			();																									///< Check if any particles leave the domain, they will be deleted
+    void YZPlaneCellsNeighbourSearch		(int q1);										///< Create pairs of particles in cells of XZ plan
+    void MainNeighbourSearch			();											///< Create pairs of particles in the whole domain
+    void StartAcceleration			(Vec3_t const & a = Vec3_t(0.0,0.0,0.0));						///< Add a fixed acceleration such as the Gravity
+    void PrimaryComputeAcceleration		();											///< Compute the solid boundary properties
+    void LastComputeAcceleration		();											///< Compute the acceleration due to the other particles
+    void CalcForce11				(Particle * P1, Particle * P2);								///< Calculates the contact force between particles
+    void CalcForce2233				(Particle * P1, Particle * P2);								///< Calculates the contact force between particles
+    void CalcForce13				(Particle * P1, Particle * P2);								///< Calculates the contact force between particles
+    void Move					(double dt);										///< Move particles
 
-    void YZPlaneCellsNeighbourSearch(int q1);																							///< Create pairs of particles in cells of XZ plan
-    void MainNeighbourSearch		();																									///< Create pairs of particles in the whole domain
-    void StartAcceleration			(Vec3_t const & a = Vec3_t(0.0,0.0,0.0));															///< Add a fixed acceleration such as the Gravity
-    void PrimaryComputeAcceleration	();																									///< Compute the solid boundary properties
-    void LastComputeAcceleration	();																									///< Compute the acceleration due to the other particles
-    void CalcForce11				(Particle * P1, Particle * P2);																		///< Calculates the contact force between particles
-    void CalcForce2233				(Particle * P1, Particle * P2);																		///< Calculates the contact force between particles
-    void CalcForce13				(Particle * P1, Particle * P2);																		///< Calculates the contact force between particles
-    void Move						(double dt);																						///< Move particles
+    void Solve					(double tf, double dt, double dtOut, char const * TheFileKey, size_t maxidx);		///< The solving function
 
-    void Solve						(double tf, double dt, double dtOut, char const * TheFileKey, size_t maxidx);						///< The solving function
+    void CellInitiate				();											///< Find the size of the domain as a cube, make cells and HOCs
+    void ListGenerate				();											///< Generate linked-list
+    void CellReset				();											///< Reset HOCs and particles' LL to initial value of -1
+	
+    void WriteXDMF				(char const * FileKey);									///< Save a XDMF file for the visualization
+    void Save					(char const * FileKey);									///< Save the domain in a file
+    void Load					(char const * FileKey);									///< Load the domain from the saved file
+    void LoadResults				(char const * FileKey, double density);							///< Load the domain from one of the results
 
-    void CellInitiate				();																									///< Find the size of the domain as a cube, make cells and HOCs
-    void ListGenerate				();																									///< Generate linked-list
-    void CellReset					();																									///< Reset HOCs and particles' LL to initial value of -1
-
-    void WriteXDMF					(char const * FileKey);																				///< Save a XDMF file for the visualization
-    void Save						(char const * FileKey);																				///< Save the domain in a file
-    void Load						(char const * FileKey);																				///< Load the domain from the saved file
-    void LoadResults				(char const * FileKey, double density);																///< Load the domain from one of the results
-
-    void PrintInput					(char const * FileKey);
+    void PrintInput				(char const * FileKey);
     void InFlowBCLeave				();
     void InFlowBCFresh				();
     void WholeVelocity				();
     void InitialChecks				();
 
     // Data
-    Array <Particle*>		Particles;     	 	///< Array of particles
-    double					R;					///< Particle Radius in addrandombox
+    Array <Particle*>				Particles; 	///< Array of particles
+    double					R;		///< Particle Radius in addrandombox
 
-    double					Time;          	 	///< The simulation time at each step
-    double					AutoSaveInt;		///< Automatic save interval time step
-    double					deltat;				///< Time Step
+    double					Time;    	///< The simulation time at each step
+    double					AutoSaveInt;	///< Automatic save interval time step
+    double					deltat;		///< Time Step
 
-    int 					Dimension;    	  	///< Dimension of the problem
+    int 					Dimension;    	///< Dimension of the problem
 
-    double					MuMax;				///< Max Dynamic viscosity for calculating the timestep
-    double					CsMax;				///< Max speed of sound for calculating the timestep
+    double					MuMax;		///< Max Dynamic viscosity for calculating the timestep
+    double					CsMax;		///< Max speed of sound for calculating the timestep
 
-    Vec3_t					Gravity;       	 	///< Gravity acceleration
+    Vec3_t					Gravity;       	///< Gravity acceleration
 
 
-    Vec3_t                  TRPR;				///< Top right-hand point at rear of the domain as a cube
-    Vec3_t                  BLPF;           	///< Bottom left-hand point at front of the domain as a cube
-    Vec3_t                  CellSize;      		///< Calculated cell size according to (cell size >= 2h)
-    int		                CellNo[3];      	///< No. of cells for linked list
-    double 					Cellfac;			///< Factor which should be multiplied by h to change the size of cells (Min 2)
-	double 					hmax;				///< Max of h for the cell size  determination
-    Vec3_t                  DomSize;			///< Each component of the vector is the domain size in that direction if periodic boundary condition is defined in that direction as well
-	double					rhomax;
+    Vec3_t                 			TRPR;		///< Top right-hand point at rear of the domain as a cube
+    Vec3_t                  			BLPF;           ///< Bottom left-hand point at front of the domain as a cube
+    Vec3_t                  			CellSize;      	///< Calculated cell size according to (cell size >= 2h)
+    int		                		CellNo[3];      ///< No. of cells for linked list
+    double 					Cellfac;	///< Factor which should be multiplied by h to change the size of cells (Min 2)
+    double 					hmax;		///< Max of h for the cell size  determination
+    Vec3_t                 			DomSize;	///< Each component of the vector is the domain size in that direction if periodic boundary condition is defined in that direction as well
+    double					rhomax;
 
-    int					*** HOC;				///< Array of "Head of Chain" for each cell
+    int						*** HOC;	///< Array of "Head of Chain" for each cell
 
-    size_t					VisEq;				///< Selecting variable to choose an equation for viscosity
-    size_t					KernelType;			///< Selecting variable to choose a kernel
-    size_t					SeepageType;		///< Selecting variable to choose a Seepage method
+    size_t					VisEq;		///< Selecting variable to choose an equation for viscosity
+    size_t					KernelType;	///< Selecting variable to choose a kernel
+    size_t					SeepageType;	///< Selecting variable to choose a Seepage method
 
-    double 					XSPH;				///< Velocity correction factor
-    double 					InitialDist;		///< Initial distance of particles for calculation of tensile instability
+    double 					XSPH;		///< Velocity correction factor
+    double 					InitialDist;	///< Initial distance of particles for calculation of tensile instability
 
-    double					AvgVelocity;		///< Average velocity of the last two column for x periodic constant velocity
+    double					AvgVelocity;	///< Average velocity of the last two column for x periodic constant velocity
 
-    size_t					Nproc;				///< No of threads which are going to use in parallel calculation
-    omp_lock_t 				dom_lock;			///< Open MP lock to lock Interactions array
-    Boundary				BC;
+    size_t					Nproc;		///< No of threads which are going to use in parallel calculation
+    omp_lock_t 					dom_lock;	///< Open MP lock to lock Interactions array
+    Boundary					BC;
     PtVel 					InCon;
     PtVel 					OutCon;
     PtVel 					AllCon;
     Vec3_t					DomMax;
     Vec3_t					DomMin;
-    PtDom					GeneralBefore;		///< Pointer to a function: to modify particles properties before CalcForce function
-    PtDom					GeneralAfter;		///< Pointer to a function: to modify particles properties after CalcForce function
-    size_t					Scheme;				///< Integration scheme: 0 = Modified Verlet, 1 = Leapfrog
-    bool					TimestepConstrain1; ///< Acceleration check for timestep size
+    PtDom					GeneralBefore;	///< Pointer to a function: to modify particles properties before CalcForce function
+    PtDom					GeneralAfter;	///< Pointer to a function: to modify particles properties after CalcForce function
+    size_t					Scheme;		///< Integration scheme: 0 = Modified Verlet, 1 = Leapfrog
+    bool					TimestepConstrain1;	///< Acceleration check for timestep size
 
     Array<Array<std::pair<size_t,size_t> > >	Pairs;
     Array< size_t > 				FixedParticles;
@@ -755,10 +754,9 @@ inline void Domain::CellInitiate ()
            }
        }
     }
-	for(size_t i=0 ; i<Nproc ; i++)
-		Pairs.Push(Initial);
-//        std::cout<<"Pairs Size = "<<Pairs.Size()<<std::endl;
-//        std::cout<<"Initial Size = "<<Initial.Size()<<std::endl;
+    // Initiate Pairs array for neibour searching
+    for(size_t i=0 ; i<Nproc ; i++)
+	Pairs.Push(Initial);
 }
 
 inline void Domain::ListGenerate ()
@@ -927,8 +925,6 @@ inline void Domain::YZPlaneCellsNeighbourSearch(int q1)
 {
 	int q3,q2;
 	size_t T = omp_get_thread_num();
-//	Array<std::pair<size_t,size_t> > LocalPairs;
-//	Array<std::pair<size_t,size_t> > FixedLocalPairs;
 	
 	for (BC.Periodic[2] ? q3=1 : q3=0;BC.Periodic[2] ? (q3<(CellNo[2]-1)) : (q3<CellNo[2]); q3++)
 	for (BC.Periodic[1] ? q2=1 : q2=0;BC.Periodic[1] ? (q2<(CellNo[1]-1)) : (q2<CellNo[1]); q2++)
@@ -1002,33 +998,31 @@ inline void Domain::YZPlaneCellsNeighbourSearch(int q1)
 			}
 		}
 	}
-
-	//Transferring LocalPairs array in each thread to Pairs (a global array)
-//	omp_set_lock(&dom_lock);
-//	Pairs.Push(LocalPairs);
-//	omp_unset_lock(&dom_lock);
-
 }
 
 inline void Domain::StartAcceleration (Vec3_t const & a)
 {
 	#pragma omp parallel for schedule (static) num_threads(Nproc)
 	for (size_t i=0; i<Particles.Size(); i++)
-    {
-    	if (Particles[i]->IsFree)
-    	{
-    		if (Particles[i]->Material < 3 && Particles[i]->FirstStep)
-    			Particles[i]->Pressure = EOS(Particles[i]->PresEq, Particles[i]->Cs, Particles[i]->P0,Particles[i]->Density, Particles[i]->RefDensity);
+	{
+	    	if (Particles[i]->IsFree)
+    		{
+    			if (Particles[i]->Material < 3 && Particles[i]->FirstStep)
+    				Particles[i]->Pressure = EOS(Particles[i]->PresEq, Particles[i]->Cs, Particles[i]->P0,Particles[i]->Density, Particles[i]->RefDensity);
 
-        	// Tensile Instability for all soil and solid particles
-            if (Particles[i]->Material > 1 && Particles[i]->TI > 0.0)
-            {
+			// Tensile Instability for all soil and solid particles
+			if (Particles[i]->Material > 1 && Particles[i]->TI > 0.0)
+        		{
 				// XY plane must be used, It is very slow in 3D
 				if (Dimension == 2)
 				{
 					double teta, Sigmaxx, Sigmayy, C, S;
 
-					if ((Particles[i]->Sigma(0,0)-Particles[i]->Sigma(1,1))!=0.0) teta = 0.5*atan(2.0*Particles[i]->Sigma(0,1)/(Particles[i]->Sigma(0,0)-Particles[i]->Sigma(1,1))); else teta = M_PI/4.0;
+					if ((Particles[i]->Sigma(0,0)-Particles[i]->Sigma(1,1))!=0.0) 
+						teta = 0.5*atan(2.0*Particles[i]->Sigma(0,1)/(Particles[i]->Sigma(0,0)-Particles[i]->Sigma(1,1)));
+					else 
+						teta = M_PI/4.0;
+
 					C = cos(teta);
 					S = sin(teta);
 					Sigmaxx = C*C*Particles[i]->Sigma(0,0) + 2.0*C*S*Particles[i]->Sigma(0,1) + S*S*Particles[i]->Sigma(1,1);
@@ -1050,31 +1044,31 @@ inline void Domain::StartAcceleration (Vec3_t const & a)
 					Mult(Vec,Val,temp);
 					Mult(temp,VecT,Particles[i]->TIR);
 				}
-            }
-    	}
-    	else
-    	{
-       		// Reset the pressure and the induced velocity for solid boundaries
-    		Particles[i]->vb = 0.0;
-    		Particles[i]->Pressure = 0.0;
-            set_to_zero(Particles[i]->Sigma);
-            set_to_zero(Particles[i]->ShearStress);
-    	}
+			}
+	    	}
+	    	else
+	    	{
+	       		// Reset the pressure and the induced velocity for solid boundaries
+	    		Particles[i]->vb = 0.0;
+	    		Particles[i]->Pressure = 0.0;
+	        	set_to_zero(Particles[i]->Sigma);
+	        	set_to_zero(Particles[i]->ShearStress);
+	    	}
 
 
 
-    	//Reset to zero for all particles
-    	Particles[i]->a			= a;
-    	Particles[i]->SatCheck	= false;
-        Particles[i]->dDensity	= 0.0;
-        Particles[i]->VXSPH		= 0.0;
-        Particles[i]->ZWab		= 0.0;
-        Particles[i]->SumDen	= 0.0;
-        Particles[i]->Vis		= 0.0;
-        Particles[i]->SumKernel	= 0.0;
-        set_to_zero(Particles[i]->StrainRate);
-        set_to_zero(Particles[i]->RotationRate);
-    }
+		//Reset to zero for all particles
+		Particles[i]->a		= a;
+		Particles[i]->SatCheck	= false;
+		Particles[i]->dDensity	= 0.0;
+		Particles[i]->VXSPH	= 0.0;
+		Particles[i]->ZWab	= 0.0;
+		Particles[i]->SumDen	= 0.0;
+		Particles[i]->Vis	= 0.0;
+		Particles[i]->SumKernel	= 0.0;
+		set_to_zero(Particles[i]->StrainRate);
+		set_to_zero(Particles[i]->RotationRate);
+	}
 }
 
 inline void Domain::PrimaryComputeAcceleration ()
@@ -1108,11 +1102,8 @@ inline void Domain::PrimaryComputeAcceleration ()
 							if (Particles[i]->Material > 1)	Particles[i]->Sigma		=  Particles[i]->Sigma + K * Particles[j]->Sigma;
 							Particles[i]->vb += Particles[j]->v * K;
 						omp_unset_lock(&Particles[i]->my_lock);
-
-	//					omp_set_lock(&dom_lock);
-	//		        	FixedPairs.Push(Pairs[k][a]);
-	//					omp_unset_lock(&dom_lock);
 					}
+
 					if (!Particles[Pairs[k][a].second]->IsFree)
 					{
 						size_t i	= Pairs[k][a].first;
@@ -1132,10 +1123,6 @@ inline void Domain::PrimaryComputeAcceleration ()
 							if (Particles[j]->Material > 1)	Particles[j]->Sigma		=  Particles[j]->Sigma + K * Particles[i]->Sigma;
 							Particles[j]->vb += Particles[i]->v * K;
 						omp_unset_lock(&Particles[j]->my_lock);
-
-	//					omp_set_lock(&dom_lock);
-	//		        	FixedPairs.Push(Pairs[k][a]);
-	//					omp_unset_lock(&dom_lock);
 					}
 				}
 				else
@@ -1165,7 +1152,7 @@ inline void Domain::PrimaryComputeAcceleration ()
 			{
 				if (Particles[i]->SatCheck && !Particles[i]->IsSat)
 				{
-					Particles[i]->Mass			= Particles[i]->V*(Particles[i]->RefDensity - Particles[i]->RhoF);
+					Particles[i]->Mass		= Particles[i]->V*(Particles[i]->RefDensity - Particles[i]->RhoF);
 					Particles[i]->Density		= Particles[i]->Density - Particles[i]->RhoF;
 					Particles[i]->Densityb		= Particles[i]->Densityb - Particles[i]->RhoF;
 					Particles[i]->RefDensity	= Particles[i]->RefDensity - Particles[i]->RhoF;
@@ -1173,7 +1160,7 @@ inline void Domain::PrimaryComputeAcceleration ()
 				}
 				if (!Particles[i]->SatCheck && Particles[i]->IsSat)
 				{
-					Particles[i]->Mass			= Particles[i]->V*(Particles[i]->RefDensity + Particles[i]->RhoF);
+					Particles[i]->Mass		= Particles[i]->V*(Particles[i]->RefDensity + Particles[i]->RhoF);
 					Particles[i]->Density		= Particles[i]->Density + Particles[i]->RhoF;
 					Particles[i]->Densityb		= Particles[i]->Densityb + Particles[i]->RhoF;
 					Particles[i]->RefDensity	= Particles[i]->RefDensity + Particles[i]->RhoF;
@@ -1189,8 +1176,8 @@ inline void Domain::PrimaryComputeAcceleration ()
 			{
 				size_t a = FixedParticles[i];
 				if (Particles[a]->Material < 3)	Particles[a]->Pressure	= Particles[a]->Pressure/Particles[a]->SumKernel;
-				if (Particles[a]->Material > 1) Particles[a]->Sigma		= 1.0/Particles[a]->SumKernel*Particles[a]->Sigma;
-				Particles[a]->vb		= Particles[a]->vb/Particles[a]->SumKernel;
+				if (Particles[a]->Material > 1) Particles[a]->Sigma	= 1.0/Particles[a]->SumKernel*Particles[a]->Sigma;
+								Particles[a]->vb	= Particles[a]->vb/Particles[a]->SumKernel;
 
 				// Tensile Instability for fixed soil and solid particles
 				if (Particles[a]->Material > 1 && Particles[a]->TI > 0.0)
@@ -1200,7 +1187,11 @@ inline void Domain::PrimaryComputeAcceleration ()
 					{
 						double teta, Sigmaxx, Sigmayy, C, S;
 
-						if ((Particles[a]->Sigma(0,0)-Particles[a]->Sigma(1,1))!=0.0) teta = 0.5*atan(2.0*Particles[a]->Sigma(0,1)/(Particles[a]->Sigma(0,0)-Particles[a]->Sigma(1,1))); else teta = M_PI/4.0;
+						if ((Particles[a]->Sigma(0,0)-Particles[a]->Sigma(1,1))!=0.0) 
+							teta = 0.5*atan(2.0*Particles[a]->Sigma(0,1)/(Particles[a]->Sigma(0,0)-Particles[a]->Sigma(1,1))); 
+						else 
+							teta = M_PI/4.0;
+
 						C = cos(teta);
 						S = sin(teta);
 						Sigmaxx = C*C*Particles[a]->Sigma(0,0) + 2.0*C*S*Particles[a]->Sigma(0,1) + S*S*Particles[a]->Sigma(1,1);
@@ -1257,9 +1248,6 @@ inline void Domain::LastComputeAcceleration ()
 
 	for (size_t i=0 ; i<Nproc ; i++)
 		Pairs[i].Clear();
-
-//	Pairs.Clear();
-//	FixedPairs.Clear();
 
 //	//Min time step check based on the acceleration
 	if (TimestepConstrain1)
@@ -1521,7 +1509,7 @@ inline void Domain::InFlowBCFresh()
 	{
                 for (size_t i=0 ; i<BC.OutPart.Size() ; i++)
 			fluxout += norm(Particles[BC.OutPart[i]]->v);	
-		temp11 = fluxin/fluxout;
+		temp11 = std::min(fluxin/fluxout,1.0);
 	} 
 	else temp11 = 1.0;
 //	std::cout<<temp11<<std::endl;
