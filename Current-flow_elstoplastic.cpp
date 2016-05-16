@@ -109,7 +109,7 @@ int main(int argc, char **argv) try
         SPH::Domain	dom;
 
         dom.Dimension	= 2;
-        dom.Nproc	= 12;
+        dom.Nproc	= 24;
     	dom.VisEq	= 0;
     	dom.KernelType	= 4;
     	dom.Scheme	= 0;
@@ -145,8 +145,6 @@ int main(int argc, char **argv) try
     	DampTime		= 0.5;
     	dom.InitialDist 	= dx;
 
-	dom.BC.Periodic[1]	= true;
-	dom.BC.Periodic[0]	= true;
 	dom.BC.InOutFlow	= 3;
 //	dom.BC.inv		= 0.000001,0.0,0.0;
 //	dom.BC.out		= 0.000001,0.0,0.0;

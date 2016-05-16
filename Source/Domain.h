@@ -913,12 +913,12 @@ inline void Domain::MainNeighbourSearch()
 
     if (BC.Periodic[0])
     {
-	#pragma omp parallel for schedule (static) num_threads(Nproc)
+	#pragma omp parallel for schedule (dynamic) num_threads(Nproc)
 	for (q1=1;q1<(CellNo[0]-1); q1++)	YZPlaneCellsNeighbourSearch(q1);
     }
     else
     {
-	#pragma omp parallel for schedule (static) num_threads(Nproc)
+	#pragma omp parallel for schedule (dynamic) num_threads(Nproc)
     	for (q1=0;q1<CellNo[0]; q1++)	YZPlaneCellsNeighbourSearch(q1);
     }
 }

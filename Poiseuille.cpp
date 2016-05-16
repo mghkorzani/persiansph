@@ -57,7 +57,7 @@ int main(int argc, char **argv) try
         std::cout<<maz<<std::endl;
     	dom.GeneralBefore	= & UserAcc;
 
-     	dom.AddBoxLength(1 ,Vec3_t ( 0.0 , -0.0006 , 0.0 ), 0.0005*50.0 , 0.00121 ,  0 , dx/2.0 ,rho, h, 1 , 0 , false, false );
+     	dom.AddBoxLength(1 ,Vec3_t ( 0.0 , -0.0006 , 0.0 ), 0.0005 , 0.00121 ,  0 , dx/2.0 ,rho, h, 1 , 0 , false, false );
 
     	for (size_t a=0; a<dom.Particles.Size(); a++)
     	{
