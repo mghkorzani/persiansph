@@ -26,11 +26,9 @@ int Check=0;
 
 void UserInFlowCon(Vec3_t & position, Vec3_t & Vel, double & Den, SPH::Boundary & bdry)
 {
-	if (position(1)<=D)
-		Vel = 0.0 , 0.0 , 0.0;
-	if (position(1)<(0.514*H+D) && position(1)>D)
-		Vel = pow(((position(1)-D)/(0.32*H)),(1.0/7.0))*U , 0.0 , 0.0;
-	if (position(1)>=(0.514*H+D))
+	if (position(1)<(0.514*(H+D)))
+		Vel = pow((position(1)/(0.32*(H+D))),(1.0/7.0))*U , 0.0 , 0.0;
+	if (position(1)>=(0.514*(H+D)))
 		Vel = 1.07*U , 0.0 , 0.0;
 
 	Den = RhoF*pow((1+7.0*g*(H+D-position(1))/(CsW*CsW)),(1.0/7.0));
@@ -38,11 +36,9 @@ void UserInFlowCon(Vec3_t & position, Vec3_t & Vel, double & Den, SPH::Boundary 
 
 void UserOutFlowCon(Vec3_t & position, Vec3_t & Vel, double & Den, SPH::Boundary & bdry)
 {
-	if (position(1)<=(D+4.0*dx))
-		Vel = 0.0 , 0.0 , 0.0;
-	if (position(1)<(0.514*H+D) && position(1)>(D+4.0*dx))
-		Vel = pow(((position(1)-D)/(0.32*H)),(1.0/7.0))*U , 0.0 , 0.0;
-	if (position(1)>=(0.514*H+D))
+	if (position(1)<(0.514*(H+D)))
+		Vel = pow((position(1)/(0.32*(H+D))),(1.0/7.0))*U , 0.0 , 0.0;
+	if (position(1)>=(0.514*(H+D)))
 		Vel = 1.07*U , 0.0 , 0.0;
 
 	Den = RhoF*pow((1+7.0*g*(H+D-position(1))/(CsW*CsW)),(1.0/7.0));
@@ -50,12 +46,22 @@ void UserOutFlowCon(Vec3_t & position, Vec3_t & Vel, double & Den, SPH::Boundary
 
 void UserAllFlowCon(Vec3_t & position, Vec3_t & Vel, double & Den, SPH::Boundary & bdry)
 {
-	if (position(1)<=D)
-		Vel = 0.0 , 0.0 , 0.0;
-	if (position(1)<(0.514*H+D) && position(1)>D)
-		Vel = pow(((position(1)-D)/(0.32*H)),(1.0/7.0))*U , 0.0 , 0.0;
-	if (position(1)>=(0.514*H+D))
-		Vel = 1.07*U , 0.0 , 0.0;
+	if (position(0)<(12.0*D) && position(0)>(2.0*D))
+	{
+		if (position(1)<=D)
+			Vel = 0.0 , 0.0 , 0.0;
+		if (position(1)<(0.514*H+D) && position(1)>D)
+			Vel = pow(((position(1)-D)/(0.32*H)),(1.0/7.0))*U , 0.0 , 0.0;
+		if (position(1)>=(0.514*H+D))
+			Vel = 1.07*U , 0.0 , 0.0;
+	}
+	else
+	{
+		if (position(1)<(0.514*(H+D)))
+			Vel = pow((position(1)/(0.32*(H+D))),(1.0/7.0))*U , 0.0 , 0.0;
+		if (position(1)>=(0.514*(H+D)))
+			Vel = 1.07*U , 0.0 , 0.0;
+	}
 }
 
 void UserDamping(SPH::Domain & domi)
@@ -67,47 +73,6 @@ void UserDamping(SPH::Domain & domi)
 		if (domi.Particles[i]->IsFree && domi.Particles[i]->Material == 1) domi.Particles[i]->a -= DampF * domi.Particles[i]->v;
 		if (domi.Particles[i]->IsFree && domi.Particles[i]->Material == 3) domi.Particles[i]->a -= DampS * domi.Particles[i]->v;
 	}
-
-//	if (domi.Time>DampTime && Check==0)
-//	{
-//		domi.BC.inv	= U,0.0,0.0;
-//		domi.BC.outv	= U,0.0,0.0;
-//		#pragma omp parallel for schedule (static) num_threads(domi.Nproc)
-//		for (size_t i=0; i<domi.Particles.Size(); i++)
-//		{
-//			if (domi.Particles[i]->IsFree && domi.Particles[i]->ID == 1)
-//			{
-//				domi.Particles[i]->FirstStep = true;
-//				if (domi.Particles[i]->x(1)<=(D+dx))
-//				{
-//					domi.Particles[i]->v = 0.0 , 0.0 , 0.0;
-//					domi.Particles[i]->vb = 0.0 , 0.0 , 0.0;
-//				}
-//				if (domi.Particles[i]->x(1)<(0.514*H+D+dx) && domi.Particles[i]->x(1)>(D+dx))
-//				{
-//					domi.Particles[i]->v = pow(((domi.Particles[i]->x(1)-(D+dx))/(0.32*H)),(1.0/7.0))*U , 0.0 , 0.0;
-//					domi.Particles[i]->vb = pow(((domi.Particles[i]->x(1)-(D+dx))/(0.32*H)),(1.0/7.0))*U , 0.0 , 0.0;
-//				}
-//				if (domi.Particles[i]->x(1)>=(0.514*H+D+dx))
-//				{
-//					domi.Particles[i]->v = 1.07*U , 0.0 , 0.0;
-//					domi.Particles[i]->vb = 1.07*U , 0.0 , 0.0;
-//				}
-//			}
-//		}
-//		Check = 1;
-//	}
-//	
-//	if (domi.Time>DampTime && Check==1)
-//	{
-//		if (U<=U0)
-//			U = ((U0-0.01)/2.5)*(domi.Time-DampTime)+0.01;
-//		else
-//		{
-//			U = U0;
-//			Check = 2;
-//		}
-//	}
 }
 
 
@@ -138,7 +103,7 @@ int main(int argc, char **argv) try
 	U	= 0.4;
 	U0	= 0.4;
 	RhoF	= 998.21;
-	CsW	= 30.0;
+	CsW	= 20.0;
 	Muw	= 1.002e-3;
     	DampF	= 0.05*CsW/h;
         t1	= (0.25*h/(CsW));
@@ -159,7 +124,7 @@ int main(int argc, char **argv) try
 	dom.OutCon		= & UserOutFlowCon;
 	dom.AllCon		= & UserAllFlowCon;
 
-    	dom.AddBoxLength(1 ,Vec3_t ( 0.0 , -4.0*dx , 0.0 ), 12.0*D + dx/10.0 , 5.0*D + 8.0*dx + dx/10.0 ,  0 , dx/2.0 ,RhoF, h, 1 , 0 , false, false );
+    	dom.AddBoxLength(1 ,Vec3_t ( 0.0 , -4.0*dx , 0.0 ), 13.0*D + dx/10.0 , 5.0*D + 4.0*dx + dx/10.0 ,  0 , dx/2.0 ,RhoF, h, 1 , 0 , false, false );
 
     	double yb,xb,R,mass,no;;
 
@@ -179,20 +144,6 @@ int main(int argc, char **argv) try
 
 
     		if (yb<0.0)
-    		{
-    			dom.Particles[a]->ID		= 3;
-    			dom.Particles[a]->IsFree	= false;
-    			dom.Particles[a]->NoSlip	= true;
-    		}
-    		if (yb>(H+D))
-    		{
-    			dom.Particles[a]->ID		= 6;
-    			dom.Particles[a]->v		= 1.07*U , 0.0 , 0.0;
-    			dom.Particles[a]->vb		= 1.07*U , 0.0 , 0.0;
-    			dom.Particles[a]->IsFree	= false;
-    			dom.Particles[a]->NoSlip	= true;
-    		}
-    		if ((xb<=(5.0*dx) || xb>=(12.0*D-5.0*dx)) && yb<=(1.0*D))
     		{
     			dom.Particles[a]->ID		= 3;
     			dom.Particles[a]->IsFree	= false;
@@ -232,25 +183,23 @@ int main(int argc, char **argv) try
 	E	= 10.0e6;
 	K	= E/(3.0*(1.0-2.0*Nu));
 	G	= E/(2.0*(1.0+Nu));
-	n	= 0.55;
+	n	= 0.6;
 	RhoS	= 2650.0*(1.0-n)+n*RhoF;;
 	CsS	= sqrt(K/RhoS);
 //	CsS	= 80.0;
 	c	= 0.0;
-	Phi	= 180.0/M_PI * atan(0.389 / ( dx/2.0*g * (RhoS-RhoF) ) );
+	Phi	= 1.0;
 	Psi	= 0.0;
 	d	= 0.0004;
 	k	= n*n*n*d*d/(180.0*(1-n)*(1-n));
   	DampS	= 0.02*sqrt(E/(RhoS*h*h));
         t2	= (0.25*h/(CsS));
+        std::cout<<"CsS = "<<CsS<<std::endl;
 
-        std::cout<<"CsS  = "<<CsS<<std::endl;
-        std::cout<<"RhoS = "<<RhoS<<std::endl;
-        std::cout<<"Phi  = "<<Phi<<std::endl;
         std::cout<<"K(Permeability) = "<<k<<std::endl;
         std::cout<<"K(Conductivity) = "<<k*RhoF*norm(dom.Gravity)/Muw<<std::endl;
 
-	dom.AddBoxLength(2 ,Vec3_t ( 0.0 , -4.0*dx , 0.0 ), 12.0*D + dx/10.0 , 1.0*D + 4.0*dx + dx/10.0 ,  0 , dx/2.0 ,RhoS, h, 1 , 0 , false, false );
+	dom.AddBoxLength(2 ,Vec3_t ( 0.0 , -4.0*dx , 0.0 ), 13.0*D + dx/10.0 , 1.0*D + 6.0*dx + dx/10.0 ,  0 , dx/2.0 ,RhoS, h, 1 , 0 , false, false );
 
 	for (size_t a=0; a<dom.Particles.Size(); a++)
 	{
@@ -282,15 +231,21 @@ int main(int argc, char **argv) try
 				dom.Particles[a]->IsFree= false;
 				dom.Particles[a]->NoSlip= true;
 			}
-	    		if ((xb<=(5.0*dx) || xb>=(12.0*D-5.0*dx)) && yb<=(1.0*D))
+	    		if (xb<=(2.0*D+4.0*dx) || xb>=(12.0*D-4.0*dx))
     			{
 				dom.Particles[a]->ID	= 4;
 				dom.Particles[a]->IsFree= false;
 				dom.Particles[a]->NoSlip= true;
 			}
-
+	    		if ((xb<=(2.0*D) || xb>=(12.0*D)) && yb<=(1.0*D))
+				dom.Particles[a]->ID	= 6;
+	    		if (xb<(12.0*D-4.0*dx) && yb>(1.0*D))
+				dom.Particles[a]->ID	= 6;
+	    		if (xb>(12.0*D) && yb>(1.0*D))
+				dom.Particles[a]->ID	= 6;
 		}
 	}
+   	dom.DelParticles(6);
 
         t	= std::min(t1,t2);
         std::cout<<"t1 = "<<t1<<std::endl;
