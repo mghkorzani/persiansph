@@ -28,33 +28,36 @@ using std::ifstream;
 
 int main(int argc, char **argv) try
 {
-    SPH::Domain		dom;
+	SPH::Domain	dom;
+
 	dom.Dimension	= 2;
-
 	dom.KernelType	= 0;
-	dom.Nproc		= 24;
-
-	dom.Scheme		= 0;
-	dom.Gravity		= 0.0,-9.81,0.0;
+	dom.Nproc	= 24;
+	dom.Scheme	= 0;
+	dom.Gravity	= 0.0,-9.81,0.0;
+	dom.SeepageType	= 0;
 	dom.BC.Periodic[0] = true;
 	dom.BC.Periodic[1] = true;
 
-	double h,rhoF,rhoS,CsF;
+	double h,rhoF,rhoS,CsF,Mu;
 	double dx,HF,HS,L,T,k,n;
 
-	HF		= 3.0;
-	HS		= 3.0;
-	L		= 0.6;
+	HF	= 3.0;
+	HS	= 3.0;
+	L	= 0.6;
 	rhoF	= 998.21;
 	rhoS	= 2038.7;
-	dx		= 0.05;
-	h		= dx*1.3;
-	CsF		= 10.0*sqrt(1.0*9.81*HF);
-	k		= 5.0e-2;
-	n		= 1.0;
-	T		= (0.1*h/CsF);
+	Mu	= 1.002e-3;
+	dx	= 0.05;
+	h	= dx*1.3;
+	CsF	= 10.0*sqrt(1.0*9.81*HF);
+	// Converting the hydraulic conductivity to the pearmeability	
+	k	= 5.0e-2*Mu/(rhoF*norm(dom.Gravity)); //Permeability
+
+	T	= (0.1*h/CsF);
+
 	dom.InitialDist	= dx;
-    std::cout<<"T  = "<<T<<std::endl;
+	std::cout<<"T  = "<<T<<std::endl;
 
 	dom.AddBoxLength(1 ,Vec3_t ( -L/2.0 , 0.0 , 0.0 ), L + dx/10.0 , HF + dx/10.0  ,  0 , dx/2.0 ,rhoF, h,1 , 0 , false,false);
 
@@ -62,8 +65,8 @@ int main(int argc, char **argv) try
 	{
  		dom.Particles[a]->PresEq	= 0;
  		dom.Particles[a]->Alpha		= 0.03;
- 		dom.Particles[a]->Mu		= 1.002e-3;
-		dom.Particles[a]->MuRef		= 1.002e-3;
+ 		dom.Particles[a]->Mu		= Mu;
+		dom.Particles[a]->MuRef		= Mu;
 		dom.Particles[a]->Material	= 1;
 		dom.Particles[a]->Cs		= CsF;
 	}
@@ -75,10 +78,8 @@ int main(int argc, char **argv) try
 	{
 		if (dom.Particles[a]->ID==3)
 		{
-			dom.Particles[a]->n			= n;
-			dom.Particles[a]->k			= k;
+			dom.Particles[a]->k		= k;
 			dom.Particles[a]->Material	= 3;
-			dom.Particles[a]->RhoF		= rhoF;
 			dom.Particles[a]->IsFree	= false;
 		}
 	}

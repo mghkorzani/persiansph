@@ -154,7 +154,7 @@ int main(int argc, char **argv) try
 	dom.BC.allv		= U,0.0,0.0;
 	dom.BC.inDensity	= RhoF;
 	dom.BC.outDensity	= RhoF;
-	dom.BC.MassConservation = true;
+//	dom.BC.MassConservation = true;
 	dom.InCon		= & UserInFlowCon;
 	dom.OutCon		= & UserOutFlowCon;
 	dom.AllCon		= & UserAllFlowCon;
@@ -227,15 +227,17 @@ int main(int argc, char **argv) try
 	n	= 0.4;
 	RhoS	= 2650.0*(1.0-n)+n*RhoF;;
 	CsS	= sqrt(K/RhoS);
-//	CsS	= 80.0;
+	CsS	= 80.0;
 	c	= 0.0;
 	Phi	= 30.0;
 	Psi	= 0.0;
-	d	= 0.00036;
+	d	= 0.036;
 	k	= n*n*n*d*d/(180.0*(1-n)*(1-n));
   	DampS	= 0.02*sqrt(E/(RhoS*h*h));
-        t2	= (0.1*h/(CsS));
+        t2	= (0.25*h/(CsS));
         std::cout<<"CsS = "<<CsS<<std::endl;
+
+        std::cout<<"k = "<<k<<std::endl;
 
 	dom.AddBoxLength(2 ,Vec3_t ( 0.0 , -4.0*dx , 0.0 ), 10.0*D + dx/10.0 , 1.0*D + 4.0*dx + dx/10.0 ,  0 , dx/2.0 ,RhoS, h, 1 , 0 , false, false );
 
@@ -285,7 +287,7 @@ int main(int argc, char **argv) try
         std::cout<<"t  = "<<t<<std::endl;
 
 
-   	dom.Solve(/*tf*/700.0,/*dt*/t,/*dtOut*/0.01,"test",100000);
+   	dom.Solve(/*tf*/700.0,/*dt*/t,/*dtOut*/0.1,"test",100000);
         return 0;
 }
 MECHSYS_CATCH

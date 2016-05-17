@@ -371,7 +371,7 @@ inline void Seepage(size_t ST,double n, double k, double d, double mu,  double r
 	case 1:
 		// Ergun
 		SF1 = mu/k;
-		SF2 = 1.75*rho/(sqrt(150.0*k*n*n*n));
+		SF2 = 1.75*(1-n)*rho/(n*n*n*d);
 		break;
 	case 2:
 		// Den Adel
