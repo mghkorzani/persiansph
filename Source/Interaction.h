@@ -152,7 +152,7 @@ inline void Domain::CalcForce11(Particle * P1, Particle * P2)
 
 		omp_set_lock(&P1->my_lock);
 //		P1->a   += -mj * ( P1->Pressure/(di*di) + P2->Pressure/(dj*dj) + PIij + TIij ) * GK*xij + mj*VI;
-		P1->a   += -mj * ( P1->Pressure/(di*dj) + P2->Pressure/(di*dj) + PIij + TIij ) * GK*xij + mj*VI;
+		P1->a   += -mj * ( (P1->Pressure + P2->Pressure)/(di*dj) + PIij + TIij ) * GK*xij + mj*VI;
 //		P1->Vis +=  mj * VI;
 		if (P1->IsFree) P1->StrainRate = P1->StrainRate + mj/dj*StrainRate; else P1->StrainRate = 0.0;
 		if (P1->ShepardCounter == P1->ShepardStep && P1->Shepard && (P1->IsFree*P2->IsFree))
@@ -167,7 +167,7 @@ inline void Domain::CalcForce11(Particle * P1, Particle * P2)
 
 		omp_set_lock(&P2->my_lock);
 //		P2->a   -= -mi * ( P1->Pressure/(di*di) + P2->Pressure/(dj*dj) + PIij + TIij ) * GK*xij + mi*VI;
-		P2->a   -= -mi * ( P1->Pressure/(di*dj) + P2->Pressure/(di*dj) + PIij + TIij ) * GK*xij + mi*VI;
+		P2->a   -= -mi * ( (P1->Pressure + P2->Pressure)/(di*dj) + PIij + TIij ) * GK*xij + mi*VI;
 //		P2->Vis -=  mi * VI;
 		if (P2->IsFree) P2->StrainRate = P2->StrainRate + mi/di*StrainRate; else P2->StrainRate = 0.0;
 		if (P2->ShepardCounter == P2->ShepardStep && P2->Shepard && (P1->IsFree*P2->IsFree))

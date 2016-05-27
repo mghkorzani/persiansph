@@ -1612,9 +1612,9 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
 
     	MainNeighbourSearch();
 
-    	PrimaryComputeAcceleration();
-
     	GeneralBefore(*this);
+
+    	PrimaryComputeAcceleration();
 
     	LastComputeAcceleration();
 

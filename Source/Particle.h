@@ -302,9 +302,9 @@ inline void Particle::Move_MVerlet (Mat3_t I, double dt)
 
 	if (ct == 30)
 	{
-		if (Shepard && ShepardCounter == ShepardStep && Material == 1)
+		if (Shepard && ShepardCounter == ShepardStep)
 		{
-			if (ShepardNeighbourNo>=3)
+			if (ShepardNeighbourNo>=5)
 			{
 				Densityb	= SumDen/ZWab;
 //				Densityb	= Density;
@@ -328,9 +328,9 @@ inline void Particle::Move_MVerlet (Mat3_t I, double dt)
 	}
 	else
 	{
-		if (Shepard && ShepardCounter == ShepardStep && Material == 1)
+		if (Shepard && ShepardCounter == ShepardStep)
 		{
-			if (ShepardNeighbourNo>=3)
+			if (ShepardNeighbourNo>=5)
 			{
 				Densityb	= SumDen/ZWab;
 //				Densityb	= Density;
