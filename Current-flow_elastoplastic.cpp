@@ -21,19 +21,18 @@
 #include "Domain.h"
 #include "Interaction.h"
 
-double H,U,RhoF,g,D,CsW,DampF,DampS,DampTime,dx,d,Muw;
-double Z0,Us;
+double H,U,RhoF,g,D,CsW,dx,d,Muw;
+double Z0,U0,Z,Us;
 
 void UserInFlowCon(SPH::Domain & domi)
 {
-	Us = U/7.0*pow((3.415e-2/H),(1.0/7.0));
-	Z0 = 2.5*3.415e-2/30.0*(1.0-exp(-Us*2.5*3.415e-2/(27.0*Muw/RhoF))) + (Muw/RhoF)/(9.0*Us);
+	Us = U0/7.0*pow((3.6e-4/(H+D-Z0)),(1.0/7.0));
+	Z = 2.5*3.6e-4/30.0*(1.0-exp(-Us*2.5*3.6e-4/(27.0*Muw/RhoF))) + (Muw/RhoF)/(9.0*Us);
 
 	int temp;
+	for (int q1=0;  q1<2                ; q1++)
 	for (int q2=0;  q2<domi.CellNo[1]   ; q2++)
 	for (int q3=0;  q3<domi.CellNo[2]   ; q3++)
-	for (int q1=0;  q1<2                ; q1++)
-	{
 		if (domi.HOC[q1][q2][q3]!=-1)
 		{
 			temp = domi.HOC[q1][q2][q3];
@@ -49,52 +48,38 @@ void UserInFlowCon(SPH::Domain & domi)
 	    					domi.Particles[temp]->Pressure = SPH::EOS(domi.Particles[temp]->PresEq, domi.Particles[temp]->Cs, domi.Particles[temp]->P0,
 													domi.Particles[temp]->Density,domi.Particles[temp]->RefDensity);	
 					}
-					if (domi.Particles[temp]->x(1)<=D && domi.Particles[temp]->x(1)>0.0 && domi.Particles[temp]->ID==1)
+					if (domi.Particles[temp]->x(1)> Z0)
 					{
-						domi.Particles[temp]->a(1)  = 0.0;
+						domi.Particles[temp]->v  = Us/0.4*log((domi.Particles[temp]->x(1)-Z0)/Z) , 0.0 , 0.0;
+						domi.Particles[temp]->vb = Us/0.4*log((domi.Particles[temp]->x(1)-Z0)/Z) , 0.0 , 0.0;
+					}
+					if (domi.Particles[temp]->x(1)<= Z0)
+					{
 						domi.Particles[temp]->v(1)  = 0.0;
 						domi.Particles[temp]->vb(1) = 0.0;
-					}
-					if (domi.Particles[temp]->x(1)> D)
-					{
-						domi.Particles[temp]->a = 0.0 , 0.0 , 0.0;
-						domi.Particles[temp]->v  = Us/0.4*log((domi.Particles[temp]->x(1)-D)/Z0) , 0.0 , 0.0;
-						domi.Particles[temp]->vb = Us/0.4*log((domi.Particles[temp]->x(1)-D)/Z0) , 0.0 , 0.0;
+						if (domi.Particles[temp]->v(0)<0)
+						{
+							domi.Particles[temp]->v(0) = 0.0;
+							domi.Particles[temp]->vb(0) = 0.0;
+						}
 					}
 				}
 				temp = domi.Particles[temp]->LL;
 			}
 		}
-	}
 }
 
 void UserAllFlowCon(Vec3_t & position, Vec3_t & Vel, double & Den, SPH::Boundary & bdry)
 {
-	Us = U/7.0*pow((3.415e-2/H),(1.0/7.0));
-	Z0 = 2.5*3.415e-2/30.0*(1.0-exp(-Us*2.5*3.415e-2/(27.0*Muw/RhoF))) + (Muw/RhoF)/(9.0*Us);
+	Us = U0/7.0*pow((3.6e-4/(H+D-Z0)),(1.0/7.0));
+	Z = 2.5*3.6e-4/30.0*(1.0-exp(-Us*2.5*3.6e-4/(27.0*Muw/RhoF))) + (Muw/RhoF)/(9.0*Us);
 
-	if (position(1)<=D)
-		Vel = 0.0 , 0.0 , 0.0;
-	if (position(1)>D)
-		Vel = Us/0.4*log((position(1)-D)/Z0) , 0.0 , 0.0;
+	if (position(1)>Z0)
+		Vel = Us/0.4*log((position(1)-Z0)/Z) , 0.0 , 0.0;
 }
 
 void UserDamping(SPH::Domain & domi)
 {
-	if (domi.Time<DampTime)
-	{
-		#pragma omp parallel for schedule (static) num_threads(domi.Nproc)
-		for (size_t i=0; i<domi.Particles.Size(); i++)
-	  		if (domi.Particles[i]->ID == 2)
-			{
-	        		domi.Particles[i]->a = 0.0;
-			}
-	}
-/*	#pragma omp parallel for schedule (static) num_threads(domi.Nproc)
-	for (size_t i=0; i<domi.Particles.Size(); i++)
-  		if (domi.Particles[i]->x(0) < 0.3 && domi.Particles[i]->ID == 2)
-        		domi.Particles[i]->a(1) = 0.0;
-*/
 	int temp;
 	for (int q1=0;  q1<2                ; q1++)
 	for (int q2=0;  q2<domi.CellNo[1]   ; q2++)
@@ -108,10 +93,14 @@ void UserDamping(SPH::Domain & domi)
 				{
 					if (domi.Particles[temp]->ID==1)
 						domi.Particles[temp]->dDensity  = 0.0;
-					if (domi.Particles[temp]->x(1)>D)
+					if (domi.Particles[temp]->x(1)>Z0)
+					{
 						domi.Particles[temp]->a = 0.0 , 0.0 , 0.0;
-					if (domi.Particles[temp]->x(1)<=D)
+					}
+					if (domi.Particles[temp]->x(1)<=Z0 && domi.Particles[temp]->ID==1)
+					{
 						domi.Particles[temp]->a(1) = 0.0;
+					}
 				}
 				temp = domi.Particles[temp]->LL;
 			}
@@ -141,20 +130,19 @@ int main(int argc, char **argv) try
     	h	= dx*1.1;
 	D	= 0.1;
 	H	= 4.0*D;
-	x	= 6.0*D;
+	x	= 5.0*D;
 	y	= 1.5*D;
-	L	= 13.0*D;
+	L	= 12.0*D;
 
-	U	= 0.34;
+	U	= 0.4;
+	Z0	= D + D/2.0;
+	U0	= 0.342/0.4 * U;
+
 	RhoF	= 1000.0;
 	CsW	= 35.0;
 	Muw	= 1.3e-3;
-    	DampF	= 0.05*CsW/h;
         t1	= (0.25*h/(CsW));
-//	dom.DomMax(1)	= H + 2.0*D;
 
-
-    	DampTime		= 0.0;
     	dom.InitialDist 	= dx;
 
 	dom.BC.allv		= U,0.0,0.0;
@@ -163,6 +151,8 @@ int main(int argc, char **argv) try
         dom.GeneralAfter	= & UserDamping;
         dom.BC.Periodic[0]	= true;
 
+	Us = U0/7.0*pow((3.6e-4/(H+D-Z0)),(1.0/7.0));
+	Z = 2.5*3.6e-4/30.0*(1.0-exp(-Us*2.5*3.6e-4/(27.0*Muw/RhoF))) + (Muw/RhoF)/(9.0*Us);
 
     	dom.AddBoxLength(1 ,Vec3_t ( 0.0 , -4.0*dx , 0.0 ), L + dx/10.0 , H + D + 8.0*dx + dx/10.0 ,  0 , dx/2.0 ,RhoF, h, 1 , 0 , false, false );
 
@@ -195,8 +185,8 @@ int main(int argc, char **argv) try
     			dom.Particles[a]->ID		= 4;
     			dom.Particles[a]->IsFree	= false;
     			dom.Particles[a]->NoSlip	= true;
-			dom.Particles[a]->v  = 0.497 , 0.0 , 0.0;
-			dom.Particles[a]->vb = 0.497 , 0.0 , 0.0;
+			dom.Particles[a]->v  = Us/0.4*log((H+D-Z0)/Z) , 0.0 , 0.0;
+			dom.Particles[a]->vb = Us/0.4*log((H+D-Z0)/Z) , 0.0 , 0.0;
 
     		}
      		if ((pow((xb-x),2)+pow((yb-y),2))<pow((D/2.0+dx/2.0),2.0))
@@ -234,14 +224,12 @@ int main(int argc, char **argv) try
 	n	= 0.5;
 	RhoS	= 2650.0*(1.0-n)+n*RhoF;;
 	CsS	= sqrt(K/RhoS);
-//	CsS	= 100.0;
 	c	= 0.0;
-	Phi	= 180.0/M_PI * atan(0.389 / ( dx/2.0*g * (RhoS-RhoF) ) )*10.0;
-	Phi	= 1.5;
+//	Phi	= 180.0/M_PI * atan(0.389 / ( dx/2.0*g * (RhoS-RhoF) ) )*10.0;
+	Phi	= 0.5;
 	Psi	= 0.0;
 	d	= 0.00036;
 	k	= n*n*n*d*d/(180.0*(1-n)*(1-n))*2.0;
-  	DampS	= 0.02*sqrt(E/(RhoS*h*h));
         t2	= (0.25*h/(CsS));
 
         std::cout<<"CsS  = "<<CsS<<std::endl;
@@ -300,18 +288,10 @@ int main(int argc, char **argv) try
 				dom.Particles[a]->IsFree= false;
 				dom.Particles[a]->NoSlip= true;
 			}
-/*			if ((yb>(0.7*D+0.3*xb) || yb>(D-0.3*(xb-L+D))) && dom.Particles[a]->ID==2)
-			{
-				dom.Particles[a]->IsFree= false;
-				dom.Particles[a]->NoSlip= true;
-				dom.Particles[a]->ID	= 14;
-			}
-*/
+
 		}
 	}
-//   	dom.DelParticles(14);
-
-        t	= 0.5*std::min(t1,t2);
+        t	= std::min(t1,t2);
         std::cout<<"t1 = "<<t1<<std::endl;
         std::cout<<"t2 = "<<t2<<std::endl;
         std::cout<<"t  = "<<t<<std::endl;
