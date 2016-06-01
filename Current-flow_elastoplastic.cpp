@@ -126,17 +126,18 @@ int main(int argc, char **argv) try
 	g		= norm(dom.Gravity);
 
     	double x,y,h,t,t1,t2,L;
-    	dx	= 0.01;
+    	dx	= 0.00625;
     	h	= dx*1.1;
 	D	= 0.1;
 	H	= 4.0*D;
-	x	= 5.0*D;
-	y	= 1.5*D;
-	L	= 12.0*D;
+	x	= 4.0*D;
+	y	= 1.5*D + 1.1*dx;
+	L	= 10.0*D;
 
 	U	= 0.4;
-	Z0	= D + D/2.0;
+	Z0	= D + D/3.0;
 	U0	= 0.342/0.4 * U;
+	dom.DomMax(1) = H+D+D/2.0;
 
 	RhoF	= 1000.0;
 	CsW	= 35.0;
@@ -151,10 +152,10 @@ int main(int argc, char **argv) try
         dom.GeneralAfter	= & UserDamping;
         dom.BC.Periodic[0]	= true;
 
-	Us = U0/7.0*pow((3.6e-4/(H+D-Z0)),(1.0/7.0));
-	Z = 2.5*3.6e-4/30.0*(1.0-exp(-Us*2.5*3.6e-4/(27.0*Muw/RhoF))) + (Muw/RhoF)/(9.0*Us);
+//	Us = U0/7.0*pow((3.6e-4/(H+D-Z0)),(1.0/7.0));
+//	Z = 2.5*3.6e-4/30.0*(1.0-exp(-Us*2.5*3.6e-4/(27.0*Muw/RhoF))) + (Muw/RhoF)/(9.0*Us);
 
-    	dom.AddBoxLength(1 ,Vec3_t ( 0.0 , -4.0*dx , 0.0 ), L + dx/10.0 , H + D + 8.0*dx + dx/10.0 ,  0 , dx/2.0 ,RhoF, h, 1 , 0 , false, false );
+    	dom.AddBoxLength(1 ,Vec3_t ( 0.0 , -4.0*dx , 0.0 ), L + dx/10.0 , H + D + 4.0*dx + dx/10.0 ,  0 , dx/2.0 ,RhoF, h, 1 , 0 , false, false );
 
     	double yb,xb,R,mass,no;;
 
@@ -169,7 +170,7 @@ int main(int argc, char **argv) try
     		dom.Particles[a]->Mu		= Muw;
     		dom.Particles[a]->MuRef		= Muw;
     		dom.Particles[a]->Material	= 1;
-    		dom.Particles[a]->Shepard	= true;
+//    		dom.Particles[a]->Shepard	= true;
     		dom.Particles[a]->Density	= RhoF*pow((1+7.0*g*(H+D-yb)/(CsW*CsW)),(1.0/7.0));
     		dom.Particles[a]->Densityb	= RhoF*pow((1+7.0*g*(H+D-yb)/(CsW*CsW)),(1.0/7.0));
 
@@ -180,7 +181,7 @@ int main(int argc, char **argv) try
     			dom.Particles[a]->IsFree	= false;
     			dom.Particles[a]->NoSlip	= true;
     		}
-    		if (yb>(H+D))
+/*    		if (yb>(H+D))
     		{
     			dom.Particles[a]->ID		= 4;
     			dom.Particles[a]->IsFree	= false;
@@ -189,7 +190,7 @@ int main(int argc, char **argv) try
 			dom.Particles[a]->vb = Us/0.4*log((H+D-Z0)/Z) , 0.0 , 0.0;
 
     		}
-     		if ((pow((xb-x),2)+pow((yb-y),2))<pow((D/2.0+dx/2.0),2.0))
+*/     		if ((pow((xb-x),2)+pow((yb-y),2))<pow((D/2.0+dx/2.0),2.0))
 	     		dom.Particles[a]->ID		= 20;
     	}
 
@@ -229,8 +230,9 @@ int main(int argc, char **argv) try
 	Phi	= 0.5;
 	Psi	= 0.0;
 	d	= 0.00036;
-	k	= n*n*n*d*d/(180.0*(1-n)*(1-n))*2.0;
+	k	= n*n*n*d*d/(180.0*(1-n)*(1-n))*1.0;
         t2	= (0.25*h/(CsS));
+	t2	= 0.6*t2; 
 
         std::cout<<"CsS  = "<<CsS<<std::endl;
         std::cout<<"RhoS = "<<RhoS<<std::endl;
@@ -264,7 +266,7 @@ int main(int argc, char **argv) try
 			dom.Particles[a]->Beta		= 0.1;
 //			dom.Particles[a]->TI		= 0.5;
 //			dom.Particles[a]->TIn		= 2.55;
-	    		dom.Particles[a]->Shepard	= true;
+//	    		dom.Particles[a]->Shepard	= true;
 			dom.Particles[a]->d		= d;
 			dom.Particles[a]->n		= n;
 			dom.Particles[a]->k		= k;

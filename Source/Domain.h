@@ -1100,7 +1100,7 @@ inline void Domain::PrimaryComputeAcceleration ()
 							Particles[i]->SumKernel									+= K;
 							if (Particles[i]->Material < 3)	Particles[i]->Pressure	+= Particles[j]->Pressure * K + dot(Gravity,xij)*Particles[j]->Density*K;
 							if (Particles[i]->Material > 1)	Particles[i]->Sigma		=  Particles[i]->Sigma + K * Particles[j]->Sigma;
-							Particles[i]->vb += Particles[j]->v * K;
+							if (Particles[i]->NoSlip)	Particles[i]->vb += Particles[j]->v * K;
 						omp_unset_lock(&Particles[i]->my_lock);
 					}
 
@@ -1121,7 +1121,7 @@ inline void Domain::PrimaryComputeAcceleration ()
 							Particles[j]->SumKernel									+= K;
 							if (Particles[j]->Material < 3)	Particles[j]->Pressure	+= Particles[i]->Pressure * K + dot(Gravity,xij)*Particles[i]->Density*K;
 							if (Particles[j]->Material > 1)	Particles[j]->Sigma		=  Particles[j]->Sigma + K * Particles[i]->Sigma;
-							Particles[j]->vb += Particles[i]->v * K;
+							if (Particles[j]->NoSlip)	Particles[j]->vb += Particles[i]->v * K;
 						omp_unset_lock(&Particles[j]->my_lock);
 					}
 				}
@@ -1177,7 +1177,7 @@ inline void Domain::PrimaryComputeAcceleration ()
 				size_t a = FixedParticles[i];
 				if (Particles[a]->Material < 3)	Particles[a]->Pressure	= Particles[a]->Pressure/Particles[a]->SumKernel;
 				if (Particles[a]->Material > 1) Particles[a]->Sigma	= 1.0/Particles[a]->SumKernel*Particles[a]->Sigma;
-								Particles[a]->vb	= Particles[a]->vb/Particles[a]->SumKernel;
+				if (Particles[a]->NoSlip)	Particles[a]->vb	= Particles[a]->vb/Particles[a]->SumKernel;
 
 				// Tensile Instability for fixed soil and solid particles
 				if (Particles[a]->Material > 1 && Particles[a]->TI > 0.0)

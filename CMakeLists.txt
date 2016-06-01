@@ -27,7 +27,7 @@ INCLUDE ($ENV{SPH}/Modules/FindPKG.cmake)
 
 SET(EXES
 	Current-flow
-	Current-flow_elastoplastic
+#	Current-flow_elastoplastic
 )
 
 FOREACH(var ${EXES})
