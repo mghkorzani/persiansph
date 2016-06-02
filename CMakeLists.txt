@@ -18,16 +18,15 @@
 # PersianSPH; if not, see <http://www.gnu.org/licenses/>                            #
 #####################################################################################
 
-CMAKE_MINIMUM_REQUIRED (VERSION 3.2.2)
-#CMAKE_MINIMUM_REQUIRED (VERSION 2.8.1)
+CMAKE_MINIMUM_REQUIRED (VERSION 2.8)
 
 PROJECT                (New_Test)
 
 INCLUDE ($ENV{SPH}/Modules/FindPKG.cmake)
 
 SET(EXES
-	Current-flow
-#	Current-flow_elastoplastic
+#	Current-flow
+	Current-flow_elastoplastic
 )
 
 FOREACH(var ${EXES})

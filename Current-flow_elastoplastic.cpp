@@ -119,7 +119,7 @@ int main(int argc, char **argv) try
         dom.Dimension	= 2;
 	dom.SeepageType = 0;
         dom.Nproc	= 24;
-    	dom.VisEq	= 0;
+    	dom.VisEq	= 3;
     	dom.KernelType	= 4;
     	dom.Scheme	= 0;
     	dom.Gravity	= 0.0 , -9.81 , 0.0 ;
@@ -137,7 +137,7 @@ int main(int argc, char **argv) try
 	U	= 0.4;
 	Z0	= D + D/3.0;
 	U0	= 0.342/0.4 * U;
-	dom.DomMax(1) = H+D+D/2.0;
+//	dom.DomMax(1) = H+D+D/2.0;
 
 	RhoF	= 1000.0;
 	CsW	= 35.0;
@@ -152,10 +152,10 @@ int main(int argc, char **argv) try
         dom.GeneralAfter	= & UserDamping;
         dom.BC.Periodic[0]	= true;
 
-//	Us = U0/7.0*pow((3.6e-4/(H+D-Z0)),(1.0/7.0));
-//	Z = 2.5*3.6e-4/30.0*(1.0-exp(-Us*2.5*3.6e-4/(27.0*Muw/RhoF))) + (Muw/RhoF)/(9.0*Us);
+	Us = U0/7.0*pow((3.6e-4/(H+D-Z0)),(1.0/7.0));
+	Z = 2.5*3.6e-4/30.0*(1.0-exp(-Us*2.5*3.6e-4/(27.0*Muw/RhoF))) + (Muw/RhoF)/(9.0*Us);
 
-    	dom.AddBoxLength(1 ,Vec3_t ( 0.0 , -4.0*dx , 0.0 ), L + dx/10.0 , H + D + 4.0*dx + dx/10.0 ,  0 , dx/2.0 ,RhoF, h, 1 , 0 , false, false );
+    	dom.AddBoxLength(1 ,Vec3_t ( 0.0 , -4.0*dx , 0.0 ), L + dx/10.0 , H + D + 8.0*dx + dx/10.0 ,  0 , dx/2.0 ,RhoF, h, 1 , 0 , false, false );
 
     	double yb,xb,R,mass,no;;
 
@@ -181,7 +181,7 @@ int main(int argc, char **argv) try
     			dom.Particles[a]->IsFree	= false;
     			dom.Particles[a]->NoSlip	= true;
     		}
-/*    		if (yb>(H+D))
+    		if (yb>(H+D))
     		{
     			dom.Particles[a]->ID		= 4;
     			dom.Particles[a]->IsFree	= false;
@@ -190,7 +190,7 @@ int main(int argc, char **argv) try
 			dom.Particles[a]->vb = Us/0.4*log((H+D-Z0)/Z) , 0.0 , 0.0;
 
     		}
-*/     		if ((pow((xb-x),2)+pow((yb-y),2))<pow((D/2.0+dx/2.0),2.0))
+     		if ((pow((xb-x),2)+pow((yb-y),2))<pow((D/2.0+dx/2.0),2.0))
 	     		dom.Particles[a]->ID		= 20;
     	}
 
@@ -199,7 +199,7 @@ int main(int argc, char **argv) try
 	R = D/2.0-dx/2.0;
     	for (size_t j=0;j<5;j++)
     	{
-    		if (j>0) R -= dx*0.85;
+    		if (j>0) R -= dx;
     		no = ceil(2*M_PI*R/dx);
     		for (size_t i=0; i<no; i++)
     		{
@@ -230,9 +230,8 @@ int main(int argc, char **argv) try
 	Phi	= 0.5;
 	Psi	= 0.0;
 	d	= 0.00036;
-	k	= n*n*n*d*d/(180.0*(1-n)*(1-n))*1.0;
+	k	= n*n*n*d*d/(180.0*(1-n)*(1-n))*4.0;
         t2	= (0.25*h/(CsS));
-	t2	= 0.6*t2; 
 
         std::cout<<"CsS  = "<<CsS<<std::endl;
         std::cout<<"RhoS = "<<RhoS<<std::endl;
@@ -242,20 +241,20 @@ int main(int argc, char **argv) try
 
 	dom.AddBoxLength(2 ,Vec3_t ( 0.0 , -4.0*dx , 0.0 ), L + dx/10.0 , 1.0*D + 4.0*dx + dx/10.0 ,  0 , dx/2.0 ,RhoS, h, 1 , 0 , false, false );
 
-   	mass = RhoS*dx*dx;
-	R = D/2.0-dx/2.0;
-    	for (size_t j=0;j<5;j++)
-    	{
-    		if (j>0) R -= dx*0.85;
-    		no = ceil(2*M_PI*R/dx);
-    		for (size_t i=0; i<no; i++)
-    		{
-    			xb = x + R*cos(2*M_PI/no*i);
-    			yb = y + R*sin(2*M_PI/no*i);
-    			dom.AddSingleParticle(3,Vec3_t ( xb ,  yb , 0.0 ), mass , RhoS , h , true);
+//   	mass = RhoS*dx*dx;
+//	R = D/2.0-dx/2.0;
+//    	for (size_t j=0;j<5;j++)
+//    	{
+//    		if (j>0) R -= dx*0.85;
+//    		no = ceil(2*M_PI*R/dx);
+//    		for (size_t i=0; i<no; i++)
+//   		{
+//    			xb = x + R*cos(2*M_PI/no*i);
+//    			yb = y + R*sin(2*M_PI/no*i);
+//    			dom.AddSingleParticle(3,Vec3_t ( xb ,  yb , 0.0 ), mass , RhoS , h , true);
 //        		dom.Particles[dom.Particles.Size()-1]->NoSlip	= true;
-       		}
-    	}
+//       		}
+//    	}
 
 	for (size_t a=0; a<dom.Particles.Size(); a++)
 	{
@@ -282,8 +281,8 @@ int main(int argc, char **argv) try
 			xb=dom.Particles[a]->x(0);
 			yb=dom.Particles[a]->x(1);
 
-			if (dom.Particles[a]->ID == 3)
-				dom.Particles[a]->k = 100000.0;
+//			if (dom.Particles[a]->ID == 3)
+//				dom.Particles[a]->k = 100000.0;
 			if (yb<0.0)
 			{
 				dom.Particles[a]->ID	= 3;
@@ -299,7 +298,7 @@ int main(int argc, char **argv) try
         std::cout<<"t  = "<<t<<std::endl;
 
 
-   	dom.Solve(/*tf*/700.0,/*dt*/t,/*dtOut*/0.1,"test",100000);
+   	dom.Solve(/*tf*/700.0,/*dt*/t,/*dtOut*/0.01,"test",100000);
         return 0;
 }
 MECHSYS_CATCH

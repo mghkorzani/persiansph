@@ -51,7 +51,12 @@ ADD_DEFINITIONS(-fpermissive)       # New C++ standard
 INCLUDE      ($ENV{SPH}/Modules/FindHDF5.cmake)
 INCLUDE      (FindOpenMP)
 INCLUDE      (FindLAPACK)
-INCLUDE      (FindGSL)
+
+set(GSL_GLOB_PATH ${CMAKE_ROOT}/Modules)
+FIND_PATH(GSL_GLOB  FindGSL.cmake ${GSL_GLOB_PATH})
+IF(NOT ${GSL_Glob} MATCHES "NOTFOUND" )
+	INCLUDE      (FindGSL)
+ENDIF(NOT ${GSL_Glob} MATCHES "NOTFOUND")
 
 INCLUDE_DIRECTORIES($ENV{SPH}/Source $ENV{SPH}/External $ENV{PKG}/blitz-0.9)
 
