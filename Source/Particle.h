@@ -33,68 +33,71 @@
 namespace SPH {
 Mat3_t abab (const Mat3_t & A, const Mat3_t & B)
 {
-    Mat3_t M;
-    M(0,0)=A(0,0)*B(0,0);  M(0,1)=A(0,1)*B(0,1);  M(0,2)=A(0,2)*B(0,2);
-    M(1,0)=A(1,0)*B(1,0);  M(1,1)=A(1,1)*B(1,1);  M(1,2)=A(1,2)*B(1,2);
-    M(2,0)=A(2,0)*B(2,0);  M(2,1)=A(2,1)*B(2,1);  M(2,2)=A(2,2)*B(2,2);
-    return M;
+	Mat3_t M;
+	M(0,0)=A(0,0)*B(0,0);  M(0,1)=A(0,1)*B(0,1);  M(0,2)=A(0,2)*B(0,2);
+	M(1,0)=A(1,0)*B(1,0);  M(1,1)=A(1,1)*B(1,1);  M(1,2)=A(1,2)*B(1,2);
+	M(2,0)=A(2,0)*B(2,0);  M(2,1)=A(2,1)*B(2,1);  M(2,2)=A(2,2)*B(2,2);
+	return M;
 }
 
 class Particle
 {
 public:
-    // Data
+	// Shepard density correction
     bool   	Shepard;	///< Shepard Filter for the density
     size_t	ShepardCounter;	///< Count number of contributing particles
-    size_t	ShepardStep;
-    size_t	ShepardNeighbourNo;
+    size_t	ShepardStep;	///< Cycle number for shepard correction
+    size_t	ShepardNeighbourNo; ///< Number of the contributing particles
+    double	ZWab;		///< Summation of mb/db*Wab for neighbour particles of the particle a (for Shepard filter)
+    double	SumDen;		///< Summation of mb*Wab for neighbour particles of the particle a (for Shepard filter)
+
     bool   	IsFree;		///< Check the particle if it is free to move or not
     bool   	InOut;		///< Check the particle if it is in-flow or out-flow or not
     bool   	IsSat;		///< Check the particle if it is Saturated or not
     bool   	SatCheck;	///< Check the particle Saturation at each time step
     bool   	NoSlip;		///< No-Slip BC
-    int    	ID;				///< an Integer value to identify the particle set
+
+    int    	ID;		///< an Integer value to identify the particle set
     int    	Material;	///< an Integer value to identify the particle material type: 1 = Fluid, 2 = Solid, 3 = Soil
 
-    Vec3_t  x;			///< Position of the particle n
-    Vec3_t  vb;			///< Velocity of the particle n-1 (Modified Verlet)
-    Vec3_t  va;			///< Velocity of the particle n+1/2 (Leapfrog)
-    Vec3_t  v;			///< Velocity of the particle n+1,
+    Vec3_t	x;		///< Position of the particle n
+    Vec3_t	vb;		///< Velocity of the particle n-1 (Modified Verlet)
+    Vec3_t	va;		///< Velocity of the particle n+1/2 (Leapfrog)
+    Vec3_t	v;		///< Velocity of the particle n+1,
     Vec3_t	VXSPH;		///< Mean Velocity of neighbor particles for updating the particle position (XSPH)
-    Vec3_t  a;			///< Acceleration of the particle n
-    Vec3_t  Vis;		///< Acceleration of the particle due to viscosity effect n
+    Vec3_t	a;		///< Acceleration of the particle n
 
-    double	ZWab;		///< Summation of mb/db*Wab for neighbour particles of the particle a (for Shepard filter)
-    double	SumDen;		///< Summation of mb*Wab for neighbour particles of the particle a (for Shepard filter)
-
+    size_t	PresEq;		///< Selecting variable to choose an equation of state
+    double	Cs;		///< Speed of sound
+    double	P0;		///< background pressure for equation of state
     double 	Pressure;	///< Pressure of the particle n+1
+
     double	Density;	///< Density of the particle n+1
     double 	Densitya;	///< Density of the particle n+1/2 (Leapfrog)
     double 	Densityb;	///< Density of the particle n-1 (Modified Verlet)
     double 	dDensity;	///< Rate of density change in time based on state equations n
-
-    double	V;			///< Volume of a particle
-    double	RhoF;		///< Density of water or any other fluids
-
     double 	RefDensity;	///< Reference Density of Particle
     double 	Mass;		///< Mass of the particle
 
-    Mat3_t  StrainRate;		///< Global shear Strain rate tensor n
-    Mat3_t  RotationRate;		///< Global rotation tensor n
-    double  ShearRate;		///< Global shear rate for fluids
+    Mat3_t	StrainRate;	///< Global shear Strain rate tensor n
+    Mat3_t	RotationRate;	///< Global rotation tensor n
+    double	ShearRate;	///< Global shear rate for fluids
 
-    Mat3_t  ShearStress;	///< Deviatoric shear stress tensor (deviatoric part of the Cauchy stress tensor) n+1
-    Mat3_t  ShearStressa;	///< Deviatoric shear stress tensor (deviatoric part of the Cauchy stress tensor) n+1/2 (Leapfrog)
-    Mat3_t  ShearStressb;	///< Deviatoric shear stress tensor (deviatoric part of the Cauchy stress tensor) n-1 (Modified Verlet)
-    Mat3_t  Sigma;		///< Cauchy stress tensor (Total Stress) n+1
-    Mat3_t  Sigmaa;		///< Cauchy stress tensor (Total Stress) n+1/2 (Leapfrog)
-    Mat3_t  Sigmab;		///< Cauchy stress tensor (Total Stress) n-1 (Modified Verlet)
+    Mat3_t	ShearStress;	///< Deviatoric shear stress tensor (deviatoric part of the Cauchy stress tensor) n+1
+    Mat3_t	ShearStressa;	///< Deviatoric shear stress tensor (deviatoric part of the Cauchy stress tensor) n+1/2 (Leapfrog)
+    Mat3_t	ShearStressb;	///< Deviatoric shear stress tensor (deviatoric part of the Cauchy stress tensor) n-1 (Modified Verlet)
 
-    Mat3_t  TIR;		///< Tensile Instability stress tensor R
+    Mat3_t	Sigma;		///< Cauchy stress tensor (Total Stress) n+1
+    Mat3_t	Sigmaa;		///< Cauchy stress tensor (Total Stress) n+1/2 (Leapfrog)
+    Mat3_t	Sigmab;		///< Cauchy stress tensor (Total Stress) n-1 (Modified Verlet)
 
-    Mat3_t  Strain;		///< Total Strain n+1
-    Mat3_t  Straina;		///< Total Strain n+1/2 (Leapfrog)
-    Mat3_t  Strainb;		///< Total Strain n-1 (Modified Verlet)
+    Mat3_t	Strain;		///< Total Strain n+1
+    Mat3_t	Straina;	///< Total Strain n+1/2 (Leapfrog)
+    Mat3_t	Strainb;	///< Total Strain n-1 (Modified Verlet)
+
+    Mat3_t	TIR;		///< Tensile Instability stress tensor R
+    double	TI;		///< Tensile instability factor
+    double	TIn;		///< Tensile instability power
 
     double 	Alpha;		///< Dynamic viscosity coefficient of the fluid particle
     double 	Beta;		///< Dynamic viscosity coefficient of the fluid particle
@@ -106,44 +109,38 @@ public:
 	
     double 	G;		///< Shear modulus
     double 	K;		///< Bulk modulus
-
-    double	TI;		///< Tensile instability factor
-    double	TIn;		///< Tensile instability power
-
+    double	Sigmay;		///< Tensile yield stress
     size_t	Fail;		///< Failure criteria
-    double	c;				///< Cohesion
+
+    double	c;		///< Cohesion
     double	phi;		///< Friction angel
     double	psi;		///< Dilation angel
-    double	Sigmay;		///< Tensile yield stress
     double	n;		///< Prosity
     double	k;		///< Permeability
     double	d;		///< effective particle size
+    double	V;		///< Volume of a particle
+    double	RhoF;		///< Density of water or any other fluids
+
 
     double 	h;		///< Smoothing length of the particle
-
     int    	LL;		///< Linked-List variable to show the next particle in the list of a cell
     int    	CC[3];		///< Current cell No for the particle (linked-list)
-
     int		ct;		///< Correction step for the Modified Verlet Algorithm and Shepard filter
+    double	SumKernel;	///< Summation of the kernel value for neighbour particles
+    bool	FirstStep;	///< to initialize the integration scheme
 
     omp_lock_t my_lock;		///< Open MP lock
 
-    double	SumKernel;	///< Summation of the kernel value for neighbour particles
-    bool	FirstStep;	///< to initialize the integration scheme
-    size_t	PresEq;		///< Selecting variable to choose an equation of state
-    double	Cs;		///< Speed of sound
-    double	P0;		///< background pressure for equation of state
 
     // Constructor
     Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double Mass0, double Density0, double h0, bool Fixed=false);
 
     // Methods
-    void Move			(double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3_t domainmin,
-    						size_t Scheme, Mat3_t I);	///< Update the important quantities of a particle
-    void Move_MVerlet	(Mat3_t I, double dt);	///< Update the important quantities of a particle
-    void Move_Leapfrog	(Mat3_t I, double dt);	///< Update the important quantities of a particle
-    void translate		(double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3_t domainmin);
-    void Mat1			(double dt);
+    void Move		(double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3_t domainmin,size_t Scheme, Mat3_t I);	///< Update the important quantities of a particle
+    void Move_MVerlet	(Mat3_t I, double dt);										///< Update the important quantities of a particle
+    void Move_Leapfrog	(Mat3_t I, double dt);										///< Update the important quantities of a particle
+    void translate	(double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3_t domainmin);
+    void Mat1		(double dt);
     void Mat2MVerlet	(double dt);
     void Mat3MVerlet	(Mat3_t I, double dt);
     void Mat2Leapfrog	(double dt);

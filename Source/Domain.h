@@ -646,6 +646,12 @@ inline void Domain::CheckParticleLeave ()
 	if (DelParticles.Size()>0)
 	{
 		std::cout<< DelParticles.Size()<< " particle(s) left the Domain"<<std::endl;
+		for (size_t i=0; i<DelParticles.Size(); i++)
+		{
+			std::cout<<Particles[DelParticles[i]]->x<<std::endl;
+			std::cout<<Particles[DelParticles[i]]->v<<std::endl;
+			std::cout<<Particles[DelParticles[i]]->a<<std::endl;
+		}
 		Particles.DelItems(DelParticles);
 	}
 }
@@ -1064,8 +1070,8 @@ inline void Domain::StartAcceleration (Vec3_t const & a)
 		Particles[i]->VXSPH	= 0.0;
 		Particles[i]->ZWab	= 0.0;
 		Particles[i]->SumDen	= 0.0;
-		Particles[i]->Vis	= 0.0;
 		Particles[i]->SumKernel	= 0.0;
+		if (Dimension == 2) Particles[i]->v(2) = 0.0;
 		set_to_zero(Particles[i]->StrainRate);
 		set_to_zero(Particles[i]->RotationRate);
 	}
@@ -1256,6 +1262,7 @@ inline void Domain::LastComputeAcceleration ()
 		for (size_t i=0; i<Particles.Size(); i++)
 			if (deltat > (0.25*sqrt(Particles[i]->h/norm(Particles[i]->a))) )
 			{
+				std::cout <<Particles[i]->a<< std::endl;
 				std::cout << "Please decrease the time step to"<< (0.25*sqrt(Particles[i]->h/norm(Particles[i]->a))) << std::endl;
 				abort();
 			}
@@ -1654,7 +1661,7 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
 
        Time += dt;
 
-       if (BC.InOutFlow>0) InFlowBCLeave(); else CheckParticleLeave ();
+	if (BC.InOutFlow>0) InFlowBCLeave(); else CheckParticleLeave ();
 
        CellReset();
 

@@ -23,50 +23,67 @@
 
 double H,U,RhoF,g,D,CsW,dx,d,Muw;
 double Z0,U0,Z,Us;
+size_t check =0;
+double DampF,DampS,DampTime;
 
 void UserInFlowCon(SPH::Domain & domi)
 {
-	Us = U0/7.0*pow((3.6e-4/(H+D-Z0)),(1.0/7.0));
-	Z = 2.5*3.6e-4/30.0*(1.0-exp(-Us*2.5*3.6e-4/(27.0*Muw/RhoF))) + (Muw/RhoF)/(9.0*Us);
-
-	int temp;
-	for (int q1=0;  q1<2                ; q1++)
-	for (int q2=0;  q2<domi.CellNo[1]   ; q2++)
-	for (int q3=0;  q3<domi.CellNo[2]   ; q3++)
-		if (domi.HOC[q1][q2][q3]!=-1)
+	if (domi.Time>=DampTime)
+	{
+		if (check == 0)
 		{
-			temp = domi.HOC[q1][q2][q3];
-			while (temp != -1)
-			{
-				if (domi.Particles[temp]->IsFree)
+			Us = U0/7.0*pow((3.6e-4/(H+D-Z0)),(1.0/7.0));
+			Z = 2.5*3.6e-4/30.0*(1.0-exp(-Us*2.5*3.6e-4/(27.0*Muw/RhoF))) + (Muw/RhoF)/(9.0*Us);
+
+			#pragma omp parallel for schedule (static) num_threads(domi.Nproc)
+			for (size_t i=0; i<domi.Particles.Size(); i++)
+				if (domi.Particles[i]->x(1)>Z0)
 				{
-					if (domi.Particles[temp]->ID==1)
+					domi.Particles[i]->v = Us/0.4*log((domi.Particles[i]->x(1)-Z0)/Z) , 0.0 , 0.0;
+					domi.Particles[i]->vb = Us/0.4*log((domi.Particles[i]->x(1)-Z0)/Z) , 0.0 , 0.0;
+				}
+			check = 1;
+		}
+
+		Us = U0/7.0*pow((3.6e-4/(H+D-Z0)),(1.0/7.0));
+		Z = 2.5*3.6e-4/30.0*(1.0-exp(-Us*2.5*3.6e-4/(27.0*Muw/RhoF))) + (Muw/RhoF)/(9.0*Us);
+
+		int temp;
+		for (int q1=0;  q1<2                ; q1++)
+		for (int q2=0;  q2<domi.CellNo[1]   ; q2++)
+		for (int q3=0;  q3<domi.CellNo[2]   ; q3++)
+			if (domi.HOC[q1][q2][q3]!=-1)
+			{
+				temp = domi.HOC[q1][q2][q3];
+				while (temp != -1)
+				{
+					if (domi.Particles[temp]->IsFree)
 					{
-						domi.Particles[temp]->dDensity = 0.0;
-						domi.Particles[temp]->Density  = RhoF*pow((1+7.0*g*(H+D-domi.Particles[temp]->x(1))/(CsW*CsW)),(1.0/7.0));
-						domi.Particles[temp]->Densityb = RhoF*pow((1+7.0*g*(H+D-domi.Particles[temp]->x(1))/(CsW*CsW)),(1.0/7.0));
-	    					domi.Particles[temp]->Pressure = SPH::EOS(domi.Particles[temp]->PresEq, domi.Particles[temp]->Cs, domi.Particles[temp]->P0,
-													domi.Particles[temp]->Density,domi.Particles[temp]->RefDensity);	
-					}
-					if (domi.Particles[temp]->x(1)> Z0)
-					{
-						domi.Particles[temp]->v  = Us/0.4*log((domi.Particles[temp]->x(1)-Z0)/Z) , 0.0 , 0.0;
-						domi.Particles[temp]->vb = Us/0.4*log((domi.Particles[temp]->x(1)-Z0)/Z) , 0.0 , 0.0;
-					}
-					if (domi.Particles[temp]->x(1)<= Z0)
-					{
-						domi.Particles[temp]->v(1)  = 0.0;
-						domi.Particles[temp]->vb(1) = 0.0;
-						if (domi.Particles[temp]->v(0)<0)
+						if (domi.Particles[temp]->ID==1)
 						{
-							domi.Particles[temp]->v(0) = 0.0;
-							domi.Particles[temp]->vb(0) = 0.0;
+							domi.Particles[temp]->dDensity = 0.0;
+							domi.Particles[temp]->Density  = RhoF*pow((1+7.0*g*(H+D-domi.Particles[temp]->x(1))/(CsW*CsW)),(1.0/7.0));
+							domi.Particles[temp]->Densityb = RhoF*pow((1+7.0*g*(H+D-domi.Particles[temp]->x(1))/(CsW*CsW)),(1.0/7.0));
+		    					domi.Particles[temp]->Pressure = SPH::EOS(domi.Particles[temp]->PresEq, domi.Particles[temp]->Cs, domi.Particles[temp]->P0,
+														domi.Particles[temp]->Density,domi.Particles[temp]->RefDensity);	
+						}
+						if (domi.Particles[temp]->x(1)> Z0)
+						{
+							domi.Particles[temp]->v  = Us/0.4*log((domi.Particles[temp]->x(1)-Z0)/Z) , 0.0 , 0.0;
+							domi.Particles[temp]->vb = Us/0.4*log((domi.Particles[temp]->x(1)-Z0)/Z) , 0.0 , 0.0;
+						}
+						if (domi.Particles[temp]->x(1)<= Z0)
+						{
+							domi.Particles[temp]->v(1)  = 0.0;
+							domi.Particles[temp]->vb(1) = 0.0;
+							domi.Particles[temp]->v(2)  = 0.0;
+							domi.Particles[temp]->vb(2) = 0.0;
 						}
 					}
+					temp = domi.Particles[temp]->LL;
 				}
-				temp = domi.Particles[temp]->LL;
 			}
-		}
+	}
 }
 
 void UserAllFlowCon(Vec3_t & position, Vec3_t & Vel, double & Den, SPH::Boundary & bdry)
@@ -80,31 +97,44 @@ void UserAllFlowCon(Vec3_t & position, Vec3_t & Vel, double & Den, SPH::Boundary
 
 void UserDamping(SPH::Domain & domi)
 {
-	int temp;
-	for (int q1=0;  q1<2                ; q1++)
-	for (int q2=0;  q2<domi.CellNo[1]   ; q2++)
-	for (int q3=0;  q3<domi.CellNo[2]   ; q3++)
-		if (domi.HOC[q1][q2][q3]!=-1)
+	if (domi.Time<DampTime)
+	{
+		#pragma omp parallel for schedule (static) num_threads(domi.Nproc)
+		for (size_t i=0; i<domi.Particles.Size(); i++)
 		{
-			temp = domi.HOC[q1][q2][q3];
-			while (temp != -1)
-			{
-				if (domi.Particles[temp]->IsFree)
-				{
-					if (domi.Particles[temp]->ID==1)
-						domi.Particles[temp]->dDensity  = 0.0;
-					if (domi.Particles[temp]->x(1)>Z0)
-					{
-						domi.Particles[temp]->a = 0.0 , 0.0 , 0.0;
-					}
-					if (domi.Particles[temp]->x(1)<=Z0 && domi.Particles[temp]->ID==1)
-					{
-						domi.Particles[temp]->a(1) = 0.0;
-					}
-				}
-				temp = domi.Particles[temp]->LL;
-			}
+			if (domi.Particles[i]->IsFree && domi.Particles[i]->Material == 1) domi.Particles[i]->a -= DampF * domi.Particles[i]->v;
+			if (domi.Particles[i]->IsFree && domi.Particles[i]->Material == 3) domi.Particles[i]->a -= DampS * domi.Particles[i]->v;
 		}
+	}
+	else
+	{
+		int temp;
+		for (int q1=0;  q1<2                ; q1++)
+		for (int q2=0;  q2<domi.CellNo[1]   ; q2++)
+		for (int q3=0;  q3<domi.CellNo[2]   ; q3++)
+			if (domi.HOC[q1][q2][q3]!=-1)
+			{
+				temp = domi.HOC[q1][q2][q3];
+				while (temp != -1)
+				{
+					if (domi.Particles[temp]->IsFree)
+					{
+						if (domi.Particles[temp]->ID==1)
+							domi.Particles[temp]->dDensity  = 0.0;
+						if (domi.Particles[temp]->x(1)>Z0)
+						{
+							domi.Particles[temp]->a = 0.0 , 0.0 , 0.0;
+						}
+						if (domi.Particles[temp]->x(1)<=Z0 && domi.Particles[temp]->ID==1)
+						{
+							domi.Particles[temp]->a(1) = 0.0;
+							domi.Particles[temp]->a(2) = 0.0;
+						}
+					}
+					temp = domi.Particles[temp]->LL;
+				}
+			}
+	}
 
 }
 
@@ -119,14 +149,14 @@ int main(int argc, char **argv) try
         dom.Dimension	= 2;
 	dom.SeepageType = 0;
         dom.Nproc	= 24;
-    	dom.VisEq	= 3;
+    	dom.VisEq	= 0;
     	dom.KernelType	= 4;
     	dom.Scheme	= 0;
     	dom.Gravity	= 0.0 , -9.81 , 0.0 ;
 	g		= norm(dom.Gravity);
 
     	double x,y,h,t,t1,t2,L;
-    	dx	= 0.00625;
+    	dx	= 0.01;
     	h	= dx*1.1;
 	D	= 0.1;
 	H	= 4.0*D;
@@ -135,7 +165,7 @@ int main(int argc, char **argv) try
 	L	= 10.0*D;
 
 	U	= 0.4;
-	Z0	= D + D/3.0;
+	Z0	= D + D/4.0;
 	U0	= 0.342/0.4 * U;
 //	dom.DomMax(1) = H+D+D/2.0;
 
@@ -146,8 +176,8 @@ int main(int argc, char **argv) try
 
     	dom.InitialDist 	= dx;
 
-	dom.BC.allv		= U,0.0,0.0;
-	dom.AllCon		= & UserAllFlowCon;
+//	dom.BC.allv		= U,0.0,0.0;
+//	dom.AllCon		= & UserAllFlowCon;
         dom.GeneralBefore	= & UserInFlowCon;
         dom.GeneralAfter	= & UserDamping;
         dom.BC.Periodic[0]	= true;
@@ -292,13 +322,17 @@ int main(int argc, char **argv) try
 
 		}
 	}
+    	DampF	= 0.05*CsW/h;
+  	DampS	= 0.02*sqrt(E/(RhoS*h*h));
+    	DampTime= 1.0;
+
         t	= std::min(t1,t2);
         std::cout<<"t1 = "<<t1<<std::endl;
         std::cout<<"t2 = "<<t2<<std::endl;
         std::cout<<"t  = "<<t<<std::endl;
 
 
-   	dom.Solve(/*tf*/700.0,/*dt*/t,/*dtOut*/0.01,"test",100000);
+   	dom.Solve(/*tf*/700.0,/*dt*/t,/*dtOut*/0.1,"test",100000);
         return 0;
 }
 MECHSYS_CATCH
