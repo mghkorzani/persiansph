@@ -1816,7 +1816,7 @@ inline void Domain::WriteXDMF (char const * FileKey)
         ShearRate[i   ] = float(Particles[i]->ShearRate);
         Density [i    ] = float(Particles[i]->Density);
         Mass	[i    ] = float(Particles[i]->Mass);
-        sh	    [i    ] = float(Particles[i]->h);
+        sh	[i    ] = float(Particles[i]->h);
         Tag     [i    ] = int  (Particles[i]->ID);
         if (Particles[i]->IsFree)
         	IsFree[i] = int  (1);
