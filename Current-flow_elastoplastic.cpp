@@ -57,8 +57,8 @@ void UserInFlowCon(SPH::Domain & domi)
 					}
 					if (domi.Particles[temp]->x(1)<= Z0  && domi.Particles[temp]->ID==1)
 					{
-						domi.Particles[temp]->v(1)  = 0.0;
-						domi.Particles[temp]->vb(1) = 0.0;
+//						domi.Particles[temp]->v(1)  = 0.0;
+//						domi.Particles[temp]->vb(1) = 0.0;
 						domi.Particles[temp]->v(2)  = 0.0;
 						domi.Particles[temp]->vb(2) = 0.0;
 						if (domi.Particles[temp]->v(0)<0 )
@@ -69,15 +69,15 @@ void UserInFlowCon(SPH::Domain & domi)
 					}
 					if (domi.Particles[temp]->x(1)<= Z0  && domi.Particles[temp]->ID==2)
 					{
-						domi.Particles[temp]->v(1)  = 0.0;
-						domi.Particles[temp]->vb(1) = 0.0;
+//						domi.Particles[temp]->v(1)  = 0.0;
+//						domi.Particles[temp]->vb(1) = 0.0;
 						domi.Particles[temp]->v(2)  = 0.0;
 						domi.Particles[temp]->vb(2) = 0.0;
-//						if (domi.Particles[temp]->v(0)<0 )
-//						{
+						if (domi.Particles[temp]->v(0)<0 )
+						{
 							domi.Particles[temp]->v(0) = 0.0;
 							domi.Particles[temp]->vb(0) = 0.0;
-//						}
+						}
 					}
 				}
 				temp = domi.Particles[temp]->LL;
@@ -131,8 +131,8 @@ void UserDamping(SPH::Domain & domi)
 						}
 						if (domi.Particles[temp]->x(1)<=Z0 && domi.Particles[temp]->ID==2)
 						{
-							domi.Particles[temp]->a(0) = 0.0;
-							domi.Particles[temp]->a(1) = 0.0;
+//							domi.Particles[temp]->a(0) = 0.0;
+//							domi.Particles[temp]->a(1) = 0.0;
 							domi.Particles[temp]->a(2) = 0.0;
 						}
 					}
@@ -140,22 +140,24 @@ void UserDamping(SPH::Domain & domi)
 				}
 			}
 	}
-
+/*
 	if (domi.Time>0.0)
 	{
 		#pragma omp parallel for schedule (static) num_threads(domi.Nproc)
 		for (size_t i=0; i<domi.Particles.Size(); i++)
 		{
-			if (domi.Particles[i]->ID == 2 && (domi.Particles[i]->x(0) > 0.9 || domi.Particles[i]->x(0) <0.2))
+			if (domi.Particles[i]->ID == 2 && (domi.Particles[i]->x(0) > 0.9 || domi.Particles[i]->x(0) <0.1))
 			{ 
-				domi.Particles[i]->a =  0.0;
-				domi.Particles[i]->v =  0.0;
-				domi.Particles[i]->vb =  0.0;
+//				domi.Particles[i]->a =  0.0;
+//				domi.Particles[i]->v =  0.0;
+				domi.Particles[i]->a(1) = 0.0;
+				domi.Particles[i]->a(2) = 0.0;
+//				domi.Particles[i]->vb =  0.0;
 			}
 		}
 	}
 
-
+*/
 }
 
 
@@ -167,7 +169,7 @@ int main(int argc, char **argv) try
         SPH::Domain	dom;
 
         dom.Dimension	= 2;
-	dom.SeepageType = 1;
+	dom.SeepageType = 0;
         dom.Nproc	= 24;
     	dom.VisEq	= 0;
     	dom.KernelType	= 4;
@@ -176,21 +178,21 @@ int main(int argc, char **argv) try
 	g		= norm(dom.Gravity);
 
     	double x,y,h,t,t1,t2,L;
-    	dx	= 0.01;
+    	dx	= 0.00625;
     	h	= dx*1.1;
 	D	= 0.1;
 	HS	= 1.0*D;
 	H	= 4.0*D;
-	x	= 4.0*D;
-	y	= HS + 0.5*D + 3.0*dx;
+	x	= 3.0*D;
+	y	= HS + 0.5*D + 0.0063;
 	L	= 10.0*D;
 
 	U	= 0.4;
-	Z0	= HS + 1.0*dx;
-	U0	= 0.342/0.4 * U;
-
+	Z0	= HS + 0.0*dx;
+//	U0	= 0.342/0.4 * U;
+	U0	= U;
 	RhoF	= 1000.0;
-	CsW	= 35.0;
+	CsW	= 45.0;
 	Muw	= 1.3e-3;
         t1	= (0.25*h/(CsW));
 
@@ -202,9 +204,9 @@ int main(int argc, char **argv) try
         dom.GeneralAfter	= & UserDamping;
         dom.BC.Periodic[0]	= true;
 
-	d	= 0.0004;
+	d  = 0.00036;
 	Us = U0/7.0*pow((d/(H+HS-Z0)),(1.0/7.0));
-	Z = 2.5*d/30.0*(1.0-exp(-Us*2.5*d/(27.0*Muw/RhoF))) + (Muw/RhoF)/(9.0*Us);
+	Z  = 2.5*d/30.0*(1.0-exp(-Us*2.5*d/(27.0*Muw/RhoF))) + (Muw/RhoF)/(9.0*Us);
 
     	dom.AddBoxLength(1 ,Vec3_t ( 0.0 , -4.0*dx , 0.0 ), L + dx/10.0 , H + HS + 8.0*dx + dx/10.0 ,  0 , dx/2.0 ,RhoF, h, 1 , 0 , false, false );
 
@@ -263,7 +265,7 @@ int main(int argc, char **argv) try
         		dom.Particles[dom.Particles.Size()-1]->Mu	= Muw;
         		dom.Particles[dom.Particles.Size()-1]->MuRef	= Muw;
         		dom.Particles[dom.Particles.Size()-1]->Material	= 1;
-//        		dom.Particles[dom.Particles.Size()-1]->NoSlip	= true;
+        		dom.Particles[dom.Particles.Size()-1]->NoSlip	= true;
        		}
     	}
 
@@ -273,14 +275,14 @@ int main(int argc, char **argv) try
 	E	= 20.0e6;
 	K	= E/(3.0*(1.0-2.0*Nu));
 	G	= E/(2.0*(1.0+Nu));
-	n	= 0.55;
+	n	= 0.5;
 	RhoS	= 2650.0*(1.0-n)+n*RhoF;;
 	CsS	= sqrt(K/RhoS);
-	c	= 0.1;
+	c	= 0.0;
 //	Phi	= 180.0/M_PI * atan(0.389 / ( dx/2.0*g * (RhoS-RhoF) ) )*10.0;
-	Phi	= 30.0;
+	Phi	= 20.0;
 	Psi	= 0.0;
-	d	= 0.0004;
+	d	= 0.00036;
 	k	= n*n*n*d*d/(150.0*(1-n)*(1-n));
         t2	= (0.25*h/(CsS))*0.5;
 
@@ -292,20 +294,20 @@ int main(int argc, char **argv) try
 
 	dom.AddBoxLength(2 ,Vec3_t ( 0.0 , -4.0*dx , 0.0 ), L + dx/10.0 , HS + 4.0*dx + dx/10.0 ,  0 , dx/2.0 ,RhoS, h, 1 , 0 , false, false );
 
-//   	mass = RhoS*dx*dx;
-//	R = D/2.0-dx/2.0;
-//    	for (size_t j=0;j<5;j++)
-//    	{
-//    		if (j>0) R -= dx*0.85;
-//    		no = ceil(2*M_PI*R/dx);
-//    		for (size_t i=0; i<no; i++)
-//   		{
-//    			xb = x + R*cos(2*M_PI/no*i);
-//    			yb = y + R*sin(2*M_PI/no*i);
-//    			dom.AddSingleParticle(3,Vec3_t ( xb ,  yb , 0.0 ), mass , RhoS , h , true);
-//        		dom.Particles[dom.Particles.Size()-1]->NoSlip	= true;
-//       		}
-//    	}
+   	mass = RhoS*dx*dx;
+	R = D/2.0-dx/2.0;
+    	for (size_t j=0;j<5;j++)
+    	{
+    		if (j>0) R -= dx;
+    		no = ceil(2*M_PI*R/dx);
+    		for (size_t i=0; i<no; i++)
+   		{
+    			xb = x + R*cos(2*M_PI/no*i);
+    			yb = y + R*sin(2*M_PI/no*i);
+    			dom.AddSingleParticle(3,Vec3_t ( xb ,  yb , 0.0 ), mass , RhoS , h , true);
+        		dom.Particles[dom.Particles.Size()-1]->NoSlip	= true;
+       		}
+    	}
 
 	for (size_t a=0; a<dom.Particles.Size(); a++)
 	{
@@ -314,8 +316,8 @@ int main(int argc, char **argv) try
 			dom.Particles[a]->Material	= 3;
 			dom.Particles[a]->Alpha		= 0.1;
 			dom.Particles[a]->Beta		= 0.1;
-			dom.Particles[a]->TI		= 0.5;
-			dom.Particles[a]->TIn		= 2.55;
+//			dom.Particles[a]->TI		= 0.5;
+//			dom.Particles[a]->TIn		= 2.55;
 //	    		dom.Particles[a]->Shepard	= true;
 //	    		dom.Particles[a]->ShepardStep	= 50;
 			dom.Particles[a]->d		= d;
@@ -339,8 +341,8 @@ int main(int argc, char **argv) try
 				dom.Particles[a]->IsFree= false;
 				dom.Particles[a]->NoSlip= true;
 			}
-//			if (dom.Particles[a]->ID == 3)
-//				dom.Particles[a]->k = 100000.0;
+			if (dom.Particles[a]->ID == 3)
+				dom.Particles[a]->k = 100000.0;
 
 		}
 	}

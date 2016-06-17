@@ -100,9 +100,9 @@ inline void Domain::CalcForce11(Particle * P1, Particle * P2)
 		Mat3_t StrainRate;
 		set_to_zero(StrainRate);
 		Vec3_t VI = 0.0;
+			Vec3_t vab=0.0;
 		if ((P1->NoSlip || P2->NoSlip) || (P1->IsFree*P2->IsFree))
 		{
-			Vec3_t vab=0.0;
 			double Mu = 0.0;
 			if (P1->IsFree*P2->IsFree)
 			{
@@ -163,6 +163,7 @@ inline void Domain::CalcForce11(Particle * P1, Particle * P2)
 			P1->a		+= -mj * temp;
 			P1->dDensity	+=  mj * (di/dj) * temp1;
 			if (P1->IsFree) P1->StrainRate = P1->StrainRate + mj/dj*StrainRate; else P1->StrainRate = 0.0;
+			if (P1->IsFree) P1->S = P1->S + mj/dj*vab(0)*xij(1)*-GK; else P1->S = 0.0;
 			if (P1->Shepard)
 				if (P1->ShepardCounter == P1->ShepardStep && (P1->IsFree*P2->IsFree))
 				{
@@ -177,6 +178,7 @@ inline void Domain::CalcForce11(Particle * P1, Particle * P2)
 			P2->a		-= -mi * temp;
 			P2->dDensity	+=  mi * (dj/di) * temp1;
 			if (P2->IsFree) P2->StrainRate = P2->StrainRate + mi/di*StrainRate; else P2->StrainRate = 0.0;
+			if (P2->IsFree) P2->S = P2->S + mi/di*vab(0)*xij(1)*-GK; else P2->StrainRate = 0.0;
 			if (P2->Shepard)
 				if (P2->ShepardCounter == P2->ShepardStep && (P1->IsFree*P2->IsFree))
 				{
@@ -349,6 +351,7 @@ inline void Domain::CalcForce2233(Particle * P1, Particle * P2)
 					P1->ZWab   += mj/dj* K;
 					P1->ShepardNeighbourNo++;
 				}
+			if (P1->IsFree) P1->S = P1->S + mj/dj*vab(0)*xij(1)*-GK; else P1->S = 0.0;
 			if (P1->IsFree)
 			{
 				P1->StrainRate	= P1->StrainRate + mj/dj*StrainRate;
@@ -367,6 +370,7 @@ inline void Domain::CalcForce2233(Particle * P1, Particle * P2)
 					P2->ZWab   += mi/di* K;
 					P2->ShepardNeighbourNo++;
 				}
+			if (P2->IsFree) P2->S = P2->S + mi/di*vab(0)*xij(1)*-GK; else P2->StrainRate = 0.0;
 			if (P2->IsFree)
 			{
 				P2->StrainRate	= P2->StrainRate + mi/di*StrainRate;
@@ -394,9 +398,57 @@ inline void Domain::CalcForce13(Particle * P1, Particle * P2)
 		double di	= P1->Density;
 		double dj	= P2->Density;
 		double SF1=0.0,SF2=0.0;
-		Vec3_t SFt=0.0;
+		Vec3_t SFt=0.0,v=0.0;
 
 		if (P1->Material == 3 )
+		{
+			v = P2->v-P1->v;
+			if (P1->ZWab<0.6)
+			{
+				double Cd = 24.0*(P2->Mu/P2->RefDensity)/(P1->d*norm(v)+0.01*h*h) + 2.0;
+				SFt = (3.0/(4.0*P1->d)*P2->RefDensity*(1.0-P1->n)*Cd*norm(v)*v) / (di*dj)*K;
+				SFt(1) += (P2->RefDensity*(1.0-P1->n)*norm(v)*(P2->S-P1->S)) / (di*dj)*K;
+			}
+			else
+			{
+				Seepage(SeepageType, P1->n, P1->k, P1->d, P2->Mu, P2->RefDensity, SF1, SF2);
+				SFt = (SF1*v + SF2*norm(v)*v) / (di*dj)*K;
+			}			
+			if (Dimension == 2) SFt(2) = 0.0;
+
+			omp_set_lock(&P1->my_lock);
+				P1->a += P2->Mass*SFt;
+			omp_unset_lock(&P1->my_lock);
+
+			omp_set_lock(&P2->my_lock);
+				P2->a -= P1->Mass*SFt;
+			omp_unset_lock(&P2->my_lock);
+		}
+		else
+		{
+			v = P1->v-P2->v;
+			if (P2->ZWab<0.6)
+			{
+				double Cd = 24.0*(P1->Mu/P1->RefDensity)/(P2->d*norm(v)+0.01*h*h) + 2.0;
+				SFt = (3.0/(4.0*P2->d)*P1->RefDensity*(1.0-P2->n)*Cd*norm(v)*v) / (di*dj)*K;
+				SFt(1) += (P1->RefDensity*(1.0-P2->n)*norm(v)*(P1->S-P2->S))/ (di*dj)*K;;
+			}
+			else
+			{
+				Seepage(SeepageType, P2->n, P2->k, P2->d, P1->Mu, P1->RefDensity, SF1, SF2);
+				SFt = (SF1*v + SF2*norm(v)*v) / (di*dj)*K;
+			}			
+			if (Dimension == 2) SFt(2) = 0.0;
+
+			omp_set_lock(&P1->my_lock);
+				P1->a -= P2->Mass*SFt;
+			omp_unset_lock(&P1->my_lock);
+
+			omp_set_lock(&P2->my_lock);
+				P2->a += P1->Mass*SFt;
+			omp_unset_lock(&P2->my_lock);
+		}
+/*		if (P1->Material == 3 )
 		{
 			Seepage(SeepageType, P1->n, P1->k, P1->d, P2->Mu, P2->RefDensity, SF1, SF2);
 			SFt = (SF1*(P2->v-P1->v) + SF2*norm((P2->v-P1->v))*(P2->v-P1->v)) / (di*dj)*K;
@@ -423,7 +475,7 @@ inline void Domain::CalcForce13(Particle * P1, Particle * P2)
 			omp_set_lock(&P2->my_lock);
 				P2->a += P1->Mass*SFt;
 			omp_unset_lock(&P2->my_lock);
-		}
+		}*/
     }
 }
 

@@ -120,6 +120,7 @@ public:
     double	d;		///< effective particle size
     double	V;		///< Volume of a particle
     double	RhoF;		///< Density of water or any other fluids
+    double	S; 
 
 
     double 	h;		///< Smoothing length of the particle
@@ -209,6 +210,7 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
     ShepardNeighbourNo = 0;
     ShepardStep = 40;
     ShepardCounter = 0;
+    S = 0.0;
 
 
     set_to_zero(Strainb);

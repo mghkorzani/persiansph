@@ -1074,6 +1074,7 @@ inline void Domain::StartAcceleration (Vec3_t const & a)
 		if (Dimension == 2) Particles[i]->v(2) = 0.0;
 		set_to_zero(Particles[i]->StrainRate);
 		set_to_zero(Particles[i]->RotationRate);
+		Particles[i]->S		= 0.0;
 	}
 }
 
@@ -1088,6 +1089,28 @@ inline void Domain::PrimaryComputeAcceleration ()
 			{
 				if (Particles[Pairs[k][a].first]->Material == Particles[Pairs[k][a].second]->Material)
 				{
+					if (Particles[Pairs[k][a].first]->Material == 3)
+					{
+						size_t i	= Pairs[k][a].first;
+						size_t j	= Pairs[k][a].second;
+						Vec3_t xij	= Particles[i]->x-Particles[j]->x;
+						double h	= (Particles[i]->h+Particles[j]->h)/2.0;
+
+						// Correction of xij for Periodic BC
+						if (DomSize(0)>0.0) {if (xij(0)>2*Cellfac*h || xij(0)<-2*Cellfac*h) {(Particles[i]->CC[0]>Particles[j]->CC[0]) ? xij(0) -= DomSize(0) : xij(0) += DomSize(0);}}
+						if (DomSize(1)>0.0) {if (xij(1)>2*Cellfac*h || xij(1)<-2*Cellfac*h) {(Particles[i]->CC[1]>Particles[j]->CC[1]) ? xij(1) -= DomSize(1) : xij(1) += DomSize(1);}}
+						if (DomSize(2)>0.0) {if (xij(2)>2*Cellfac*h || xij(2)<-2*Cellfac*h) {(Particles[i]->CC[2]>Particles[j]->CC[2]) ? xij(2) -= DomSize(2) : xij(2) += DomSize(2);}}
+
+						double K = Kernel(Dimension, KernelType, norm(xij), h);
+
+
+						omp_set_lock(&Particles[i]->my_lock);
+							if (Particles[i]->IsFree) Particles[i]->ZWab += Particles[j]->Mass/Particles[j]->Density* K; else Particles[i]->ZWab = 1.0;
+						omp_unset_lock(&Particles[i]->my_lock);
+						omp_set_lock(&Particles[j]->my_lock);
+							if (Particles[j]->IsFree) Particles[j]->ZWab += Particles[i]->Mass/Particles[i]->Density* K; else Particles[j]->ZWab = 1.0;
+						omp_unset_lock(&Particles[j]->my_lock);
+					}
 					if (!Particles[Pairs[k][a].first]->IsFree)
 					{
 						size_t i	= Pairs[k][a].first;
@@ -1813,7 +1836,7 @@ inline void Domain::WriteXDMF (char const * FileKey)
         ACCvec  [3*i+1] = float(Particles[i]->a(1));
         ACCvec  [3*i+2] = float(Particles[i]->a(2));
        	Pressure[i    ] = float(Particles[i]->Pressure);
-        ShearRate[i   ] = float(Particles[i]->ShearRate);
+        ShearRate[i   ] = float(Particles[i]->ZWab);
         Density [i    ] = float(Particles[i]->Density);
         Mass	[i    ] = float(Particles[i]->Mass);
         sh	[i    ] = float(Particles[i]->h);
