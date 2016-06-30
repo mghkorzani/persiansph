@@ -91,8 +91,11 @@ inline void Domain::CalcForce11(Particle * P1, Particle * P2)
 			double Ri,Rj;
 			Ri = 0.0;
 			Rj = 0.0;
-			if (P1->Pressure < 0.0) Ri = -P1->Pressure/(di*di);
-			if (P2->Pressure < 0.0) Rj = -P2->Pressure/(dj*dj);
+			if ((P1->Pressure+P2->Pressure) < 0.0)
+			{
+				if (P1->Pressure < 0.0) Ri = -P1->Pressure/(di*di);
+				if (P2->Pressure < 0.0) Rj = -P2->Pressure/(dj*dj);
+			}
 			TIij = (P1->TI*Ri + P2->TI*Rj)*pow((K/Kernel(Dimension, KernelType, InitialDist, h)),(P1->TIn+P2->TIn)/2.0);
 		}
 

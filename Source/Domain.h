@@ -1277,19 +1277,20 @@ inline void Domain::LastComputeAcceleration ()
 
 	for (size_t i=0 ; i<Nproc ; i++)
 		Pairs[i].Clear();
-
+/*
 //	//Min time step check based on the acceleration
 	if (TimestepConstrain1)
 	{
 		#pragma omp parallel for schedule (static) num_threads(Nproc)
 		for (size_t i=0; i<Particles.Size(); i++)
-			if (deltat > (0.25*sqrt(Particles[i]->h/norm(Particles[i]->a))) )
+			if (deltat > (0.25*sqrt(Particles[i]->h/norm(Particles[i]->a))) && Particles[i]->Material == 1)
 			{
 				std::cout <<Particles[i]->a<< std::endl;
 				std::cout << "Please decrease the time step to"<< (0.25*sqrt(Particles[i]->h/norm(Particles[i]->a))) << std::endl;
 				abort();
 			}
 	}
+*/
 }
 
 inline void Domain::Move (double dt)
@@ -1836,7 +1837,7 @@ inline void Domain::WriteXDMF (char const * FileKey)
         ACCvec  [3*i+1] = float(Particles[i]->a(1));
         ACCvec  [3*i+2] = float(Particles[i]->a(2));
        	Pressure[i    ] = float(Particles[i]->Pressure);
-        ShearRate[i   ] = float(Particles[i]->ZWab);
+        ShearRate[i   ] = float(Particles[i]->n);
         Density [i    ] = float(Particles[i]->Density);
         Mass	[i    ] = float(Particles[i]->Mass);
         sh	[i    ] = float(Particles[i]->h);
