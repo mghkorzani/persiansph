@@ -345,7 +345,7 @@ inline double DensitySolid(size_t EQ, double Cs0, double P00, double Pressure, d
 	}
 }
 
-inline void Seepage(size_t ST,double n, double k, double d, double mu,  double rho, double& SF1, double& SF2)
+inline void Seepage(size_t ST, double k, double k2, double mu,  double rho, double& SF1, double& SF2)
 {
 	switch (ST)
 	{
@@ -355,20 +355,26 @@ inline void Seepage(size_t ST,double n, double k, double d, double mu,  double r
 		SF2 = 0.0;
 		break;
 	case 1:
-		// Ergun
+		// Darcy_Kozeny–Carman EQ
 		SF1 = mu/k;
-		SF2 = 1.75*(1-n)*rho/(n*n*n*d);
+		SF2 = 0.0;
 		break;
 	case 2:
+		// Ergun
+		SF1 = mu/k;
+		SF2 = k2*rho;
+		break;
+	case 3:
 		// Den Adel
 		SF1 = mu/k;
-		SF2 = 0.4*rho/(n*n*d);
+		SF2 = k2*rho;
 		break;
 	default:
 		std::cout << "Seepage Type No is out of range. Please correct it and run again" << std::endl;
-		std::cout << "0 => Darcy" << std::endl;
-		std::cout << "1 => Ergun" << std::endl;
-		std::cout << "2 => Den Adel" << std::endl;
+		std::cout << "0 => Darcy's Law" << std::endl;
+		std::cout << "1 => Darcy's Law & Kozeny–Carman Eq" << std::endl;
+		std::cout << "2 => The Forchheimer Eq & Ergun Coeffs" << std::endl;
+		std::cout << "3 => The Forchheimer Eq & Den Adel Coeffs" << std::endl;
 		abort();
 		break;
 	}

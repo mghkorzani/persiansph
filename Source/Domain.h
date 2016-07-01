@@ -162,7 +162,6 @@ public:
 
     size_t					VisEq;		///< Selecting variable to choose an equation for viscosity
     size_t					KernelType;	///< Selecting variable to choose a kernel
-    size_t					SeepageType;	///< Selecting variable to choose a Seepage method
 
     double 					XSPH;		///< Velocity correction factor
     double 					InitialDist;	///< Initial distance of particles for calculation of tensile instability
@@ -223,7 +222,6 @@ inline Domain::Domain ()
     DomSize	= 0.0,0.0,0.0;
 
     Gravity	= 0.0,0.0,0.0;
-    SeepageType = 0;
 
     Cellfac = 2.0;
 
@@ -1614,6 +1612,35 @@ inline void Domain::InitialChecks()
         	std::cout << "Quadratic kernel can not be used with the second order viscosity equations" << std::endl;
     		abort();
     	}
+
+	// Initializing the permeability for soil
+	#pragma omp parallel for schedule (static) num_threads(Nproc)
+	for (size_t i=0; i<Particles.Size(); i++)
+		if (Particles[i]->Material == 3)
+			switch(Particles[i]->SeepageType)
+			{
+				case 0:
+					break;
+				case 1:
+					Particles[i]->k = Particles[i]->n0*Particles[i]->n0*Particles[i]->n0*Particles[i]->d*Particles[i]->d/(180.0*(1.0-Particles[i]->n0)*(1.0-Particles[i]->n0));
+					break;
+				case 2:
+					Particles[i]->k = Particles[i]->n0*Particles[i]->n0*Particles[i]->n0*Particles[i]->d*Particles[i]->d/(150.0*(1.0-Particles[i]->n0)*(1.0-Particles[i]->n0));
+					Particles[i]->k2= 1.75*(1.0-Particles[i]->n0)/(Particles[i]->n0*Particles[i]->n0*Particles[i]->n0*Particles[i]->d);
+					break;
+				case 3:
+					Particles[i]->k = Particles[i]->n0*Particles[i]->n0*Particles[i]->n0*Particles[i]->d*Particles[i]->d/(150.0*(1.0-Particles[i]->n0)*(1.0-Particles[i]->n0));
+					Particles[i]->k2= 0.4/(Particles[i]->n0*Particles[i]->n0*Particles[i]->d);
+					break;
+				default:
+					std::cout << "Seepage Type No is out of range. Please correct it and run again" << std::endl;
+					std::cout << "0 => Darcy's Law" << std::endl;
+					std::cout << "1 => Darcy's Law & Kozeny–Carman Eq" << std::endl;
+					std::cout << "2 => The Forchheimer Eq & Ergun Coeffs" << std::endl;
+					std::cout << "3 => The Forchheimer Eq & Den Adel Coeffs" << std::endl;
+					abort();
+					break;
+			}
 }
 
 inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheFileKey, size_t maxidx)
@@ -1837,7 +1864,7 @@ inline void Domain::WriteXDMF (char const * FileKey)
         ACCvec  [3*i+1] = float(Particles[i]->a(1));
         ACCvec  [3*i+2] = float(Particles[i]->a(2));
        	Pressure[i    ] = float(Particles[i]->Pressure);
-        ShearRate[i   ] = float(Particles[i]->n);
+        ShearRate[i   ] = float(Particles[i]->k);
         Density [i    ] = float(Particles[i]->Density);
         Mass	[i    ] = float(Particles[i]->Mass);
         sh	[i    ] = float(Particles[i]->h);

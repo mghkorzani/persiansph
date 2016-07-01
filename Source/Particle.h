@@ -116,10 +116,14 @@ public:
     double	phi;		///< Friction angel
     double	psi;		///< Dilation angel
     double	n;		///< Prosity
+    double	n0;		///< Initial Prosity
     double	k;		///< Permeability
+    double	k2;		///< Second Permeability for the Forchheimer Eq
     double	d;		///< effective particle size
     double	V;		///< Volume of a particle
     double	RhoF;		///< Density of water or any other fluids
+    bool	VarPorosity;	///< If yes, it will calculate porosity and permeability based on new calculated porosity
+    size_t	SeepageType;	///< Selecting variable to choose a Seepage method
     double	S; 
 
 
@@ -154,7 +158,9 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
 	a = 0.0;
     x = x0;
     n = 0.0;
+    n0 = 0.0;
     k = 0.0;
+    k2 = 0.0;
 
     Cs		= 0.0;
     P0		= 0.0;
@@ -211,6 +217,8 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
     ShepardStep = 40;
     ShepardCounter = 0;
     S = 0.0;
+    VarPorosity = false;
+    SeepageType = 0;
 
 
     set_to_zero(Strainb);
@@ -425,7 +433,7 @@ inline void Particle::Mat2MVerlet(double dt)
 inline void Particle::Mat3MVerlet(Mat3_t I, double dt)
 {
 	Mat3_t RotationRateT, Stress, SRT,RS;
-	double I1,J2,alpha,k,I1strain;
+	double I1,J2,alpha,kf,I1strain;
 
 	// Jaumann rate terms
 	Trans(RotationRate,RotationRateT);
@@ -447,14 +455,14 @@ inline void Particle::Mat3MVerlet(Mat3_t I, double dt)
 	{
 		// Drucker-Prager failure criterion for plane strain
 		alpha	= tan(phi) / sqrt(9.0+12.0*tan(phi)*tan(phi));
-		k		= 3.0 * c  / sqrt(9.0+12.0*tan(phi)*tan(phi));
+		kf	= 3.0 * c  / sqrt(9.0+12.0*tan(phi)*tan(phi));
 
 		// Bring back stress to the apex of the failure criteria
 		I1		= Sigma(0,0) + Sigma(1,1) + Sigma(2,2);
-		if ((k-alpha*I1)<0.0)
+		if ((kf-alpha*I1)<0.0)
 		{
 			double Ratio;
-			if (alpha == 0.0) Ratio =0.0; else Ratio = k/alpha;
+			if (alpha == 0.0) Ratio =0.0; else Ratio = kf/alpha;
 			Sigma(0,0) -= 1.0/3.0*(I1-Ratio);
 			Sigma(1,1) -= 1.0/3.0*(I1-Ratio);
 			Sigma(2,2) -= 1.0/3.0*(I1-Ratio);
@@ -469,7 +477,7 @@ inline void Particle::Mat3MVerlet(Mat3_t I, double dt)
 
 
 		// Check the elastic prediction step by the failure criteria
-		if ((sqrt(J2)+alpha*I1-k)>0.0)
+		if ((sqrt(J2)+alpha*I1-kf)>0.0)
 		{
 			// Shear stress based on the existing stress (S n)
 			ShearStress = Stress - 1.0/3.0*(Stress(0,0)+Stress(1,1)+Stress(2,2))*OrthoSys::I;
@@ -511,10 +519,10 @@ inline void Particle::Mat3MVerlet(Mat3_t I, double dt)
 
 			//Scale back
 			I1			= Sigma(0,0) + Sigma(1,1) + Sigma(2,2);
-			if ((k-alpha*I1)<0.0)
+			if ((kf-alpha*I1)<0.0)
 			{
 				double Ratio;
-				if (alpha == 0.0) Ratio =0.0; else Ratio = k/alpha;
+				if (alpha == 0.0) Ratio =0.0; else Ratio = kf/alpha;
 				Sigma(0,0) -= 1.0/3.0*(I1-Ratio);
 				Sigma(1,1) -= 1.0/3.0*(I1-Ratio);
 				Sigma(2,2) -= 1.0/3.0*(I1-Ratio);
@@ -525,7 +533,7 @@ inline void Particle::Mat3MVerlet(Mat3_t I, double dt)
 							2.0*ShearStress(0,2)*ShearStress(2,0) + ShearStress(1,1)*ShearStress(1,1) +
 							2.0*ShearStress(1,2)*ShearStress(2,1) + ShearStress(2,2)*ShearStress(2,2));
 
-			if ((sqrt(J2)+alpha*I1-k)>0.0 && sqrt(J2)>0.0) Sigma = I1/3.0*OrthoSys::I + (k-alpha*I1)/sqrt(J2) * ShearStress;
+			if ((sqrt(J2)+alpha*I1-kf)>0.0 && sqrt(J2)>0.0) Sigma = I1/3.0*OrthoSys::I + (kf-alpha*I1)/sqrt(J2) * ShearStress;
 		}
 	}
 
@@ -535,6 +543,37 @@ inline void Particle::Mat3MVerlet(Mat3_t I, double dt)
 	else
 		Strain	= 2.0*dt*StrainRate + Strainb;
 	Strainb	= Stress;
+
+	if (VarPorosity && IsFree)
+	{
+		double ev = (Strain(0,0)+Strain(1,1)+Strain(2,2))/3.0;
+		n = (n0+ev)/(1.0+ev);
+		switch(SeepageType)
+		{
+			case 0:
+				break;
+			case 1:
+				k = n*n*n*d*d/(180.0*(1.0-n)*(1.0-n));
+				break;
+			case 2:
+				k = n*n*n*d*d/(150.0*(1.0-n)*(1.0-n));
+				k2= 1.75*(1.0-n)/(n*n*n*d);
+				break;
+			case 3:
+				k = n*n*n*d*d/(150.0*(1.0-n)*(1.0-n));
+				k2= 0.4/(n*n*d);
+				break;
+			default:
+				std::cout << "Seepage Type No is out of range. Please correct it and run again" << std::endl;
+				std::cout << "0 => Darcy's Law" << std::endl;
+				std::cout << "1 => Darcy's Law & Kozeny–Carman Eq" << std::endl;
+				std::cout << "2 => The Forchheimer Eq & Ergun Coeffs" << std::endl;
+				std::cout << "3 => The Forchheimer Eq & Den Adel Coeffs" << std::endl;
+				abort();
+				break;
+		}
+	}
+
 
 }
 
@@ -621,7 +660,7 @@ inline void Particle::Mat2Leapfrog(double dt)
 inline void Particle::Mat3Leapfrog(Mat3_t I, double dt)
 {
 	Mat3_t RotationRateT, Stress, SRT,RS;
-	double I1,J2,alpha,k,I1strain;
+	double I1,J2,alpha,kf,I1strain;
 
 	// Jaumann rate terms
 	Trans(RotationRate,RotationRateT);
@@ -642,14 +681,14 @@ inline void Particle::Mat3Leapfrog(Mat3_t I, double dt)
 	{
 		// Drucker-Prager failure criterion for plane strain
 		alpha	= tan(phi) / sqrt(9.0+12.0*tan(phi)*tan(phi));
-		k		= 3.0 * c  / sqrt(9.0+12.0*tan(phi)*tan(phi));
+		kf		= 3.0 * c  / sqrt(9.0+12.0*tan(phi)*tan(phi));
 
 		// Bring back stress to the apex of the failure criteria
 		I1		= Sigmaa(0,0) + Sigmaa(1,1) + Sigmaa(2,2);
-		if ((k-alpha*I1)<0.0)
+		if ((kf-alpha*I1)<0.0)
 		{
 			double Ratio;
-			if (alpha == 0.0) Ratio =0.0; else Ratio = k/alpha;
+			if (alpha == 0.0) Ratio =0.0; else Ratio = kf/alpha;
 			Sigmaa(0,0) -= 1.0/3.0*(I1-Ratio);
 			Sigmaa(1,1) -= 1.0/3.0*(I1-Ratio);
 			Sigmaa(2,2) -= 1.0/3.0*(I1-Ratio);
@@ -664,7 +703,7 @@ inline void Particle::Mat3Leapfrog(Mat3_t I, double dt)
 
 
 		// Check the elastic prediction step by the failure criteria
-		if ((sqrt(J2)+alpha*I1-k)>0.0)
+		if ((sqrt(J2)+alpha*I1-kf)>0.0)
 		{
 			// Shear stress based on the existing stress (S n)
 			ShearStress = Sigma - 1.0/3.0*(Sigma(0,0)+Sigma(1,1)+Sigma(2,2))*OrthoSys::I;
@@ -701,10 +740,10 @@ inline void Particle::Mat3Leapfrog(Mat3_t I, double dt)
 			}
 
 			I1	= Sigmaa(0,0) + Sigmaa(1,1) + Sigmaa(2,2);
-			if ((k-alpha*I1)<0.0)
+			if ((kf-alpha*I1)<0.0)
 			{
 				double Ratio;
-				if (alpha == 0.0) Ratio =0.0; else Ratio = k/alpha;
+				if (alpha == 0.0) Ratio =0.0; else Ratio = kf/alpha;
 				Sigmaa(0,0) -= 1.0/3.0*(I1-Ratio);
 				Sigmaa(1,1) -= 1.0/3.0*(I1-Ratio);
 				Sigmaa(2,2) -= 1.0/3.0*(I1-Ratio);
@@ -714,7 +753,7 @@ inline void Particle::Mat3Leapfrog(Mat3_t I, double dt)
 			J2			= 0.5*(ShearStress(0,0)*ShearStress(0,0) + 2.0*ShearStress(0,1)*ShearStress(1,0) +
 							2.0*ShearStress(0,2)*ShearStress(2,0) + ShearStress(1,1)*ShearStress(1,1) +
 							2.0*ShearStress(1,2)*ShearStress(2,1) + ShearStress(2,2)*ShearStress(2,2));
-			if ((sqrt(J2)+alpha*I1-k)>0.0 && sqrt(J2)>0.0) Sigmaa = I1/3.0*OrthoSys::I + (k-alpha*I1)/sqrt(J2) * ShearStress;
+			if ((sqrt(J2)+alpha*I1-kf)>0.0 && sqrt(J2)>0.0) Sigmaa = I1/3.0*OrthoSys::I + (kf-alpha*I1)/sqrt(J2) * ShearStress;
 		}
 	}
 	Sigma = 1.0/2.0*(Sigmaa+Sigmab);
@@ -724,6 +763,37 @@ inline void Particle::Mat3Leapfrog(Mat3_t I, double dt)
 	Strainb	= Straina;
 	Straina	= dt*StrainRate + Straina;
 	Strain	= 1.0/2.0*(Straina+Strainb);
+
+	if (VarPorosity && IsFree)
+	{
+		double ev = (Strain(0,0)+Strain(1,1)+Strain(2,2))/3.0;
+		n = (n0+ev)/(1.0+ev);
+		switch(SeepageType)
+		{
+			case 0:
+				break;
+			case 1:
+				k = n*n*n*d*d/(180.0*(1.0-n)*(1.0-n));
+				break;
+			case 2:
+				k = n*n*n*d*d/(150.0*(1.0-n)*(1.0-n));
+				k2= 1.75*(1.0-n)/(n*n*n*d);
+				break;
+			case 3:
+				k = n*n*n*d*d/(150.0*(1.0-n)*(1.0-n));
+				k2= 0.4/(n*n*d);
+				break;
+			default:
+				std::cout << "Seepage Type No is out of range. Please correct it and run again" << std::endl;
+				std::cout << "0 => Darcy's Law" << std::endl;
+				std::cout << "1 => Darcy's Law & Kozeny–Carman Eq" << std::endl;
+				std::cout << "2 => The Forchheimer Eq & Ergun Coeffs" << std::endl;
+				std::cout << "3 => The Forchheimer Eq & Den Adel Coeffs" << std::endl;
+				abort();
+				break;
+		}
+	}
+
 }
 
 inline void Particle::translate(double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3_t domainmin)

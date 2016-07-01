@@ -21,81 +21,71 @@
 #include "Domain.h"
 #include "Interaction.h"
 
-double H,HS,U,RhoF,g,D,CsW,dx,d,Muw,t;
+double H,HS,U,RhoF,g,D,CsW,dx,d,Muw;
 double Z0,U0,Z,Us;
 size_t check =0;
 double DampF,DampS,DampTime;
 
 void UserInFlowCon(SPH::Domain & domi)
 {
-	#pragma omp parallel for schedule (static) num_threads(domi.Nproc)
-	for (size_t i=0; i<domi.Particles.Size(); i++)
+	if (domi.Time>=DampTime)
 	{
-		if (domi.Particles[i]->IsFree && domi.Particles[i]->Material == 3) 
-		{
-			double ev = (domi.Particles[i]->Strain(0,0)+domi.Particles[i]->Strain(1,1)+domi.Particles[i]->Strain(2,2))/3.0;
-			double n = (0.5+ev)/(1.0+ev);
-			domi.Particles[i]->n = n;
-			domi.Particles[i]->k = n*n*n*d*d/(180.0*(1.0-n)*(1.0-n));
+		Us = U0/7.0*pow((d/(H+HS-Z0)),(1.0/7.0));
+		Z = 2.5*d/30.0*(1.0-exp(-Us*2.5*d/(27.0*Muw/RhoF))) + (Muw/RhoF)/(9.0*Us);
 
-		}
-	}
-
-	Us = U0/7.0*pow((d/(H+HS-Z0)),(1.0/7.0));
-	Z = 2.5*d/30.0*(1.0-exp(-Us*2.5*d/(27.0*Muw/RhoF))) + (Muw/RhoF)/(9.0*Us);
-
-	int temp;
-	for (int q1=0;  q1<2                ; q1++)
-	for (int q2=0;  q2<domi.CellNo[1]   ; q2++)
-	for (int q3=0;  q3<domi.CellNo[2]   ; q3++)
-		if (domi.HOC[q1][q2][q3]!=-1)
-		{
-			temp = domi.HOC[q1][q2][q3];
-			while (temp != -1)
+		int temp;
+		for (int q1=0;  q1<2                ; q1++)
+		for (int q2=0;  q2<domi.CellNo[1]   ; q2++)
+		for (int q3=0;  q3<domi.CellNo[2]   ; q3++)
+			if (domi.HOC[q1][q2][q3]!=-1)
 			{
-				if (domi.Particles[temp]->IsFree)
+				temp = domi.HOC[q1][q2][q3];
+				while (temp != -1)
 				{
-					if (domi.Particles[temp]->ID==1)
+					if (domi.Particles[temp]->IsFree)
 					{
-						domi.Particles[temp]->dDensity = 0.0;
-						domi.Particles[temp]->Density  = RhoF*pow((1+7.0*g*(H+HS-domi.Particles[temp]->x(1))/(CsW*CsW)),(1.0/7.0));
-						domi.Particles[temp]->Densityb = RhoF*pow((1+7.0*g*(H+HS-domi.Particles[temp]->x(1))/(CsW*CsW)),(1.0/7.0));
-	    					domi.Particles[temp]->Pressure = SPH::EOS(domi.Particles[temp]->PresEq, domi.Particles[temp]->Cs, domi.Particles[temp]->P0,
-													domi.Particles[temp]->Density,domi.Particles[temp]->RefDensity);	
-					}
-					if (domi.Particles[temp]->x(1)> Z0)
-					{
-						domi.Particles[temp]->v  = Us/0.4*log((domi.Particles[temp]->x(1)-Z0)/Z) , 0.0 , 0.0;
-						domi.Particles[temp]->vb = Us/0.4*log((domi.Particles[temp]->x(1)-Z0)/Z) , 0.0 , 0.0;
-					}
-					if (domi.Particles[temp]->x(1)<= Z0  && domi.Particles[temp]->ID==1)
-					{
-						domi.Particles[temp]->v(1)  = 0.0;
-						domi.Particles[temp]->vb(1) = 0.0;
-						domi.Particles[temp]->v(2)  = 0.0;
-						domi.Particles[temp]->vb(2) = 0.0;
-						if (domi.Particles[temp]->v(0)<0 )
+						if (domi.Particles[temp]->ID==1)
 						{
-							domi.Particles[temp]->v(0) = 0.0;
-							domi.Particles[temp]->vb(0) = 0.0;
+							domi.Particles[temp]->dDensity = 0.0;
+							domi.Particles[temp]->Density  = RhoF*pow((1+7.0*g*(H+HS-domi.Particles[temp]->x(1))/(CsW*CsW)),(1.0/7.0));
+							domi.Particles[temp]->Densityb = RhoF*pow((1+7.0*g*(H+HS-domi.Particles[temp]->x(1))/(CsW*CsW)),(1.0/7.0));
+		    					domi.Particles[temp]->Pressure = SPH::EOS(domi.Particles[temp]->PresEq, domi.Particles[temp]->Cs, domi.Particles[temp]->P0,
+														domi.Particles[temp]->Density,domi.Particles[temp]->RefDensity);	
+						}
+						if (domi.Particles[temp]->x(1)> Z0)
+						{
+							domi.Particles[temp]->v  = Us/0.4*log((domi.Particles[temp]->x(1)-Z0)/Z) , 0.0 , 0.0;
+							domi.Particles[temp]->vb = Us/0.4*log((domi.Particles[temp]->x(1)-Z0)/Z) , 0.0 , 0.0;
+						}
+						if (domi.Particles[temp]->x(1)<= Z0  && domi.Particles[temp]->ID==1)
+						{
+							domi.Particles[temp]->v(1)  = 0.0;
+							domi.Particles[temp]->vb(1) = 0.0;
+							domi.Particles[temp]->v(2)  = 0.0;
+							domi.Particles[temp]->vb(2) = 0.0;
+							if (domi.Particles[temp]->v(0)<0 )
+							{
+								domi.Particles[temp]->v(0) = 0.0;
+								domi.Particles[temp]->vb(0) = 0.0;
+							}
+						}
+						if (domi.Particles[temp]->x(1)<= Z0  && domi.Particles[temp]->ID==2)
+						{
+	//						domi.Particles[temp]->v(1)  = 0.0;
+							domi.Particles[temp]->vb(1) = 0.0;
+							domi.Particles[temp]->v(2)  = 0.0;
+							domi.Particles[temp]->vb(2) = 0.0;
+							if (domi.Particles[temp]->v(0)<0 )
+							{
+	//							domi.Particles[temp]->v(0) = 0.0;
+								domi.Particles[temp]->vb(0) = 0.0;
+							}
 						}
 					}
-					if (domi.Particles[temp]->x(1)<= Z0  && domi.Particles[temp]->ID==2)
-					{
-//						domi.Particles[temp]->v(1)  = 0.0;
-						domi.Particles[temp]->vb(1) = 0.0;
-						domi.Particles[temp]->v(2)  = 0.0;
-						domi.Particles[temp]->vb(2) = 0.0;
-						if (domi.Particles[temp]->v(0)<0 )
-						{
-//							domi.Particles[temp]->v(0) = 0.0;
-							domi.Particles[temp]->vb(0) = 0.0;
-						}
-					}
+					temp = domi.Particles[temp]->LL;
 				}
-				temp = domi.Particles[temp]->LL;
 			}
-		}
+	}
 }
 
 void UserAllFlowCon(Vec3_t & position, Vec3_t & Vel, double & Den, SPH::Boundary & bdry)
@@ -152,10 +142,7 @@ void UserDamping(SPH::Domain & domi)
 					temp = domi.Particles[temp]->LL;
 				}
 			}
-	}
 
-	if (domi.Time>t)
-	{
 		#pragma omp parallel for schedule (static) num_threads(domi.Nproc)
 		for (size_t i=0; i<domi.Particles.Size(); i++)
 		{
@@ -180,7 +167,6 @@ int main(int argc, char **argv) try
         SPH::Domain	dom;
 
         dom.Dimension	= 2;
-	dom.SeepageType = 0;
         dom.Nproc	= 24;
     	dom.VisEq	= 0;
     	dom.KernelType	= 4;
@@ -188,7 +174,7 @@ int main(int argc, char **argv) try
     	dom.Gravity	= 0.0 , -9.81 , 0.0 ;
 	g		= norm(dom.Gravity);
 
-    	double x,y,h,t1,t2,L;
+    	double x,y,h,t,t1,t2,L;
     	dx	= 0.005;
     	h	= dx*1.1;
 	D	= 0.1;
@@ -214,7 +200,7 @@ int main(int argc, char **argv) try
         dom.GeneralAfter	= & UserDamping;
         dom.BC.Periodic[0]	= true;
 
-	d  = 0.00036;
+	d  = 0.0004;
 	Us = U0/7.0*pow((d/(H+HS-Z0)),(1.0/7.0));
 	Z  = 2.5*d/30.0*(1.0-exp(-Us*2.5*d/(27.0*Muw/RhoF))) + (Muw/RhoF)/(9.0*Us);
 
@@ -280,27 +266,24 @@ int main(int argc, char **argv) try
        		}
     	}
 
-	double Nu,E,K,G,CsS,RhoS,c,Phi,Psi,n,k;
+	double Nu,E,K,G,CsS,RhoS,c,Phi,Psi,n;
 
 	Nu	= 0.25;
-	E	= 20.0e6;
+	E	= 15.0e6;
 	K	= E/(3.0*(1.0-2.0*Nu));
 	G	= E/(2.0*(1.0+Nu));
 	n	= 0.5;
 	RhoS	= 2650.0*(1.0-n)+n*RhoF;;
 	CsS	= sqrt(K/RhoS);
-	c	= 0.389;
+	c	= 0.0;
 	Phi	= 20.0;
 	Psi	= 0.0;
-	d	= 0.00036;
-	k	= n*n*n*d*d/(180.0*(1-n)*(1-n));
-        t2	= (0.25*h/(CsS));
+	d	= 0.0004;
+        t2	= (0.25*h/(CsS))*0.8;
 
         std::cout<<"CsS  = "<<CsS<<std::endl;
         std::cout<<"RhoS = "<<RhoS<<std::endl;
         std::cout<<"Phi  = "<<Phi<<std::endl;
-        std::cout<<"K(Permeability) = "<<k<<std::endl;
-        std::cout<<"K(Conductivity) = "<<k*RhoF*norm(dom.Gravity)/Muw<<std::endl;
 
 	dom.AddBoxLength(2 ,Vec3_t ( 0.0 , -4.0*dx , 0.0 ), L + dx/10.0 , HS + 4.0*dx + dx/10.0 ,  0 , dx/2.0 ,RhoS, h, 1 , 0 , false, false );
 
@@ -329,13 +312,16 @@ int main(int argc, char **argv) try
 			dom.Particles[a]->TI		= 0.5;
 			dom.Particles[a]->TIn		= 2.55;
 			dom.Particles[a]->d		= d;
-			dom.Particles[a]->n		= n;
-			dom.Particles[a]->k		= k;
+			dom.Particles[a]->VarPorosity	= true;
+			dom.Particles[a]->SeepageType	= 1;	// Kozeny–Carman Eq
+//			dom.Particles[a]->n		= n;
+			dom.Particles[a]->n0		= n;
+//			dom.Particles[a]->k		= k;
 			dom.Particles[a]->RhoF		= RhoF;
 			dom.Particles[a]->Cs		= CsS;
 			dom.Particles[a]->G		= G;
 			dom.Particles[a]->K		= K;
-			dom.Particles[a]->Fail		= 3;
+			dom.Particles[a]->Fail		= 3;	//non-associated flow rule 
 			dom.Particles[a]->c		= c;
 			dom.Particles[a]->phi		= Phi/180.0*M_PI;
 			dom.Particles[a]->psi		= Psi/180.0*M_PI;
@@ -356,7 +342,7 @@ int main(int argc, char **argv) try
 	}
     	DampF	= 0.05*CsW/h;
   	DampS	= 0.02*sqrt(E/(RhoS*h*h));
-    	DampTime= 0.0;
+    	DampTime= 0.5;
 
         t	= std::min(t1,t2);
         std::cout<<"t1 = "<<t1<<std::endl;
