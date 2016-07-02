@@ -162,6 +162,7 @@ public:
 
     size_t					VisEq;		///< Selecting variable to choose an equation for viscosity
     size_t					KernelType;	///< Selecting variable to choose a kernel
+    size_t					SWIType;	///< Selecting variable to choose Soil-Water Interaction type
 
     double 					XSPH;		///< Velocity correction factor
     double 					InitialDist;	///< Initial distance of particles for calculation of tensile instability
@@ -226,6 +227,7 @@ inline Domain::Domain ()
     Cellfac = 2.0;
 
     KernelType	= 0;
+    SWIType	= 0;
     VisEq	= 0;
     Scheme	= 0;
 

@@ -185,6 +185,7 @@ int main(int argc, char **argv) try
         dom.Nproc	= 24;
     	dom.VisEq	= 0;
     	dom.KernelType	= 4;
+	dom.SWIType	= 1;
     	dom.Scheme	= 0;
     	dom.Gravity	= 0.0 , -9.81 , 0.0 ;
 	g		= norm(dom.Gravity);
