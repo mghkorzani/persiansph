@@ -350,7 +350,7 @@ int main(int argc, char **argv) try
 	}
     	DampF	= 0.05*CsW/h;
   	DampS	= 0.02*sqrt(E/(RhoS*h*h));
-    	DampTime= 0.0;
+    	DampTime= 0.5;
 
         t	= std::min(t1,t2);
         std::cout<<"t1 = "<<t1<<std::endl;
