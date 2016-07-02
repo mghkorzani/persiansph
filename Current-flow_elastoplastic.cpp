@@ -33,6 +33,21 @@ void UserInFlowCon(SPH::Domain & domi)
 		Us = U0/7.0*pow((d/(H+HS-Z0)),(1.0/7.0));
 		Z = 2.5*d/30.0*(1.0-exp(-Us*2.5*d/(27.0*Muw/RhoF))) + (Muw/RhoF)/(9.0*Us);
 
+		if (check == 0)
+		{
+			#pragma omp parallel for schedule (static) num_threads(domi.Nproc)
+			for (size_t i=0; i<domi.Particles.Size(); i++)
+			{
+				if (domi.Particles[i]->ID == 10) 
+				{
+					domi.Particles[i]->v  = Us/0.4*log((H+HS-Z0)/Z) , 0.0 , 0.0;
+					domi.Particles[i]->vb = Us/0.4*log((H+HS-Z0)/Z) , 0.0 , 0.0;
+
+				}
+			}
+			check = 1;
+		}
+
 		int temp;
 		for (int q1=0;  q1<2                ; q1++)
 		for (int q2=0;  q2<domi.CellNo[1]   ; q2++)
@@ -200,10 +215,6 @@ int main(int argc, char **argv) try
         dom.GeneralAfter	= & UserDamping;
         dom.BC.Periodic[0]	= true;
 
-	d  = 0.0004;
-	Us = U0/7.0*pow((d/(H+HS-Z0)),(1.0/7.0));
-	Z  = 2.5*d/30.0*(1.0-exp(-Us*2.5*d/(27.0*Muw/RhoF))) + (Muw/RhoF)/(9.0*Us);
-
     	dom.AddBoxLength(1 ,Vec3_t ( 0.0 , -4.0*dx , 0.0 ), L + dx/10.0 , H + HS + 8.0*dx + dx/10.0 ,  0 , dx/2.0 ,RhoF, h, 1 , 0 , false, false );
 
     	double yb,xb,R,mass,no;;
@@ -236,9 +247,6 @@ int main(int argc, char **argv) try
     			dom.Particles[a]->ID		= 10;
     			dom.Particles[a]->IsFree	= false;
     			dom.Particles[a]->NoSlip	= true;
-			dom.Particles[a]->v  = Us/0.4*log((H+HS-Z0)/Z) , 0.0 , 0.0;
-			dom.Particles[a]->vb = Us/0.4*log((H+HS-Z0)/Z) , 0.0 , 0.0;
-
     		}
      		if ((pow((xb-x),2)+pow((yb-y),2))<pow((D/2.0+dx/2.0),2.0))
 	     		dom.Particles[a]->ID		= 20;
@@ -287,7 +295,7 @@ int main(int argc, char **argv) try
 
 	dom.AddBoxLength(2 ,Vec3_t ( 0.0 , -4.0*dx , 0.0 ), L + dx/10.0 , HS + 4.0*dx + dx/10.0 ,  0 , dx/2.0 ,RhoS, h, 1 , 0 , false, false );
 
-   	mass = RhoS*dx*dx;
+/*   	mass = RhoS*dx*dx;
 	R = D/2.0-dx/2.0;
     	for (size_t j=0;j<5;j++)
     	{
@@ -301,7 +309,7 @@ int main(int argc, char **argv) try
         		dom.Particles[dom.Particles.Size()-1]->NoSlip	= true;
        		}
     	}
-
+*/
 	for (size_t a=0; a<dom.Particles.Size(); a++)
 	{
 		if (dom.Particles[a]->ID==2 || dom.Particles[a]->ID==3)
@@ -309,8 +317,8 @@ int main(int argc, char **argv) try
 			dom.Particles[a]->Material	= 3;
 			dom.Particles[a]->Alpha		= 0.1;
 			dom.Particles[a]->Beta		= 0.1;
-			dom.Particles[a]->TI		= 0.5;
-			dom.Particles[a]->TIn		= 2.55;
+//			dom.Particles[a]->TI		= 0.5;
+//			dom.Particles[a]->TIn		= 2.55;
 			dom.Particles[a]->d		= d;
 			dom.Particles[a]->VarPorosity	= true;
 			dom.Particles[a]->SeepageType	= 1;	// Kozeny–Carman Eq
@@ -335,14 +343,14 @@ int main(int argc, char **argv) try
 				dom.Particles[a]->IsFree= false;
 				dom.Particles[a]->NoSlip= true;
 			}
-			if (dom.Particles[a]->ID == 3)
-				dom.Particles[a]->k = 100000000.0;
+//			if (dom.Particles[a]->ID == 3)
+//				dom.Particles[a]->k = 100000000.0;
 
 		}
 	}
     	DampF	= 0.05*CsW/h;
   	DampS	= 0.02*sqrt(E/(RhoS*h*h));
-    	DampTime= 0.5;
+    	DampTime= 0.0;
 
         t	= std::min(t1,t2);
         std::cout<<"t1 = "<<t1<<std::endl;
