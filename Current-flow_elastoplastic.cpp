@@ -169,6 +169,19 @@ void UserDamping(SPH::Domain & domi)
 			}
 		}
 	}
+	if (domi.Time>=DampTime && domi.Time<2.0)
+	{
+		#pragma omp parallel for schedule (static) num_threads(domi.Nproc)
+		for (size_t i=0; i<domi.Particles.Size(); i++)
+		{
+			if (domi.Particles[i]->ID == 2)
+			{ 
+				domi.Particles[i]->a =  0.0;
+				domi.Particles[i]->v =  0.0;
+				domi.Particles[i]->vb =  0.0;
+			}
+		}
+	}
 
 
 }
@@ -195,7 +208,7 @@ int main(int argc, char **argv) try
     	h	= dx*1.1;
 	D	= 0.1;
 	HS	= 1.0*D;
-	H	= 4.0*D;
+	H	= 3.5*D;
 	x	= 3.0*D;
 	y	= HS + 0.5*D + 0.01;
 	L	= 10.0*D;
@@ -349,7 +362,7 @@ int main(int argc, char **argv) try
 
 		}
 	}
-    	DampF	= 0.05*CsW/h;
+    	DampF	= 0.02*CsW/h;
   	DampS	= 0.02*sqrt(E/(RhoS*h*h));
     	DampTime= 0.5;
 

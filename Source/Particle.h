@@ -124,7 +124,7 @@ public:
     double	RhoF;		///< Density of water or any other fluids
     bool	VarPorosity;	///< If yes, it will calculate porosity and permeability based on new calculated porosity
     size_t	SeepageType;	///< Selecting variable to choose a Seepage method
-    double	S; 
+    double	S;		///< Velocity derivative for surface erosion 
 
 
     double 	h;		///< Smoothing length of the particle
@@ -219,6 +219,7 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
     S = 0.0;
     VarPorosity = false;
     SeepageType = 0;
+    S = 0
 
 
     set_to_zero(Strainb);

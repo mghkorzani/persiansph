@@ -1089,7 +1089,7 @@ inline void Domain::PrimaryComputeAcceleration ()
 			{
 				if (Particles[Pairs[k][a].first]->Material == Particles[Pairs[k][a].second]->Material)
 				{
-					if (Particles[Pairs[k][a].first]->Material == 3)
+					if (Particles[Pairs[k][a].first]->Material == 3 && SWIType == 1)
 					{
 						size_t i	= Pairs[k][a].first;
 						size_t j	= Pairs[k][a].second;
@@ -1156,48 +1156,53 @@ inline void Domain::PrimaryComputeAcceleration ()
 				}
 				else
 				{
-					if (Particles[Pairs[k][a].first]->Material == 3)
+					if (SWIType != 2)
 					{
-						if (!Particles[Pairs[k][a].first]->SatCheck)
-							if (Particles[Pairs[k][a].second]->CC[1] >= Particles[Pairs[k][a].first]->CC[1])
-								if (Particles[Pairs[k][a].second]->x(1) >= Particles[Pairs[k][a].first]->x(1))
-									Particles[Pairs[k][a].first]->SatCheck = true;
-					}
-					if (Particles[Pairs[k][a].second]->Material == 3)
-					{
-						if (!Particles[Pairs[k][a].second]->SatCheck)
-							if (Particles[Pairs[k][a].first]->CC[1] >= Particles[Pairs[k][a].second]->CC[1])
-								if (Particles[Pairs[k][a].first]->x(1) >= Particles[Pairs[k][a].second]->x(1))
-									Particles[Pairs[k][a].second]->SatCheck = true;
+						if (Particles[Pairs[k][a].first]->Material == 3)
+						{
+							if (!Particles[Pairs[k][a].first]->SatCheck)
+								if (Particles[Pairs[k][a].second]->CC[1] >= Particles[Pairs[k][a].first]->CC[1])
+									if (Particles[Pairs[k][a].second]->x(1) >= Particles[Pairs[k][a].first]->x(1))
+										Particles[Pairs[k][a].first]->SatCheck = true;
+						}
+						if (Particles[Pairs[k][a].second]->Material == 3)
+						{
+							if (!Particles[Pairs[k][a].second]->SatCheck)
+								if (Particles[Pairs[k][a].first]->CC[1] >= Particles[Pairs[k][a].second]->CC[1])
+									if (Particles[Pairs[k][a].first]->x(1) >= Particles[Pairs[k][a].second]->x(1))
+										Particles[Pairs[k][a].second]->SatCheck = true;
+						}
 					}
 				}
 			}
 		}
 
-		#pragma omp parallel for schedule (static) num_threads(Nproc)
-		for (size_t i=0; i<Particles.Size(); i++)
+		if (SWIType != 2)
 		{
-			if (Particles[i]->Material == 3)
+			#pragma omp parallel for schedule (static) num_threads(Nproc)
+			for (size_t i=0; i<Particles.Size(); i++)
 			{
-				if (Particles[i]->SatCheck && !Particles[i]->IsSat)
+				if (Particles[i]->Material == 3)
 				{
-					Particles[i]->Mass		= Particles[i]->V*(Particles[i]->RefDensity - Particles[i]->RhoF);
-					Particles[i]->Density		= Particles[i]->Density - Particles[i]->RhoF;
-					Particles[i]->Densityb		= Particles[i]->Densityb - Particles[i]->RhoF;
-					Particles[i]->RefDensity	= Particles[i]->RefDensity - Particles[i]->RhoF;
-					Particles[i]->IsSat			= true;
-				}
-				if (!Particles[i]->SatCheck && Particles[i]->IsSat)
-				{
-					Particles[i]->Mass		= Particles[i]->V*(Particles[i]->RefDensity + Particles[i]->RhoF);
-					Particles[i]->Density		= Particles[i]->Density + Particles[i]->RhoF;
-					Particles[i]->Densityb		= Particles[i]->Densityb + Particles[i]->RhoF;
-					Particles[i]->RefDensity	= Particles[i]->RefDensity + Particles[i]->RhoF;
-					Particles[i]->IsSat			= false;
+					if (Particles[i]->SatCheck && !Particles[i]->IsSat)
+					{
+						Particles[i]->Mass		= Particles[i]->V*(Particles[i]->RefDensity - Particles[i]->RhoF);
+						Particles[i]->Density		= Particles[i]->Density - Particles[i]->RhoF;
+						Particles[i]->Densityb		= Particles[i]->Densityb - Particles[i]->RhoF;
+						Particles[i]->RefDensity	= Particles[i]->RefDensity - Particles[i]->RhoF;
+						Particles[i]->IsSat			= true;
+					}
+					if (!Particles[i]->SatCheck && Particles[i]->IsSat)
+					{
+						Particles[i]->Mass		= Particles[i]->V*(Particles[i]->RefDensity + Particles[i]->RhoF);
+						Particles[i]->Density		= Particles[i]->Density + Particles[i]->RhoF;
+						Particles[i]->Densityb		= Particles[i]->Densityb + Particles[i]->RhoF;
+						Particles[i]->RefDensity	= Particles[i]->RefDensity + Particles[i]->RhoF;
+						Particles[i]->IsSat			= false;
+					}
 				}
 			}
 		}
-
 
 		#pragma omp parallel for schedule (static) num_threads(Nproc)
 		for (size_t i=0; i<FixedParticles.Size(); i++)

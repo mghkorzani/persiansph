@@ -166,7 +166,7 @@ inline void Domain::CalcForce11(Particle * P1, Particle * P2)
 			P1->a		+= -mj * temp;
 			P1->dDensity	+=  mj * (di/dj) * temp1;
 			if (P1->IsFree) P1->StrainRate = P1->StrainRate + mj/dj*StrainRate; else P1->StrainRate = 0.0;
-			if (P1->IsFree) P1->S = P1->S + mj/dj*vab(0)*xij(1)*-GK; else P1->S = 0.0;
+			if (P1->IsFree && SWIType ==1) P1->S = P1->S + mj/dj*vab(0)*xij(1)*-GK; else P1->S = 0.0;
 			if (P1->Shepard)
 				if (P1->ShepardCounter == P1->ShepardStep && (P1->IsFree*P2->IsFree))
 				{
@@ -181,7 +181,7 @@ inline void Domain::CalcForce11(Particle * P1, Particle * P2)
 			P2->a		-= -mi * temp;
 			P2->dDensity	+=  mi * (dj/di) * temp1;
 			if (P2->IsFree) P2->StrainRate = P2->StrainRate + mi/di*StrainRate; else P2->StrainRate = 0.0;
-			if (P2->IsFree) P2->S = P2->S + mi/di*vab(0)*xij(1)*-GK; else P2->StrainRate = 0.0;
+			if (P2->IsFree && SWIType ==1) P2->S = P2->S + mi/di*vab(0)*xij(1)*-GK; else P2->StrainRate = 0.0;
 			if (P2->Shepard)
 				if (P2->ShepardCounter == P2->ShepardStep && (P1->IsFree*P2->IsFree))
 				{
@@ -354,7 +354,7 @@ inline void Domain::CalcForce2233(Particle * P1, Particle * P2)
 					P1->ZWab   += mj/dj* K;
 					P1->ShepardNeighbourNo++;
 				}
-			if (P1->IsFree) P1->S = P1->S + mj/dj*vab(0)*xij(1)*-GK; else P1->S = 0.0;
+			if (P1->IsFree && SWIType ==1) P1->S = P1->S + mj/dj*vab(0)*xij(1)*-GK; else P1->S = 0.0;
 			if (P1->IsFree)
 			{
 				P1->StrainRate	= P1->StrainRate + mj/dj*StrainRate;
@@ -373,7 +373,7 @@ inline void Domain::CalcForce2233(Particle * P1, Particle * P2)
 					P2->ZWab   += mi/di* K;
 					P2->ShepardNeighbourNo++;
 				}
-			if (P2->IsFree) P2->S = P2->S + mi/di*vab(0)*xij(1)*-GK; else P2->StrainRate = 0.0;
+			if (P2->IsFree  && SWIType ==1) P2->S = P2->S + mi/di*vab(0)*xij(1)*-GK; else P2->StrainRate = 0.0;
 			if (P2->IsFree)
 			{
 				P2->StrainRate	= P2->StrainRate + mi/di*StrainRate;
