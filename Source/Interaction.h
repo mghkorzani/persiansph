@@ -355,6 +355,7 @@ inline void Domain::CalcForce2233(Particle * P1, Particle * P2)
 					P1->ShepardNeighbourNo++;
 				}
 			if (P1->IsFree && SWIType ==1) P1->S = P1->S + mj/dj*vab(0)*xij(1)*-GK; else P1->S = 0.0;
+			if (P1->IsFree) P1->ZWab   += mj/dj* K; else P1->ZWab = 1.0;
 			if (P1->IsFree)
 			{
 				P1->StrainRate	= P1->StrainRate + mj/dj*StrainRate;
@@ -374,6 +375,7 @@ inline void Domain::CalcForce2233(Particle * P1, Particle * P2)
 					P2->ShepardNeighbourNo++;
 				}
 			if (P2->IsFree  && SWIType ==1) P2->S = P2->S + mi/di*vab(0)*xij(1)*-GK; else P2->StrainRate = 0.0;
+			if (P2->IsFree) P2->ZWab   += mi/di* K; else P2->ZWab = 1.0;
 			if (P2->IsFree)
 			{
 				P2->StrainRate	= P2->StrainRate + mi/di*StrainRate;

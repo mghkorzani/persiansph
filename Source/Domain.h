@@ -182,9 +182,10 @@ public:
     size_t					Scheme;		///< Integration scheme: 0 = Modified Verlet, 1 = Leapfrog
     bool					TimestepConstrain1;	///< Acceleration check for timestep size
 
-    Array<Array<std::pair<size_t,size_t> > >	Pairs;
+    Array<Array<std::pair<size_t,size_t> > >	SMPairs;
+    Array<Array<std::pair<size_t,size_t> > >	NSMPairs;
+    Array<Array<std::pair<size_t,size_t> > >	FSMPairs;
     Array< size_t > 				FixedParticles;
-    Array<std::pair<size_t,size_t> >		FixedPairs;
     Array<std::pair<size_t,size_t> >		Initial;
     Mat3_t I;
     int						Excemption;
@@ -762,7 +763,11 @@ inline void Domain::CellInitiate ()
     }
     // Initiate Pairs array for neibour searching
     for(size_t i=0 ; i<Nproc ; i++)
-	Pairs.Push(Initial);
+    {
+	SMPairs.Push(Initial);
+	NSMPairs.Push(Initial);
+	FSMPairs.Push(Initial);
+    }
 }
 
 inline void Domain::ListGenerate ()
@@ -948,7 +953,18 @@ inline void Domain::YZPlaneCellsNeighbourSearch(int q1)
 				while (temp2 != -1)
 				{
 					if (Particles[temp1]->IsFree || Particles[temp2]->IsFree)
-						Pairs[T].Push(std::make_pair(temp1, temp2));
+					{
+						if (Particles[temp1]->Material == Particles[temp2]->Material)
+						{
+							if (Particles[temp1]->IsFree*Particles[temp2]->IsFree)
+								SMPairs[T].Push(std::make_pair(temp1, temp2));
+							else
+								FSMPairs[T].Push(std::make_pair(temp1, temp2));
+						
+						}
+						else
+							NSMPairs[T].Push(std::make_pair(temp1, temp2));
+					}
 					temp2 = Particles[temp2]->LL;
 				}
 
@@ -959,7 +975,18 @@ inline void Domain::YZPlaneCellsNeighbourSearch(int q1)
 					while (temp2 != -1)
 					{
 						if (Particles[temp1]->IsFree || Particles[temp2]->IsFree)
-							Pairs[T].Push(std::make_pair(temp1, temp2));
+						{
+							if (Particles[temp1]->Material == Particles[temp2]->Material)
+							{
+								if (Particles[temp1]->IsFree*Particles[temp2]->IsFree)
+									SMPairs[T].Push(std::make_pair(temp1, temp2));
+								else
+									FSMPairs[T].Push(std::make_pair(temp1, temp2));
+						
+							}
+							else
+								NSMPairs[T].Push(std::make_pair(temp1, temp2));
+						}
 						temp2 = Particles[temp2]->LL;
 					}
 				}
@@ -975,7 +1002,18 @@ inline void Domain::YZPlaneCellsNeighbourSearch(int q1)
 							while (temp2 != -1)
 							{
 								if (Particles[temp1]->IsFree || Particles[temp2]->IsFree)
-									Pairs[T].Push(std::make_pair(temp1, temp2));
+								{
+									if (Particles[temp1]->Material == Particles[temp2]->Material)
+									{
+										if (Particles[temp1]->IsFree*Particles[temp2]->IsFree)
+											SMPairs[T].Push(std::make_pair(temp1, temp2));
+										else
+											FSMPairs[T].Push(std::make_pair(temp1, temp2));
+						
+									}
+									else
+										NSMPairs[T].Push(std::make_pair(temp1, temp2));
+								}
 								temp2 = Particles[temp2]->LL;
 							}
 						}
@@ -994,7 +1032,18 @@ inline void Domain::YZPlaneCellsNeighbourSearch(int q1)
 							while (temp2 != -1)
 							{
 								if (Particles[temp1]->IsFree || Particles[temp2]->IsFree)
-									Pairs[T].Push(std::make_pair(temp1, temp2));
+								{
+									if (Particles[temp1]->Material == Particles[temp2]->Material)
+									{
+										if (Particles[temp1]->IsFree*Particles[temp2]->IsFree)
+											SMPairs[T].Push(std::make_pair(temp1, temp2));
+										else
+											FSMPairs[T].Push(std::make_pair(temp1, temp2));
+						
+									}
+									else
+										NSMPairs[T].Push(std::make_pair(temp1, temp2));
+								}
 								temp2 = Particles[temp2]->LL;
 							}
 						}
@@ -1013,9 +1062,6 @@ inline void Domain::StartAcceleration (Vec3_t const & a)
 	{
 	    	if (Particles[i]->IsFree)
     		{
-    			if (Particles[i]->Material < 3 && Particles[i]->FirstStep)
-    				Particles[i]->Pressure = EOS(Particles[i]->PresEq, Particles[i]->Cs, Particles[i]->P0,Particles[i]->Density, Particles[i]->RefDensity);
-
 			// Tensile Instability for all soil and solid particles
 			if (Particles[i]->Material > 1 && Particles[i]->TI > 0.0)
         		{
@@ -1080,208 +1126,187 @@ inline void Domain::StartAcceleration (Vec3_t const & a)
 
 inline void Domain::PrimaryComputeAcceleration ()
 {
-	if (FixedParticles.Size()>0)
+	// Summing the smoothed pressure, velocity and stress for fixed particles from neighbour particles
+	#pragma omp parallel for schedule (static) num_threads(Nproc)
+	for (size_t k=0; k<FSMPairs.Size();k++)
 	{
-		#pragma omp parallel for schedule (static) num_threads(Nproc)
-		for (size_t k=0; k<Pairs.Size();k++)
+		size_t P1,P2;
+		Vec3_t xij;
+		double h,K;
+		for (size_t a=0; a<FSMPairs[k].Size();a++)
 		{
-			for (size_t a=0; a<Pairs[k].Size();a++)
+			P1	= FSMPairs[k][a].first;
+			P2	= FSMPairs[k][a].second;
+			xij	= Particles[P1]->x-Particles[P2]->x;
+			h	= (Particles[P1]->h+Particles[P2]->h)/2.0;
+
+			// Correction of xij for Periodic BC
+			if (DomSize(0)>0.0) {if (xij(0)>2*Cellfac*h || xij(0)<-2*Cellfac*h) {(Particles[P1]->CC[0]>Particles[P2]->CC[0]) ? xij(0) -= DomSize(0) : xij(0) += DomSize(0);}}
+			if (DomSize(1)>0.0) {if (xij(1)>2*Cellfac*h || xij(1)<-2*Cellfac*h) {(Particles[P1]->CC[1]>Particles[P2]->CC[1]) ? xij(1) -= DomSize(1) : xij(1) += DomSize(1);}}
+			if (DomSize(2)>0.0) {if (xij(2)>2*Cellfac*h || xij(2)<-2*Cellfac*h) {(Particles[P1]->CC[2]>Particles[P2]->CC[2]) ? xij(2) -= DomSize(2) : xij(2) += DomSize(2);}}
+
+			K	= Kernel(Dimension, KernelType, norm(xij), h);
+
+			if (!Particles[P1]->IsFree)
 			{
-				if (Particles[Pairs[k][a].first]->Material == Particles[Pairs[k][a].second]->Material)
+				omp_set_lock(&Particles[P1]->my_lock);
+										Particles[P1]->SumKernel+= K;
+					if (Particles[P1]->Material < 3)	Particles[P1]->Pressure	+= Particles[P2]->Pressure * K + dot(Gravity,xij)*Particles[P2]->Density*K;
+					if (Particles[P1]->Material > 1)	Particles[P1]->Sigma 	 = Particles[P1]->Sigma + K * Particles[P2]->Sigma;
+					if (Particles[P1]->NoSlip)		Particles[P1]->vb 	+= Particles[P2]->v * K;
+				omp_unset_lock(&Particles[P1]->my_lock);
+			}
+			else
+			{
+				omp_set_lock(&Particles[P2]->my_lock);
+										Particles[P2]->SumKernel+= K;
+					if (Particles[P2]->Material < 3)	Particles[P2]->Pressure	+= Particles[P1]->Pressure * K + dot(Gravity,xij)*Particles[P1]->Density*K;
+					if (Particles[P2]->Material > 1)	Particles[P2]->Sigma	 = Particles[P2]->Sigma + K * Particles[P1]->Sigma;
+					if (Particles[P2]->NoSlip)		Particles[P2]->vb 	+= Particles[P1]->v * K;
+				omp_unset_lock(&Particles[P2]->my_lock);
+			}
+		}
+	}
+
+	// Calculateing the finala value of the smoothed pressure, velocity and stress for fixed particles
+	#pragma omp parallel for schedule (static) num_threads(Nproc)
+	for (size_t i=0; i<FixedParticles.Size(); i++)
+		if (Particles[FixedParticles[i]]->SumKernel!= 0.0)
+		{
+			size_t a = FixedParticles[i];
+			if (Particles[a]->Material < 3)	Particles[a]->Pressure	= Particles[a]->Pressure/Particles[a]->SumKernel;
+			if (Particles[a]->Material > 1) Particles[a]->Sigma	= 1.0/Particles[a]->SumKernel*Particles[a]->Sigma;
+			if (Particles[a]->NoSlip)	Particles[a]->vb	= Particles[a]->vb/Particles[a]->SumKernel;
+
+			// Tensile Instability for fixed soil and solid particles
+			if (Particles[a]->Material > 1 && Particles[a]->TI > 0.0)
+			{
+				// XY plane must be used, It is very slow in 3D
+				if (Dimension == 2)
 				{
-					if (Particles[Pairs[k][a].first]->Material == 3 && SWIType == 1)
-					{
-						size_t i	= Pairs[k][a].first;
-						size_t j	= Pairs[k][a].second;
-						Vec3_t xij	= Particles[i]->x-Particles[j]->x;
-						double h	= (Particles[i]->h+Particles[j]->h)/2.0;
+					double teta, Sigmaxx, Sigmayy, C, S;
+					if ((Particles[a]->Sigma(0,0)-Particles[a]->Sigma(1,1))!=0.0) 
+						teta = 0.5*atan(2.0*Particles[a]->Sigma(0,1)/(Particles[a]->Sigma(0,0)-Particles[a]->Sigma(1,1))); 
+					else 
+						teta = M_PI/4.0;
 
-						// Correction of xij for Periodic BC
-						if (DomSize(0)>0.0) {if (xij(0)>2*Cellfac*h || xij(0)<-2*Cellfac*h) {(Particles[i]->CC[0]>Particles[j]->CC[0]) ? xij(0) -= DomSize(0) : xij(0) += DomSize(0);}}
-						if (DomSize(1)>0.0) {if (xij(1)>2*Cellfac*h || xij(1)<-2*Cellfac*h) {(Particles[i]->CC[1]>Particles[j]->CC[1]) ? xij(1) -= DomSize(1) : xij(1) += DomSize(1);}}
-						if (DomSize(2)>0.0) {if (xij(2)>2*Cellfac*h || xij(2)<-2*Cellfac*h) {(Particles[i]->CC[2]>Particles[j]->CC[2]) ? xij(2) -= DomSize(2) : xij(2) += DomSize(2);}}
-
-						double K = Kernel(Dimension, KernelType, norm(xij), h);
-
-
-						omp_set_lock(&Particles[i]->my_lock);
-							if (Particles[i]->IsFree) Particles[i]->ZWab += Particles[j]->Mass/Particles[j]->Density* K; else Particles[i]->ZWab = 1.0;
-						omp_unset_lock(&Particles[i]->my_lock);
-						omp_set_lock(&Particles[j]->my_lock);
-							if (Particles[j]->IsFree) Particles[j]->ZWab += Particles[i]->Mass/Particles[i]->Density* K; else Particles[j]->ZWab = 1.0;
-						omp_unset_lock(&Particles[j]->my_lock);
-					}
-					if (!Particles[Pairs[k][a].first]->IsFree)
-					{
-						size_t i	= Pairs[k][a].first;
-						size_t j	= Pairs[k][a].second;
-						Vec3_t xij	= Particles[i]->x-Particles[j]->x;
-						double h	= (Particles[i]->h+Particles[j]->h)/2.0;
-
-						// Correction of xij for Periodic BC
-						if (DomSize(0)>0.0) {if (xij(0)>2*Cellfac*h || xij(0)<-2*Cellfac*h) {(Particles[i]->CC[0]>Particles[j]->CC[0]) ? xij(0) -= DomSize(0) : xij(0) += DomSize(0);}}
-						if (DomSize(1)>0.0) {if (xij(1)>2*Cellfac*h || xij(1)<-2*Cellfac*h) {(Particles[i]->CC[1]>Particles[j]->CC[1]) ? xij(1) -= DomSize(1) : xij(1) += DomSize(1);}}
-						if (DomSize(2)>0.0) {if (xij(2)>2*Cellfac*h || xij(2)<-2*Cellfac*h) {(Particles[i]->CC[2]>Particles[j]->CC[2]) ? xij(2) -= DomSize(2) : xij(2) += DomSize(2);}}
-
-						double K = Kernel(Dimension, KernelType, norm(xij), h);
-
-						omp_set_lock(&Particles[i]->my_lock);
-							Particles[i]->SumKernel									+= K;
-							if (Particles[i]->Material < 3)	Particles[i]->Pressure	+= Particles[j]->Pressure * K + dot(Gravity,xij)*Particles[j]->Density*K;
-							if (Particles[i]->Material > 1)	Particles[i]->Sigma		=  Particles[i]->Sigma + K * Particles[j]->Sigma;
-							if (Particles[i]->NoSlip)	Particles[i]->vb += Particles[j]->v * K;
-						omp_unset_lock(&Particles[i]->my_lock);
-					}
-
-					if (!Particles[Pairs[k][a].second]->IsFree)
-					{
-						size_t i	= Pairs[k][a].first;
-						size_t j	= Pairs[k][a].second;
-						Vec3_t xij	= Particles[i]->x-Particles[j]->x;
-						double h	= (Particles[i]->h+Particles[j]->h)/2.0;
-
-						// Correction of xij for Periodic BC
-						if (DomSize(0)>0.0) {if (xij(0)>2*Cellfac*h || xij(0)<-2*Cellfac*h) {(Particles[i]->CC[0]>Particles[j]->CC[0]) ? xij(0) -= DomSize(0) : xij(0) += DomSize(0);}}
-						if (DomSize(1)>0.0) {if (xij(1)>2*Cellfac*h || xij(1)<-2*Cellfac*h) {(Particles[i]->CC[1]>Particles[j]->CC[1]) ? xij(1) -= DomSize(1) : xij(1) += DomSize(1);}}
-						if (DomSize(2)>0.0) {if (xij(2)>2*Cellfac*h || xij(2)<-2*Cellfac*h) {(Particles[i]->CC[2]>Particles[j]->CC[2]) ? xij(2) -= DomSize(2) : xij(2) += DomSize(2);}}
-
-						double K = Kernel(Dimension, KernelType, norm(xij), h);
-						omp_set_lock(&Particles[j]->my_lock);
-							Particles[j]->SumKernel									+= K;
-							if (Particles[j]->Material < 3)	Particles[j]->Pressure	+= Particles[i]->Pressure * K + dot(Gravity,xij)*Particles[i]->Density*K;
-							if (Particles[j]->Material > 1)	Particles[j]->Sigma		=  Particles[j]->Sigma + K * Particles[i]->Sigma;
-							if (Particles[j]->NoSlip)	Particles[j]->vb += Particles[i]->v * K;
-						omp_unset_lock(&Particles[j]->my_lock);
-					}
+					C = cos(teta);
+					S = sin(teta);
+					Sigmaxx = C*C*Particles[a]->Sigma(0,0) + 2.0*C*S*Particles[a]->Sigma(0,1) + S*S*Particles[a]->Sigma(1,1);
+					Sigmayy = S*S*Particles[a]->Sigma(0,0) - 2.0*C*S*Particles[a]->Sigma(0,1) + C*C*Particles[a]->Sigma(1,1);
+					if (Sigmaxx>0) Sigmaxx = -Particles[a]->TI * Sigmaxx/(Particles[a]->Density*Particles[a]->Density); else Sigmaxx = 0.0;
+					if (Sigmayy>0) Sigmayy = -Particles[a]->TI * Sigmayy/(Particles[a]->Density*Particles[a]->Density); else Sigmayy = 0.0;
+					Particles[a]->TIR(0,0) = C*C*Sigmaxx + S*S*Sigmayy;
+					Particles[a]->TIR(1,1) = S*S*Sigmaxx + C*C*Sigmayy;
+					Particles[a]->TIR(0,1) = Particles[a]->TIR(1,0) = S*C*(Sigmaxx-Sigmayy);
 				}
 				else
 				{
-					if (SWIType != 2)
-					{
-						if (Particles[Pairs[k][a].first]->Material == 3)
-						{
-							if (!Particles[Pairs[k][a].first]->SatCheck)
-								if (Particles[Pairs[k][a].second]->CC[1] >= Particles[Pairs[k][a].first]->CC[1])
-									if (Particles[Pairs[k][a].second]->x(1) >= Particles[Pairs[k][a].first]->x(1))
-										Particles[Pairs[k][a].first]->SatCheck = true;
-						}
-						if (Particles[Pairs[k][a].second]->Material == 3)
-						{
-							if (!Particles[Pairs[k][a].second]->SatCheck)
-								if (Particles[Pairs[k][a].first]->CC[1] >= Particles[Pairs[k][a].second]->CC[1])
-									if (Particles[Pairs[k][a].first]->x(1) >= Particles[Pairs[k][a].second]->x(1))
-										Particles[Pairs[k][a].second]->SatCheck = true;
-						}
-					}
+					Mat3_t Vec,Val,VecT,temp;
+					Rotation(Particles[a]->Sigma,Vec,VecT,Val);
+					if (Val(0,0)>0) Val(0,0) = -Particles[a]->TI * Val(0,0)/(Particles[a]->Density*Particles[a]->Density); else Val(0,0) = 0.0;
+					if (Val(1,1)>0) Val(1,1) = -Particles[a]->TI * Val(1,1)/(Particles[a]->Density*Particles[a]->Density); else Val(1,1) = 0.0;
+					if (Val(2,2)>0) Val(2,2) = -Particles[a]->TI * Val(2,2)/(Particles[a]->Density*Particles[a]->Density); else Val(2,2) = 0.0;
+					Mult(Vec,Val,temp);
+					Mult(temp,VecT,Particles[a]->TIR);
 				}
 			}
 		}
 
-		if (SWIType != 2)
+
+	if (SWIType != 2)
+	{
+		#pragma omp parallel for schedule (static) num_threads(Nproc)
+		for (size_t k=0; k<NSMPairs.Size();k++)
 		{
-			#pragma omp parallel for schedule (static) num_threads(Nproc)
-			for (size_t i=0; i<Particles.Size(); i++)
+			size_t P1,P2;
+			for (size_t a=0; a<NSMPairs[k].Size();a++)
 			{
-				if (Particles[i]->Material == 3)
+				P1 = NSMPairs[k][a].first;
+				P2 = NSMPairs[k][a].second;
+				if (Particles[P1]->Material == 3)
 				{
-					if (Particles[i]->SatCheck && !Particles[i]->IsSat)
-					{
-						Particles[i]->Mass		= Particles[i]->V*(Particles[i]->RefDensity - Particles[i]->RhoF);
-						Particles[i]->Density		= Particles[i]->Density - Particles[i]->RhoF;
-						Particles[i]->Densityb		= Particles[i]->Densityb - Particles[i]->RhoF;
-						Particles[i]->RefDensity	= Particles[i]->RefDensity - Particles[i]->RhoF;
-						Particles[i]->IsSat			= true;
-					}
-					if (!Particles[i]->SatCheck && Particles[i]->IsSat)
-					{
-						Particles[i]->Mass		= Particles[i]->V*(Particles[i]->RefDensity + Particles[i]->RhoF);
-						Particles[i]->Density		= Particles[i]->Density + Particles[i]->RhoF;
-						Particles[i]->Densityb		= Particles[i]->Densityb + Particles[i]->RhoF;
-						Particles[i]->RefDensity	= Particles[i]->RefDensity + Particles[i]->RhoF;
-						Particles[i]->IsSat			= false;
-					}
+					if (!Particles[P1]->SatCheck)
+						if (Particles[P2]->CC[1] >= Particles[P1]->CC[1])
+							if (Particles[P2]->x(1) >= Particles[P1]->x(1))
+								Particles[P1]->SatCheck = true;
+				}
+				if (Particles[P2]->Material == 3)
+				{
+					if (!Particles[P2]->SatCheck)
+						if (Particles[P1]->CC[1] >= Particles[P2]->CC[1])
+							if (Particles[P1]->x(1) >= Particles[P2]->x(1))
+								Particles[P2]->SatCheck = true;
 				}
 			}
 		}
 
 		#pragma omp parallel for schedule (static) num_threads(Nproc)
-		for (size_t i=0; i<FixedParticles.Size(); i++)
-			if (Particles[FixedParticles[i]]->SumKernel!= 0.0)
+		for (size_t i=0; i<Particles.Size(); i++)
+		{
+			if (Particles[i]->Material == 3)
 			{
-				size_t a = FixedParticles[i];
-				if (Particles[a]->Material < 3)	Particles[a]->Pressure	= Particles[a]->Pressure/Particles[a]->SumKernel;
-				if (Particles[a]->Material > 1) Particles[a]->Sigma	= 1.0/Particles[a]->SumKernel*Particles[a]->Sigma;
-				if (Particles[a]->NoSlip)	Particles[a]->vb	= Particles[a]->vb/Particles[a]->SumKernel;
-
-				// Tensile Instability for fixed soil and solid particles
-				if (Particles[a]->Material > 1 && Particles[a]->TI > 0.0)
+				if (Particles[i]->SatCheck && !Particles[i]->IsSat)
 				{
-					// XY plane must be used, It is very slow in 3D
-					if (Dimension == 2)
-					{
-						double teta, Sigmaxx, Sigmayy, C, S;
-
-						if ((Particles[a]->Sigma(0,0)-Particles[a]->Sigma(1,1))!=0.0) 
-							teta = 0.5*atan(2.0*Particles[a]->Sigma(0,1)/(Particles[a]->Sigma(0,0)-Particles[a]->Sigma(1,1))); 
-						else 
-							teta = M_PI/4.0;
-
-						C = cos(teta);
-						S = sin(teta);
-						Sigmaxx = C*C*Particles[a]->Sigma(0,0) + 2.0*C*S*Particles[a]->Sigma(0,1) + S*S*Particles[a]->Sigma(1,1);
-						Sigmayy = S*S*Particles[a]->Sigma(0,0) - 2.0*C*S*Particles[a]->Sigma(0,1) + C*C*Particles[a]->Sigma(1,1);
-						if (Sigmaxx>0) Sigmaxx = -Particles[a]->TI * Sigmaxx/(Particles[a]->Density*Particles[a]->Density); else Sigmaxx = 0.0;
-						if (Sigmayy>0) Sigmayy = -Particles[a]->TI * Sigmayy/(Particles[a]->Density*Particles[a]->Density); else Sigmayy = 0.0;
-						Particles[a]->TIR(0,0) = C*C*Sigmaxx + S*S*Sigmayy;
-						Particles[a]->TIR(1,1) = S*S*Sigmaxx + C*C*Sigmayy;
-						Particles[a]->TIR(0,1) = Particles[a]->TIR(1,0) = S*C*(Sigmaxx-Sigmayy);
-					}
-					else
-					{
-						Mat3_t Vec,Val,VecT,temp;
-
-						Rotation(Particles[a]->Sigma,Vec,VecT,Val);
-						if (Val(0,0)>0) Val(0,0) = -Particles[a]->TI * Val(0,0)/(Particles[a]->Density*Particles[a]->Density); else Val(0,0) = 0.0;
-						if (Val(1,1)>0) Val(1,1) = -Particles[a]->TI * Val(1,1)/(Particles[a]->Density*Particles[a]->Density); else Val(1,1) = 0.0;
-						if (Val(2,2)>0) Val(2,2) = -Particles[a]->TI * Val(2,2)/(Particles[a]->Density*Particles[a]->Density); else Val(2,2) = 0.0;
-						Mult(Vec,Val,temp);
-						Mult(temp,VecT,Particles[a]->TIR);
-					}
+					Particles[i]->Mass		= Particles[i]->V*(Particles[i]->RefDensity - Particles[i]->RhoF);
+					Particles[i]->Density		= Particles[i]->Density - Particles[i]->RhoF;
+					Particles[i]->Densityb		= Particles[i]->Densityb - Particles[i]->RhoF;
+					Particles[i]->RefDensity	= Particles[i]->RefDensity - Particles[i]->RhoF;
+					Particles[i]->IsSat		= true;
+				}
+				if (!Particles[i]->SatCheck && Particles[i]->IsSat)
+				{
+					Particles[i]->Mass		= Particles[i]->V*(Particles[i]->RefDensity + Particles[i]->RhoF);
+					Particles[i]->Density		= Particles[i]->Density + Particles[i]->RhoF;
+					Particles[i]->Densityb		= Particles[i]->Densityb + Particles[i]->RhoF;
+					Particles[i]->RefDensity	= Particles[i]->RefDensity + Particles[i]->RhoF;
+					Particles[i]->IsSat		= false;
 				}
 			}
+		}
 	}
+
 }
 
 inline void Domain::LastComputeAcceleration ()
 {
 	#pragma omp parallel for schedule (static) num_threads(Nproc)
-	for (size_t k=0; k<Pairs.Size();k++)
+	for (size_t k=0; k<SMPairs.Size();k++)
+		for (size_t i=0; i<SMPairs[k].Size();i++)
+			if (Particles[SMPairs[k][i].first]->Material == 1)
+				CalcForce11(Particles[SMPairs[k][i].first],Particles[SMPairs[k][i].second]);
+			else
+				CalcForce2233(Particles[SMPairs[k][i].first],Particles[SMPairs[k][i].second]);
+
+	#pragma omp parallel for schedule (static) num_threads(Nproc)
+	for (size_t k=0; k<FSMPairs.Size();k++)
+		for (size_t i=0; i<FSMPairs[k].Size();i++)
+			if (Particles[FSMPairs[k][i].first]->Material == 1)
+				CalcForce11(Particles[FSMPairs[k][i].first],Particles[FSMPairs[k][i].second]);
+			else
+				CalcForce2233(Particles[FSMPairs[k][i].first],Particles[FSMPairs[k][i].second]);
+
+	#pragma omp parallel for schedule (static) num_threads(Nproc)
+	for (size_t k=0; k<NSMPairs.Size();k++)
 	{
-		for (size_t i=0; i<Pairs[k].Size();i++)
+		for (size_t i=0; i<NSMPairs[k].Size();i++)
 		{
-			switch (Particles[Pairs[k][i].first]->Material*Particles[Pairs[k][i].second]->Material)
-			{case 1:
-				CalcForce11(Particles[Pairs[k][i].first],Particles[Pairs[k][i].second]);
-				break;
-			case 4:
-				CalcForce2233(Particles[Pairs[k][i].first],Particles[Pairs[k][i].second]);
-				break;
-			case 9:
-				CalcForce2233(Particles[Pairs[k][i].first],Particles[Pairs[k][i].second]);
-				break;
-			case 3:
-				CalcForce13(Particles[Pairs[k][i].first],Particles[Pairs[k][i].second]);
-				break;
-		   default:
+			if (Particles[NSMPairs[k][i].first]->Material*Particles[NSMPairs[k][i].second]->Material == 3)
+				CalcForce13(Particles[NSMPairs[k][i].first],Particles[NSMPairs[k][i].second]);
+			else
+			{
 				std::cout<<"Out of Interaction types"<<std::endl;
 				abort();
-				break;
 			}
 		}
 	}
 
 	for (size_t i=0 ; i<Nproc ; i++)
-		Pairs[i].Clear();
+	{
+		SMPairs[i].Clear();
+		FSMPairs[i].Clear();
+		NSMPairs[i].Clear();
+	}
 /*
 //	//Min time step check based on the acceleration
 	if (TimestepConstrain1)
@@ -1623,6 +1648,11 @@ inline void Domain::InitialChecks()
 	// Initializing the permeability for soil
 	#pragma omp parallel for schedule (static) num_threads(Nproc)
 	for (size_t i=0; i<Particles.Size(); i++)
+	{
+		if (Particles[i]->Material < 3)
+    				Particles[i]->Pressure = EOS(Particles[i]->PresEq, Particles[i]->Cs, Particles[i]->P0,Particles[i]->Density, Particles[i]->RefDensity);
+
+
 		if (Particles[i]->Material == 3)
 			switch(Particles[i]->SeepageType)
 			{
@@ -1648,6 +1678,7 @@ inline void Domain::InitialChecks()
 					abort();
 					break;
 			}
+	}
 }
 
 inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheFileKey, size_t maxidx)

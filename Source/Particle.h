@@ -219,7 +219,7 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
     S = 0.0;
     VarPorosity = false;
     SeepageType = 0;
-    S = 0
+    S = 0;
 
 
     set_to_zero(Strainb);

@@ -169,7 +169,7 @@ void UserDamping(SPH::Domain & domi)
 			}
 		}
 	}
-	if (domi.Time>=DampTime && domi.Time<2.0)
+	if (domi.Time>=DampTime && domi.Time<3.0)
 	{
 		#pragma omp parallel for schedule (static) num_threads(domi.Nproc)
 		for (size_t i=0; i<domi.Particles.Size(); i++)
@@ -210,7 +210,7 @@ int main(int argc, char **argv) try
 	HS	= 1.0*D;
 	H	= 3.5*D;
 	x	= 3.0*D;
-	y	= HS + 0.5*D + 0.01;
+	y	= HS + 0.5*D;
 	L	= 10.0*D;
 
 	U	= 0.4;
@@ -357,14 +357,20 @@ int main(int argc, char **argv) try
 				dom.Particles[a]->IsFree= false;
 				dom.Particles[a]->NoSlip= true;
 			}
-//			if (dom.Particles[a]->ID == 3)
+			if (xb>=(x-D) && xb<=(x+D) && yb>=(D-0.1*D*sin(M_PI/2.0/D*(xb-x+D))))
+			{
+		     		dom.Particles[a]->ID		= 20;
+			}
+///			if (dom.Particles[a]->ID == 3)
 //				dom.Particles[a]->k = 100000000.0;
 
 		}
 	}
+
+   	dom.DelParticles(20);
     	DampF	= 0.02*CsW/h;
   	DampS	= 0.02*sqrt(E/(RhoS*h*h));
-    	DampTime= 0.5;
+    	DampTime= 0.3;
 
         t	= std::min(t1,t2);
         std::cout<<"t1 = "<<t1<<std::endl;
