@@ -1126,13 +1126,13 @@ inline void Domain::StartAcceleration (Vec3_t const & a)
 
 inline void Domain::PrimaryComputeAcceleration ()
 {
-	// Summing the smoothed pressure, velocity and stress for fixed particles from neighbour particles
 	#pragma omp parallel for schedule (static) num_threads(Nproc)
-	for (size_t k=0; k<FSMPairs.Size();k++)
+	for (size_t k=0; k<Nproc;k++)
 	{
 		size_t P1,P2;
 		Vec3_t xij;
 		double h,K;
+		// Summing the smoothed pressure, velocity and stress for fixed particles from neighbour particles
 		for (size_t a=0; a<FSMPairs[k].Size();a++)
 		{
 			P1	= FSMPairs[k][a].first;
@@ -1166,6 +1166,37 @@ inline void Domain::PrimaryComputeAcceleration ()
 				omp_unset_lock(&Particles[P2]->my_lock);
 			}
 		}
+		if (SWIType != 2)
+		{
+			for (size_t a=0; a<NSMPairs[k].Size();a++)
+			{
+				P1 = NSMPairs[k][a].first;
+				P2 = NSMPairs[k][a].second;
+				if (Particles[P1]->Material == 3)
+				{
+					if (!Particles[P1]->SatCheck)
+						if (Particles[P2]->CC[1] >= Particles[P1]->CC[1])
+							if (Particles[P2]->x(1) >= Particles[P1]->x(1))
+							{
+								omp_set_lock(&Particles[P1]->my_lock);
+									Particles[P1]->SatCheck = true;
+								omp_unset_lock(&Particles[P1]->my_lock);
+							}
+				}
+				if (Particles[P2]->Material == 3)
+				{
+					if (!Particles[P2]->SatCheck)
+						if (Particles[P1]->CC[1] >= Particles[P2]->CC[1])
+							if (Particles[P1]->x(1) >= Particles[P2]->x(1))
+							{
+								omp_set_lock(&Particles[P2]->my_lock);
+									Particles[P2]->SatCheck = true;
+								omp_unset_lock(&Particles[P2]->my_lock);
+							}
+				}
+			}
+		}
+
 	}
 
 	// Calculateing the finala value of the smoothed pressure, velocity and stress for fixed particles
@@ -1217,31 +1248,6 @@ inline void Domain::PrimaryComputeAcceleration ()
 	if (SWIType != 2)
 	{
 		#pragma omp parallel for schedule (static) num_threads(Nproc)
-		for (size_t k=0; k<NSMPairs.Size();k++)
-		{
-			size_t P1,P2;
-			for (size_t a=0; a<NSMPairs[k].Size();a++)
-			{
-				P1 = NSMPairs[k][a].first;
-				P2 = NSMPairs[k][a].second;
-				if (Particles[P1]->Material == 3)
-				{
-					if (!Particles[P1]->SatCheck)
-						if (Particles[P2]->CC[1] >= Particles[P1]->CC[1])
-							if (Particles[P2]->x(1) >= Particles[P1]->x(1))
-								Particles[P1]->SatCheck = true;
-				}
-				if (Particles[P2]->Material == 3)
-				{
-					if (!Particles[P2]->SatCheck)
-						if (Particles[P1]->CC[1] >= Particles[P2]->CC[1])
-							if (Particles[P1]->x(1) >= Particles[P2]->x(1))
-								Particles[P2]->SatCheck = true;
-				}
-			}
-		}
-
-		#pragma omp parallel for schedule (static) num_threads(Nproc)
 		for (size_t i=0; i<Particles.Size(); i++)
 		{
 			if (Particles[i]->Material == 3)
@@ -1271,20 +1277,20 @@ inline void Domain::PrimaryComputeAcceleration ()
 inline void Domain::LastComputeAcceleration ()
 {
 	#pragma omp parallel for schedule (static) num_threads(Nproc)
-	for (size_t k=0; k<SMPairs.Size();k++)
+	for (size_t k=0; k<Nproc;k++)
+	{
 		for (size_t i=0; i<SMPairs[k].Size();i++)
 			if (Particles[SMPairs[k][i].first]->Material == 1)
 				CalcForce11(Particles[SMPairs[k][i].first],Particles[SMPairs[k][i].second]);
 			else
 				CalcForce2233(Particles[SMPairs[k][i].first],Particles[SMPairs[k][i].second]);
 
-	#pragma omp parallel for schedule (static) num_threads(Nproc)
-	for (size_t k=0; k<FSMPairs.Size();k++)
 		for (size_t i=0; i<FSMPairs[k].Size();i++)
 			if (Particles[FSMPairs[k][i].first]->Material == 1)
 				CalcForce11(Particles[FSMPairs[k][i].first],Particles[FSMPairs[k][i].second]);
 			else
 				CalcForce2233(Particles[FSMPairs[k][i].first],Particles[FSMPairs[k][i].second]);
+	}
 
 	#pragma omp parallel for schedule (static) num_threads(Nproc)
 	for (size_t k=0; k<NSMPairs.Size();k++)
