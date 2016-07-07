@@ -169,7 +169,8 @@ void UserDamping(SPH::Domain & domi)
 			}
 		}
 	}
-	if (domi.Time>=DampTime && domi.Time<3.0)
+
+/*	if (domi.Time>=DampTime && domi.Time<3.0)
 	{
 		#pragma omp parallel for schedule (static) num_threads(domi.Nproc)
 		for (size_t i=0; i<domi.Particles.Size(); i++)
@@ -182,7 +183,7 @@ void UserDamping(SPH::Domain & domi)
 			}
 		}
 	}
-
+*/
 
 }
 
@@ -198,7 +199,7 @@ int main(int argc, char **argv) try
         dom.Nproc	= 24;
     	dom.VisEq	= 0;
     	dom.KernelType	= 4;
-	dom.SWIType	= 1;
+	dom.SWIType	= 0;
     	dom.Scheme	= 0;
     	dom.Gravity	= 0.0 , -9.81 , 0.0 ;
 	g		= norm(dom.Gravity);
@@ -288,38 +289,41 @@ int main(int argc, char **argv) try
        		}
     	}
 
-	double Nu,E,K,G,CsS,RhoS,c,Phi,Psi,n;
+	double Nu,E,K,G,CsS,RhoS,c,Phi,Psi,n,hs,dxs;
+
+	hs	= h/2.0;
+	dxs	= dx/2.0;
 
 	Nu	= 0.25;
-	E	= 15.0e6;
+	E	= 10.0e6;
 	K	= E/(3.0*(1.0-2.0*Nu));
 	G	= E/(2.0*(1.0+Nu));
 	n	= 0.5;
 	RhoS	= 2650.0*(1.0-n)+n*RhoF;;
 	CsS	= sqrt(K/RhoS);
-	c	= 0.0;
+	c	= 0.1;
 	Phi	= 20.0;
 	Psi	= 0.0;
 	d	= 0.0004;
-        t2	= (0.25*h/(CsS))*0.8;
+        t2	= (0.25*hs/(CsS));
 
         std::cout<<"CsS  = "<<CsS<<std::endl;
         std::cout<<"RhoS = "<<RhoS<<std::endl;
         std::cout<<"Phi  = "<<Phi<<std::endl;
 
-	dom.AddBoxLength(2 ,Vec3_t ( 0.0 , -4.0*dx , 0.0 ), L + dx/10.0 , HS + 4.0*dx + dx/10.0 ,  0 , dx/2.0 ,RhoS, h, 1 , 0 , false, false );
+	dom.AddBoxLength(2 ,Vec3_t ( 0.0 , -4.0*dxs , 0.0 ), L + dxs/10.0 , HS + 4.0*dxs + dxs/10.0 ,  0 , dxs/2.0 ,RhoS, hs, 1 , 0 , false, false );
 
-/*   	mass = RhoS*dx*dx;
-	R = D/2.0-dx/2.0;
+/*   	mass = RhoS*dxs*dxs;
+	R = D/2.0-dxs/2.0;
     	for (size_t j=0;j<5;j++)
     	{
-    		if (j>0) R -= dx;
-    		no = ceil(2*M_PI*R/dx);
+    		if (j>0) R -= dxs;
+    		no = ceil(2*M_PI*R/dxs);
     		for (size_t i=0; i<no; i++)
    		{
     			xb = x + R*cos(2*M_PI/no*i);
     			yb = y + R*sin(2*M_PI/no*i);
-    			dom.AddSingleParticle(3,Vec3_t ( xb ,  yb , 0.0 ), mass , RhoS , h , true);
+    			dom.AddSingleParticle(3,Vec3_t ( xb ,  yb , 0.0 ), mass , RhoS , hs , true);
         		dom.Particles[dom.Particles.Size()-1]->NoSlip	= true;
        		}
     	}
@@ -331,8 +335,8 @@ int main(int argc, char **argv) try
 			dom.Particles[a]->Material	= 3;
 			dom.Particles[a]->Alpha		= 0.1;
 			dom.Particles[a]->Beta		= 0.1;
-//			dom.Particles[a]->TI		= 0.5;
-//			dom.Particles[a]->TIn		= 2.55;
+			dom.Particles[a]->TI		= 0.5;
+			dom.Particles[a]->TIn		= 2.55;
 			dom.Particles[a]->d		= d;
 			dom.Particles[a]->VarPorosity	= true;
 			dom.Particles[a]->SeepageType	= 1;	// Kozeny–Carman Eq
@@ -369,7 +373,7 @@ int main(int argc, char **argv) try
 
    	dom.DelParticles(20);
     	DampF	= 0.02*CsW/h;
-  	DampS	= 0.02*sqrt(E/(RhoS*h*h));
+  	DampS	= 0.02*sqrt(E/(RhoS*hs*hs));
     	DampTime= 0.3;
 
         t	= std::min(t1,t2);
