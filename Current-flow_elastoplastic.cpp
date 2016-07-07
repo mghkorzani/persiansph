@@ -191,7 +191,7 @@ void NewUserOutput(SPH::Particle * Particles, double & Prop1, double & Prop2,  d
 {
 	Prop1 = Particles->ZWab;
 	Prop2 = Particles->k;
-	Prop3 = Particles->n;
+	Prop3 = Particles->S;
 }
 
 
@@ -228,8 +228,6 @@ int main(int argc, char **argv) try
 	CsW	= 50.0;
 	Muw	= 1.3e-3;
         t1	= (0.25*h/(CsW));
-
-    	dom.InitialDist 	= dx;
 
 //	dom.BC.allv		= U,0.0,0.0;
 //	dom.AllCon		= & UserAllFlowCon;
@@ -309,7 +307,7 @@ int main(int argc, char **argv) try
 	n	= 0.5;
 	RhoS	= 2650.0*(1.0-n)+n*RhoF;;
 	CsS	= sqrt(K/RhoS);
-	c	= 0.1;
+	c	= 0.05;
 	Phi	= 20.0;
 	Psi	= 0.0;
 	d	= 0.0004;
@@ -319,7 +317,18 @@ int main(int argc, char **argv) try
         std::cout<<"RhoS = "<<RhoS<<std::endl;
         std::cout<<"Phi  = "<<Phi<<std::endl;
 
-	dom.AddBoxLength(2 ,Vec3_t ( 0.0 , -4.0*dxs , 0.0 ), L + dxs/10.0 , HS + 4.0*dxs + dxs/10.0 ,  0 , dxs/2.0 ,RhoS, hs, 1 , 0 , false, false );
+	hs	= h;
+	dxs	= dx;
+	dom.AddBoxLength(2 ,Vec3_t ( 0.0 , -4.0*dxs , 0.0 ), 0.1 + dxs/10.0 , HS + 4.0*dxs + dxs/10.0 ,  0 , dxs/2.0 ,RhoS, hs, 1 , 0 , false, false );
+	dom.AddBoxLength(2 ,Vec3_t ( 0.1 , -4.0*dxs , 0.0 ), 0.5 + dxs/10.0 , HS/2.0 + 4.0*dxs + dxs/10.0 ,  0 , dxs/2.0 ,RhoS, hs, 1 , 0 , false, false );
+	hs	= h/2.0;
+	dxs	= dx/2.0;
+	dom.AddBoxLength(2 ,Vec3_t ( 0.1 , HS/2.0 , 0.0 ), 0.5 + dxs/10.0 , HS/2.0 + dxs/10.0 ,  0 , dxs/2.0 ,RhoS, hs, 1 , 0 , false, false );
+	hs	= h;
+	dxs	= dx;
+	dom.AddBoxLength(2 ,Vec3_t ( 0.6 , -4.0*dxs , 0.0 ), 0.4   + dxs/10.0 , HS + 4.0*dxs + dxs/10.0 ,  0 , dxs/2.0 ,RhoS, hs, 1 , 0 , false, false );
+	hs	= h/2.0;
+	dxs	= dx/2.0;
 
 /*   	mass = RhoS*dxs*dxs;
 	R = D/2.0-dxs/2.0;
@@ -345,6 +354,7 @@ int main(int argc, char **argv) try
 			dom.Particles[a]->Beta		= 0.1;
 			dom.Particles[a]->TI		= 0.5;
 			dom.Particles[a]->TIn		= 2.55;
+			dom.Particles[a]->TIInitDist	= dom.Particles[a]->h/1.1;
 			dom.Particles[a]->d		= d;
 	    		dom.Particles[a]->Shepard	= true;
 			dom.Particles[a]->VarPorosity	= true;
@@ -374,7 +384,7 @@ int main(int argc, char **argv) try
 			{
 		     		dom.Particles[a]->ID		= 20;
 			}
-///			if (dom.Particles[a]->ID == 3)
+//			if (dom.Particles[a]->ID == 3)
 //				dom.Particles[a]->k = 100000000.0;
 
 		}

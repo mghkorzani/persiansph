@@ -96,7 +96,7 @@ inline void Domain::CalcForce11(Particle * P1, Particle * P2)
 				if (P1->Pressure < 0.0) Ri = -P1->Pressure/(di*di);
 				if (P2->Pressure < 0.0) Rj = -P2->Pressure/(dj*dj);
 			}
-			TIij = (P1->TI*Ri + P2->TI*Rj)*pow((K/Kernel(Dimension, KernelType, InitialDist, h)),(P1->TIn+P2->TIn)/2.0);
+			TIij = (P1->TI*Ri + P2->TI*Rj)*pow((K/Kernel(Dimension, KernelType, (P1->TIInitDist + P2->TIInitDist)/2.0, h)),(P1->TIn+P2->TIn)/2.0);
 		}
 
 		// Real Viscosity
@@ -285,7 +285,7 @@ inline void Domain::CalcForce2233(Particle * P1, Particle * P2)
 		// Tensile Instability
 		Mat3_t TIij;
 		set_to_zero(TIij);
-		if (P1->TI > 0.0 || P2->TI > 0.0) TIij = pow((K/Kernel(Dimension, KernelType, InitialDist, h)),(P1->TIn+P2->TIn)/2.0)*(P1->TIR+P2->TIR);
+		if (P1->TI > 0.0 || P2->TI > 0.0) TIij = pow((K/Kernel(Dimension, KernelType, (P1->TIInitDist + P2->TIInitDist)/2.0, h)),(P1->TIn+P2->TIn)/2.0)*(P1->TIR+P2->TIR);
 
 		// NoSlip BC velocity correction
 		Vec3_t vab = 0.0;

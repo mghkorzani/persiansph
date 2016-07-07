@@ -166,7 +166,7 @@ public:
     size_t					SWIType;	///< Selecting variable to choose Soil-Water Interaction type
 
     double 					XSPH;		///< Velocity correction factor
-    double 					InitialDist;	///< Initial distance of particles for calculation of tensile instability
+    double 					InitialDist;	///< Initial distance of particles for Inflow BC
 
     double					AvgVelocity;	///< Average velocity of the last two column for x periodic constant velocity
 

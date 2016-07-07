@@ -97,6 +97,7 @@ public:
     Mat3_t	TIR;		///< Tensile Instability stress tensor R
     double	TI;		///< Tensile instability factor
     double	TIn;		///< Tensile instability power
+    double 	TIInitDist;	///< Initial distance of particles for calculation of tensile instability
 
     double 	Alpha;		///< Dynamic viscosity coefficient of the fluid particle
     double 	Beta;		///< Dynamic viscosity coefficient of the fluid particle
@@ -173,6 +174,7 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
     VXSPH = 0.0;
     TI		= 0.0;
     TIn		= 4.0;
+    TIInitDist  = 0.0;
 
     Densitya = 0.0;
     Densityb = 0.0;
