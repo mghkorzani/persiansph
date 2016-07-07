@@ -22,7 +22,7 @@
 #define MECHSYS_SPH_DOMAIN_H
 
 // Std Lib
-#include <stdio.h>			/// for NULL
+#include <stdio.h>		/// for NULL
 #include <algorithm>		/// for min,max
 
 #include "Particle.h"
@@ -90,6 +90,7 @@ class Domain
 {
 public:
 	typedef void (*PtVel) (Vec3_t & position, Vec3_t & Vel, double & Den, Boundary & bdry);
+	typedef void (*PtOut) (Particle * Particles, double & Prop1, double & Prop2,  double & Prop3);
 	typedef void (*PtDom) (Domain & dom);
     // Constructor
     Domain();
@@ -172,6 +173,7 @@ public:
     size_t					Nproc;		///< No of threads which are going to use in parallel calculation
     omp_lock_t 					dom_lock;	///< Open MP lock to lock Interactions array
     Boundary					BC;
+    PtOut					UserOutput;	
     PtVel 					InCon;
     PtVel 					OutCon;
     PtVel 					AllCon;
@@ -188,11 +190,18 @@ public:
     Array< size_t > 				FixedParticles;
     Array<std::pair<size_t,size_t> >		Initial;
     Mat3_t I;
-    int						Excemption;
+    String					OutputName[3];
 };
 /////////////////////////////////////////////////////////////////////////////////////////// Implementation /////
 void General(Domain & dom)
 {
+}
+
+void OutPut(Particle * Particles, double & Prop1, double & Prop2,  double & Prop3)
+{
+	Prop1 = 0.0;
+	Prop2 = 0.0;
+	Prop3 = 0.0;
 }
 
 void InFlowCon(Vec3_t & position, Vec3_t & Vel, double & Den, Boundary & bdry)
@@ -216,7 +225,9 @@ void AllFlowCon(Vec3_t & position, Vec3_t & Vel, double & Den, Boundary & bdry)
 // Constructor
 inline Domain::Domain ()
 {
-    Excemption = 0;
+    OutputName[0] = "Property1";
+    OutputName[1] = "Property2";
+    OutputName[2] = "Property3";
     Time    = 0.0;
     AutoSaveInt = 0.0;
 
@@ -252,6 +263,7 @@ inline Domain::Domain ()
     AllCon = & AllFlowCon;
     GeneralBefore = & General;
     GeneralAfter = & General;
+    UserOutput = & OutPut;
 
     DomMax = -100000000000.0;
     DomMin = 100000000000.0;
@@ -1704,7 +1716,6 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
     ListGenerate();
     PrintInput(TheFileKey);
     WholeVelocity();
-//    std::cout<< Excemption<<std::endl;
 
     while (Time<tf && idx_out<=maxidx)
     {
@@ -1876,26 +1887,29 @@ inline void Domain::PrintInput(char const * FileKey)
 
 inline void Domain::WriteXDMF (char const * FileKey)
 {
-	String fn(FileKey);
+    String fn(FileKey);
     fn.append(".hdf5");
     hid_t file_id;
     file_id = H5Fcreate(fn.CStr(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
 
-    float * Posvec   = new float[3*Particles.Size()];
-    float * Velvec   = new float[3*Particles.Size()];
-    float * ACCvec   = new float[3*Particles.Size()];
-    float * Pressure = new float[  Particles.Size()];
-    float * ShearRate= new float[  Particles.Size()];
-    float * Density  = new float[  Particles.Size()];
-    float * Mass	 = new float[  Particles.Size()];
-    float * sh	     = new float[  Particles.Size()];
-    int   * Tag      = new int  [  Particles.Size()];
-    int   * IsFree   = new int  [  Particles.Size()];
-    float * Sigma    = new float[6*Particles.Size()];
-    float * Strain   = new float[6*Particles.Size()];
+    float * Posvec	= new float[3*Particles.Size()];
+    float * Velvec	= new float[3*Particles.Size()];
+    float * ACCvec	= new float[3*Particles.Size()];
+    float * Pressure	= new float[  Particles.Size()];
+    float * Prop1	= new float[  Particles.Size()];
+    float * Prop2	= new float[  Particles.Size()];
+    float * Prop3	= new float[  Particles.Size()];
+    float * Density	= new float[  Particles.Size()];
+    float * Mass	= new float[  Particles.Size()];
+    float * sh		= new float[  Particles.Size()];
+    int   * Tag		= new int  [  Particles.Size()];
+    float * Sigma	= new float[6*Particles.Size()];
+    float * Strain	= new float[6*Particles.Size()];
 
+	double P1,P2,P3;
 
+    #pragma omp parallel for schedule (static) private(P1,P2,P3) num_threads(Nproc)
     for (size_t i=0;i<Particles.Size();i++)
     {
         Posvec  [3*i  ] = float(Particles[i]->x(0));
@@ -1908,27 +1922,27 @@ inline void Domain::WriteXDMF (char const * FileKey)
         ACCvec  [3*i+1] = float(Particles[i]->a(1));
         ACCvec  [3*i+2] = float(Particles[i]->a(2));
        	Pressure[i    ] = float(Particles[i]->Pressure);
-        ShearRate[i   ] = float(Particles[i]->k);
         Density [i    ] = float(Particles[i]->Density);
         Mass	[i    ] = float(Particles[i]->Mass);
         sh	[i    ] = float(Particles[i]->h);
         Tag     [i    ] = int  (Particles[i]->ID);
-        if (Particles[i]->IsFree)
-        	IsFree[i] = int  (1);
-        else
-        	IsFree[i] = int  (0);
-        Sigma  [6*i  ] = float(Particles[i]->Sigma(0,0));
-        Sigma  [6*i+1] = float(Particles[i]->Sigma(0,1));
-        Sigma  [6*i+2] = float(Particles[i]->Sigma(0,2));
-        Sigma  [6*i+3] = float(Particles[i]->Sigma(1,1));
-        Sigma  [6*i+4] = float(Particles[i]->Sigma(1,2));
-        Sigma  [6*i+5] = float(Particles[i]->Sigma(2,2));
-        Strain [6*i  ] = float(Particles[i]->Strain(0,0));
-        Strain [6*i+1] = float(Particles[i]->Strain(0,1));
-        Strain [6*i+2] = float(Particles[i]->Strain(0,2));
-        Strain [6*i+3] = float(Particles[i]->Strain(1,1));
-        Strain [6*i+4] = float(Particles[i]->Strain(1,2));
-        Strain [6*i+5] = float(Particles[i]->Strain(2,2));
+        Sigma   [6*i  ] = float(Particles[i]->Sigma(0,0));
+        Sigma   [6*i+1] = float(Particles[i]->Sigma(0,1));
+        Sigma   [6*i+2] = float(Particles[i]->Sigma(0,2));
+        Sigma   [6*i+3] = float(Particles[i]->Sigma(1,1));
+        Sigma   [6*i+4] = float(Particles[i]->Sigma(1,2));
+        Sigma   [6*i+5] = float(Particles[i]->Sigma(2,2));
+        Strain  [6*i  ] = float(Particles[i]->Strain(0,0));
+        Strain  [6*i+1] = float(Particles[i]->Strain(0,1));
+        Strain  [6*i+2] = float(Particles[i]->Strain(0,2));
+        Strain  [6*i+3] = float(Particles[i]->Strain(1,1));
+        Strain  [6*i+4] = float(Particles[i]->Strain(1,2));
+        Strain  [6*i+5] = float(Particles[i]->Strain(2,2));
+
+	UserOutput(Particles[i],P1,P2,P3);
+        Prop1	[i    ] = float(P1);
+        Prop2	[i    ] = float(P2);
+        Prop3	[i    ] = float(P3);
    }
 
     int data[1];
@@ -1946,20 +1960,22 @@ inline void Domain::WriteXDMF (char const * FileKey)
     dsname.Printf("Acceleration");
     H5LTmake_dataset_float(file_id,dsname.CStr(),1,dims,ACCvec);
     dims[0] = Particles.Size();
+    dsname.Printf("Tag");
+    H5LTmake_dataset_int(file_id,dsname.CStr(),1,dims,Tag);
     dsname.Printf("Pressure");
     H5LTmake_dataset_float(file_id,dsname.CStr(),1,dims,Pressure);
-    dsname.Printf("ShearRate");
-    H5LTmake_dataset_float(file_id,dsname.CStr(),1,dims,ShearRate);
     dsname.Printf("Density");
     H5LTmake_dataset_float(file_id,dsname.CStr(),1,dims,Density);
+    dsname.Printf(OutputName[0]);
+    H5LTmake_dataset_float(file_id,dsname.CStr(),1,dims,Prop1);
+    dsname.Printf(OutputName[1]);
+    H5LTmake_dataset_float(file_id,dsname.CStr(),1,dims,Prop2);
+    dsname.Printf(OutputName[2]);
+    H5LTmake_dataset_float(file_id,dsname.CStr(),1,dims,Prop3);
     dsname.Printf("Mass");
     H5LTmake_dataset_float(file_id,dsname.CStr(),1,dims,Mass);
     dsname.Printf("h");
     H5LTmake_dataset_float(file_id,dsname.CStr(),1,dims,sh);
-    dsname.Printf("Tag");
-    H5LTmake_dataset_int(file_id,dsname.CStr(),1,dims,Tag);
-    dsname.Printf("IsFree");
-    H5LTmake_dataset_int(file_id,dsname.CStr(),1,dims,IsFree);
     dims[0] = 6*Particles.Size();
     dsname.Printf("Sigma");
     H5LTmake_dataset_float(file_id,dsname.CStr(),1,dims,Sigma);
@@ -1972,12 +1988,15 @@ inline void Domain::WriteXDMF (char const * FileKey)
     delete [] Velvec;
     delete [] ACCvec;
     delete [] Pressure;
-    delete [] ShearRate;
+    delete [] Prop1;
+    delete [] Prop2;
+    delete [] Prop3;
     delete [] Density;
     delete [] Mass;
     delete [] sh;
     delete [] Tag;
-    delete [] IsFree;
+    delete [] Sigma;
+    delete [] Strain;
 
    //Closing the file
     H5Fflush(file_id,H5F_SCOPE_GLOBAL);
@@ -1996,6 +2015,16 @@ inline void Domain::WriteXDMF (char const * FileKey)
     oss << "        " << fn.CStr() <<":/Position \n";
     oss << "       </DataItem>\n";
     oss << "     </Geometry>\n";
+    oss << "     <Attribute Name=\"Tag\" AttributeType=\"Scalar\" Center=\"Node\">\n";
+    oss << "       <DataItem Dimensions=\"" << Particles.Size() << "\" NumberType=\"Int\" Format=\"HDF\">\n";
+    oss << "        " << fn.CStr() <<":/Tag \n";
+    oss << "       </DataItem>\n";
+    oss << "     </Attribute>\n";
+    oss << "     <Attribute Name=\"Position\" AttributeType=\"Vector\" Center=\"Node\">\n";
+    oss << "       <DataItem Dimensions=\"" << Particles.Size() << " 3\" NumberType=\"Float\" Precision=\"10\" Format=\"HDF\">\n";
+    oss << "        " << fn.CStr() <<":/Position \n";
+    oss << "       </DataItem>\n";
+    oss << "     </Attribute>\n";
     oss << "     <Attribute Name=\"Velocity\" AttributeType=\"Vector\" Center=\"Node\">\n";
     oss << "       <DataItem Dimensions=\"" << Particles.Size() << " 3\" NumberType=\"Float\" Precision=\"10\" Format=\"HDF\">\n";
     oss << "        " << fn.CStr() <<":/Velocity \n";
@@ -2006,6 +2035,31 @@ inline void Domain::WriteXDMF (char const * FileKey)
     oss << "        " << fn.CStr() <<":/Acceleration \n";
     oss << "       </DataItem>\n";
     oss << "     </Attribute>\n";
+    oss << "     <Attribute Name=\"Density\" AttributeType=\"Scalar\" Center=\"Node\">\n";
+    oss << "       <DataItem Dimensions=\"" << Particles.Size() << "\" NumberType=\"Float\" Precision=\"10\"  Format=\"HDF\">\n";
+    oss << "        " << fn.CStr() <<":/Density \n";
+    oss << "       </DataItem>\n";
+    oss << "     </Attribute>\n";
+    oss << "     <Attribute Name=\"Pressure\" AttributeType=\"Scalar\" Center=\"Node\">\n";
+    oss << "       <DataItem Dimensions=\"" << Particles.Size() << "\" NumberType=\"Float\" Precision=\"10\"  Format=\"HDF\">\n";
+    oss << "        " << fn.CStr() <<":/Pressure \n";
+    oss << "       </DataItem>\n";
+    oss << "     </Attribute>\n";
+    oss << "     <Attribute Name=\"" << OutputName[0] << "\" AttributeType=\"Scalar\" Center=\"Node\">\n";
+    oss << "       <DataItem Dimensions=\"" << Particles.Size() << "\" NumberType=\"Float\" Precision=\"10\"  Format=\"HDF\">\n";
+    oss << "        " << fn.CStr() <<":/" << OutputName[0] << " \n";
+    oss << "       </DataItem>\n";
+    oss << "     </Attribute>\n";
+    oss << "     <Attribute Name=\"" << OutputName[1] << "\" AttributeType=\"Scalar\" Center=\"Node\">\n";
+    oss << "       <DataItem Dimensions=\"" << Particles.Size() << "\" NumberType=\"Float\" Precision=\"10\"  Format=\"HDF\">\n";
+    oss << "        " << fn.CStr() <<":/" << OutputName[1] << " \n";
+    oss << "       </DataItem>\n";
+    oss << "     </Attribute>\n";
+    oss << "     <Attribute Name=\"" << OutputName[2] << "\" AttributeType=\"Scalar\" Center=\"Node\">\n";
+    oss << "       <DataItem Dimensions=\"" << Particles.Size() << "\" NumberType=\"Float\" Precision=\"10\"  Format=\"HDF\">\n";
+    oss << "        " << fn.CStr() <<":/" << OutputName[2] << " \n";
+    oss << "       </DataItem>\n";
+    oss << "     </Attribute>\n";
     oss << "     <Attribute Name=\"Sigma\" AttributeType=\"Tensor6\" Center=\"Node\">\n";
     oss << "       <DataItem Dimensions=\"" << Particles.Size() << " 6\" NumberType=\"Float\" Precision=\"10\" Format=\"HDF\">\n";
     oss << "        " << fn.CStr() <<":/Sigma \n";
@@ -2014,31 +2068,6 @@ inline void Domain::WriteXDMF (char const * FileKey)
     oss << "     <Attribute Name=\"Strain\" AttributeType=\"Tensor6\" Center=\"Node\">\n";
     oss << "       <DataItem Dimensions=\"" << Particles.Size() << " 6\" NumberType=\"Float\" Precision=\"10\" Format=\"HDF\">\n";
     oss << "        " << fn.CStr() <<":/Strain \n";
-    oss << "       </DataItem>\n";
-    oss << "     </Attribute>\n";
-    oss << "     <Attribute Name=\"Position\" AttributeType=\"Vector\" Center=\"Node\">\n";
-    oss << "       <DataItem Dimensions=\"" << Particles.Size() << " 3\" NumberType=\"Float\" Precision=\"10\" Format=\"HDF\">\n";
-    oss << "        " << fn.CStr() <<":/Position \n";
-    oss << "       </DataItem>\n";
-    oss << "     </Attribute>\n";
-    oss << "     <Attribute Name=\"Pressure\" AttributeType=\"Scalar\" Center=\"Node\">\n";
-    oss << "       <DataItem Dimensions=\"" << Particles.Size() << "\" NumberType=\"Float\" Precision=\"10\"  Format=\"HDF\">\n";
-    oss << "        " << fn.CStr() <<":/Pressure \n";
-    oss << "       </DataItem>\n";
-    oss << "     </Attribute>\n";
-    oss << "     <Attribute Name=\"ShearRate\" AttributeType=\"Scalar\" Center=\"Node\">\n";
-    oss << "       <DataItem Dimensions=\"" << Particles.Size() << "\" NumberType=\"Float\" Precision=\"10\"  Format=\"HDF\">\n";
-    oss << "        " << fn.CStr() <<":/ShearRate \n";
-    oss << "       </DataItem>\n";
-    oss << "     </Attribute>\n";
-    oss << "     <Attribute Name=\"Density\" AttributeType=\"Scalar\" Center=\"Node\">\n";
-    oss << "       <DataItem Dimensions=\"" << Particles.Size() << "\" NumberType=\"Float\" Precision=\"10\"  Format=\"HDF\">\n";
-    oss << "        " << fn.CStr() <<":/Density \n";
-    oss << "       </DataItem>\n";
-    oss << "     </Attribute>\n";
-    oss << "     <Attribute Name=\"Tag\" AttributeType=\"Scalar\" Center=\"Node\">\n";
-    oss << "       <DataItem Dimensions=\"" << Particles.Size() << "\" NumberType=\"Int\" Format=\"HDF\">\n";
-    oss << "        " << fn.CStr() <<":/Tag \n";
     oss << "       </DataItem>\n";
     oss << "     </Attribute>\n";
     oss << "   </Grid>\n";

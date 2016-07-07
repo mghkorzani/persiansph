@@ -187,6 +187,13 @@ void UserDamping(SPH::Domain & domi)
 
 }
 
+void NewUserOutput(SPH::Particle * Particles, double & Prop1, double & Prop2,  double & Prop3)
+{
+	Prop1 = Particles->ZWab;
+	Prop2 = Particles->k;
+	Prop3 = Particles->n;
+}
+
 
 using std::cout;
 using std::endl;
@@ -229,6 +236,7 @@ int main(int argc, char **argv) try
         dom.GeneralBefore	= & UserInFlowCon;
         dom.GeneralAfter	= & UserDamping;
         dom.BC.Periodic[0]	= true;
+
 
     	dom.AddBoxLength(1 ,Vec3_t ( 0.0 , -4.0*dx , 0.0 ), L + dx/10.0 , H + HS + 8.0*dx + dx/10.0 ,  0 , dx/2.0 ,RhoF, h, 1 , 0 , false, false );
 
@@ -291,8 +299,8 @@ int main(int argc, char **argv) try
 
 	double Nu,E,K,G,CsS,RhoS,c,Phi,Psi,n,hs,dxs;
 
-	hs	= h;
-	dxs	= dx;
+	hs	= h/2.0;
+	dxs	= dx/2.0;
 
 	Nu	= 0.25;
 	E	= 10.0e6;
@@ -338,6 +346,7 @@ int main(int argc, char **argv) try
 			dom.Particles[a]->TI		= 0.5;
 			dom.Particles[a]->TIn		= 2.55;
 			dom.Particles[a]->d		= d;
+	    		dom.Particles[a]->Shepard	= true;
 			dom.Particles[a]->VarPorosity	= true;
 			dom.Particles[a]->SeepageType	= 1;	// Kozeny–Carman Eq
 //			dom.Particles[a]->n		= n;
@@ -381,6 +390,10 @@ int main(int argc, char **argv) try
         std::cout<<"t2 = "<<t2<<std::endl;
         std::cout<<"t  = "<<t<<std::endl;
 
+	dom.OutputName[0]	= "ZWab";
+	dom.OutputName[1]	= "Pearmeability";
+	dom.OutputName[2]	= "S_lift";
+        dom.UserOutput		= & NewUserOutput;
 
    	dom.Solve(/*tf*/700.0,/*dt*/t,/*dtOut*/0.1,"test",100000);
         return 0;
