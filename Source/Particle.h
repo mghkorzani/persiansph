@@ -47,7 +47,6 @@ public:
     bool   	Shepard;	///< Shepard Filter for the density
     size_t	ShepardCounter;	///< Count number of contributing particles
     size_t	ShepardStep;	///< Cycle number for shepard correction
-    size_t	ShepardNeighbourNo; ///< Number of the contributing particles
     double	ZWab;		///< Summation of mb/db*Wab for neighbour particles of the particle a (for Shepard filter)
     double	SumDen;		///< Summation of mb*Wab for neighbour particles of the particle a (for Shepard filter)
 
@@ -130,7 +129,7 @@ public:
     double 	h;		///< Smoothing length of the particle
     int    	LL;		///< Linked-List variable to show the next particle in the list of a cell
     int    	CC[3];		///< Current cell No for the particle (linked-list)
-    int		ct;		///< Correction step for the Modified Verlet Algorithm and Shepard filter
+    int		ct;		///< Correction step for the Modified Verlet Algorithm
     double	SumKernel;	///< Summation of the kernel value for neighbour particles
     bool	FirstStep;	///< to initialize the integration scheme
 
@@ -213,7 +212,6 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
     RhoF = 0.0;
     IsSat = false;
     SatCheck = false;
-    ShepardNeighbourNo = 0;
     ShepardStep = 40;
     ShepardCounter = 0;
     S = 0.0;
@@ -312,7 +310,7 @@ inline void Particle::Move_MVerlet (Mat3_t I, double dt)
 	{
 		if (Shepard && ShepardCounter == ShepardStep)
 		{
-			if (ShepardNeighbourNo>=5)
+			if (ZWab>0.6)
 			{
 				Densityb	= SumDen/ZWab;
 //				Densityb	= Density;
@@ -323,7 +321,6 @@ inline void Particle::Move_MVerlet (Mat3_t I, double dt)
 				Densityb	= Density;
 				Density		+=dt*dDensity;
 			}
-			ShepardNeighbourNo = 0;
 		}
 		else
 		{
@@ -338,7 +335,7 @@ inline void Particle::Move_MVerlet (Mat3_t I, double dt)
 	{
 		if (Shepard && ShepardCounter == ShepardStep)
 		{
-			if (ShepardNeighbourNo>=5)
+			if (ZWab>0.6)
 			{
 				Densityb	= SumDen/ZWab;
 //				Densityb	= Density;
@@ -350,7 +347,6 @@ inline void Particle::Move_MVerlet (Mat3_t I, double dt)
 				Density		= Densityb + 2.0*dt*dDensity;
 				Densityb	= dens;
 			}
-			ShepardNeighbourNo = 0;
 		}
 		else
 		{

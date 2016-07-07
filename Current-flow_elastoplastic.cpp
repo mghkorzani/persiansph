@@ -291,8 +291,8 @@ int main(int argc, char **argv) try
 
 	double Nu,E,K,G,CsS,RhoS,c,Phi,Psi,n,hs,dxs;
 
-	hs	= h/2.0;
-	dxs	= dx/2.0;
+	hs	= h;
+	dxs	= dx;
 
 	Nu	= 0.25;
 	E	= 10.0e6;

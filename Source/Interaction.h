@@ -119,11 +119,13 @@ inline void Domain::CalcForce11(Particle * P1, Particle * P2)
 				if (!P1->IsFree) Mu = P2->Mu;
 				if (!P2->IsFree) Mu = P1->Mu;
 			}
-
-			StrainRate =	2.0*vab(0)*xij(0)            , vab(0)*xij(1)+vab(1)*xij(0) , vab(0)*xij(2)+vab(2)*xij(0) ,
-					vab(0)*xij(1)+vab(1)*xij(0)  , 2.0*vab(1)*xij(1)           , vab(1)*xij(2)+vab(2)*xij(1) ,
-					 vab(0)*xij(2)+vab(2)*xij(0) , vab(1)*xij(2)+vab(2)*xij(1) , 2.0*vab(2)*xij(2)           ;
-			StrainRate = -GK * StrainRate;
+			if (P1->T0>0.0 || P2->T0>0.0)
+			{		
+				StrainRate =	2.0*vab(0)*xij(0)            , vab(0)*xij(1)+vab(1)*xij(0) , vab(0)*xij(2)+vab(2)*xij(0) ,
+						vab(0)*xij(1)+vab(1)*xij(0)  , 2.0*vab(1)*xij(1)           , vab(1)*xij(2)+vab(2)*xij(1) ,
+						 vab(0)*xij(2)+vab(2)*xij(0) , vab(1)*xij(2)+vab(2)*xij(1) , 2.0*vab(2)*xij(2)           ;
+				StrainRate = -GK * StrainRate;
+			}
 
 			if (VisEq==0) VI =  2.0*Mu / (di*dj)          * GK*vab;								//Morris et al 1997
 			if (VisEq==1) VI =  8.0*Mu / ((di+dj)*(di+dj))* GK*vab;								//Shao et al 2003
@@ -165,30 +167,38 @@ inline void Domain::CalcForce11(Particle * P1, Particle * P2)
 		omp_set_lock(&P1->my_lock);
 			P1->a		+= -mj * temp;
 			P1->dDensity	+=  mj * (di/dj) * temp1;
-			if (P1->IsFree) P1->StrainRate = P1->StrainRate + mj/dj*StrainRate; else P1->StrainRate = 0.0;
-			if (P1->IsFree && SWIType ==1) P1->S = P1->S + mj/dj*vab(0)*xij(1)*-GK; else P1->S = 0.0;
+
+			if (P1->IsFree) 
+			{
+				if (P1->T0>0.0 || P2->T0>0.0)	P1->StrainRate	 = P1->StrainRate + mj/dj*StrainRate; 
+				if (SWIType == 1)		P1->S		 = P1->S + mj/dj*vab(0)*xij(1)*-GK;  
+								P1->ZWab	+= mj/dj* K;
+			}
+			else
+				P1->ZWab	= 1.0;
+
 			if (P1->Shepard)
-				if (P1->ShepardCounter == P1->ShepardStep && (P1->IsFree*P2->IsFree))
-				{
+				if (P1->ShepardCounter == P1->ShepardStep)
 					P1->SumDen += mj*    K;
-					P1->ZWab   += mj/dj* K;
-					P1->ShepardNeighbourNo++;
-				}
 		omp_unset_lock(&P1->my_lock);
 
 
 		omp_set_lock(&P2->my_lock);
 			P2->a		-= -mi * temp;
 			P2->dDensity	+=  mi * (dj/di) * temp1;
-			if (P2->IsFree) P2->StrainRate = P2->StrainRate + mi/di*StrainRate; else P2->StrainRate = 0.0;
-			if (P2->IsFree && SWIType ==1) P2->S = P2->S + mi/di*vab(0)*xij(1)*-GK; else P2->S = 0.0;
+
+			if (P2->IsFree)
+			{
+				if (P1->T0>0.0 || P2->T0>0.0)	P2->StrainRate	 = P2->StrainRate + mi/di*StrainRate; 
+				if (SWIType ==1)		P2->S		 = P2->S + mi/di*vab(0)*xij(1)*-GK;
+								P2->ZWab	+= mi/di* K;
+			}
+			else
+				P2->ZWab	= 1.0;
+
 			if (P2->Shepard)
-				if (P2->ShepardCounter == P2->ShepardStep && (P1->IsFree*P2->IsFree))
-				{
+				if (P2->ShepardCounter == P2->ShepardStep)
 					P2->SumDen += mi*    K;
-					P2->ZWab   += mi/di* K;
-					P2->ShepardNeighbourNo++;
-				}
 		omp_unset_lock(&P2->my_lock);
     }
 }
@@ -347,40 +357,40 @@ inline void Domain::CalcForce2233(Particle * P1, Particle * P2)
 		omp_set_lock(&P1->my_lock);
 			P1->a		+= mj * temp;
 			P1->dDensity	+= mj * (di/dj) * temp1;
-			if (P1->Shepard)
-				if (P1->ShepardCounter == P1->ShepardStep && (P1->IsFree*P2->IsFree))
-				{
-					P1->SumDen += mj*    K;
-					P1->ZWab   += mj/dj* K;
-					P1->ShepardNeighbourNo++;
-				}
-			if (P1->IsFree && SWIType ==1) P1->S = P1->S + mj/dj*vab(0)*xij(1)*-GK; else P1->S = 0.0;
-			if (P1->IsFree) P1->ZWab   += mj/dj* K; else P1->ZWab = 1.0;
+
 			if (P1->IsFree)
 			{
-				P1->StrainRate	= P1->StrainRate + mj/dj*StrainRate;
-				P1->RotationRate= P1->RotationRate + mj/dj*RotationRate;
+				P1->ZWab	+= mj/dj* K;
+				P1->StrainRate	 = P1->StrainRate + mj/dj*StrainRate;
+				P1->RotationRate = P1->RotationRate + mj/dj*RotationRate;
+				if (SWIType ==1) P1->S = P1->S + mj/dj*vab(0)*xij(1)*-GK;
 			}
+			else
+				P1->ZWab	= 1.0;
+
+			if (P1->Shepard)
+				if (P1->ShepardCounter == P1->ShepardStep)
+					P1->SumDen += mj*    K;
 		omp_unset_lock(&P1->my_lock);
 
 		// Locking the particle 2 for updating the properties
 		omp_set_lock(&P2->my_lock);
 			P2->a		-= mi * temp;
 			P2->dDensity	+= mi * (dj/di) * temp1;
-			if (P2->Shepard)
-				if (P2->ShepardCounter == P2->ShepardStep && (P1->IsFree*P2->IsFree))
-				{
-					P2->SumDen += mi*    K;
-					P2->ZWab   += mi/di* K;
-					P2->ShepardNeighbourNo++;
-				}
-			if (P2->IsFree  && SWIType ==1) P2->S = P2->S + mi/di*vab(0)*xij(1)*-GK; else P2->S = 0.0;
-			if (P2->IsFree) P2->ZWab   += mi/di* K; else P2->ZWab = 1.0;
 			if (P2->IsFree)
 			{
-				P2->StrainRate	= P2->StrainRate + mi/di*StrainRate;
-				P2->RotationRate= P2->RotationRate + mi/di*RotationRate;
+				P2->ZWab	+= mi/di* K;
+				P2->StrainRate	 = P2->StrainRate + mi/di*StrainRate;
+				P2->RotationRate = P2->RotationRate + mi/di*RotationRate;
+				if (SWIType ==1) P2->S = P2->S + mi/di*vab(0)*xij(1)*-GK;
 			}
+			else
+				P2->ZWab	= 1.0;
+
+			if (P2->Shepard)
+				if (P2->ShepardCounter == P2->ShepardStep)
+					P2->SumDen += mi*    K;
+
 		omp_unset_lock(&P2->my_lock);
 	}
 }
