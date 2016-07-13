@@ -25,6 +25,7 @@ double H,HS,U,RhoF,g,D,CsW,dx,d,Muw;
 double Z0,U0,Z,Us;
 size_t check =0;
 double DampF,DampS,DampTime;
+bool Onset;
 
 void UserInFlowCon(SPH::Domain & domi)
 {
@@ -170,7 +171,7 @@ void UserDamping(SPH::Domain & domi)
 		}
 	}
 
-/*	if (domi.Time>=DampTime && domi.Time<3.0)
+	if (domi.Time>=DampTime && domi.Time<3.0 && !Onset)
 	{
 		#pragma omp parallel for schedule (static) num_threads(domi.Nproc)
 		for (size_t i=0; i<domi.Particles.Size(); i++)
@@ -183,7 +184,7 @@ void UserDamping(SPH::Domain & domi)
 			}
 		}
 	}
-*/
+
 
 }
 
@@ -206,7 +207,7 @@ int main(int argc, char **argv) try
         dom.Nproc	= 24;
     	dom.VisEq	= 0;
     	dom.KernelType	= 4;
-	dom.SWIType	= 0;
+	dom.SWIType	= 1;
     	dom.Scheme	= 0;
     	dom.Gravity	= 0.0 , -9.81 , 0.0 ;
 	g		= norm(dom.Gravity);
@@ -224,9 +225,9 @@ int main(int argc, char **argv) try
 	U	= 0.4;
 	Z0	= HS + 0.0*dx;
 	U0	= U;
-	RhoF	= 1000.0;
+	RhoF	= 1010.0;
 	CsW	= 50.0;
-	Muw	= 1.3e-3;
+	Muw	= 0.8e-3;
         t1	= (0.25*h/(CsW));
 
 //	dom.BC.allv		= U,0.0,0.0;
@@ -305,13 +306,15 @@ int main(int argc, char **argv) try
 	K	= E/(3.0*(1.0-2.0*Nu));
 	G	= E/(2.0*(1.0+Nu));
 	n	= 0.5;
-	RhoS	= 2650.0*(1.0-n)+n*RhoF;;
-	CsS	= sqrt(K/RhoS);
+	RhoS	= 2650.0*(1.0-n)+n*RhoF;
+	RhoS	= 1800.0;
+	CsS	= sqrt(K/RhoS)/0.9;
 	c	= 0.05;
 	Phi	= 20.0;
 	Psi	= 0.0;
-	d	= 0.0004;
+	d	= 0.00048;
         t2	= (0.25*hs/(CsS));
+	Onset	= true;
 
         std::cout<<"CsS  = "<<CsS<<std::endl;
         std::cout<<"RhoS = "<<RhoS<<std::endl;
@@ -330,7 +333,7 @@ int main(int argc, char **argv) try
 	hs	= h/2.0;
 	dxs	= dx/2.0;
 
-/*   	mass = RhoS*dxs*dxs;
+   	mass = RhoS*dxs*dxs;
 	R = D/2.0-dxs/2.0;
     	for (size_t j=0;j<5;j++)
     	{
@@ -341,10 +344,10 @@ int main(int argc, char **argv) try
     			xb = x + R*cos(2*M_PI/no*i);
     			yb = y + R*sin(2*M_PI/no*i);
     			dom.AddSingleParticle(3,Vec3_t ( xb ,  yb , 0.0 ), mass , RhoS , hs , true);
-        		dom.Particles[dom.Particles.Size()-1]->NoSlip	= true;
        		}
     	}
-*/
+
+
 	for (size_t a=0; a<dom.Particles.Size(); a++)
 	{
 		if (dom.Particles[a]->ID==2 || dom.Particles[a]->ID==3)
@@ -374,23 +377,26 @@ int main(int argc, char **argv) try
 			xb=dom.Particles[a]->x(0);
 			yb=dom.Particles[a]->x(1);
 
+			if (dom.Particles[a]->ID == 3)
+			{
+				dom.Particles[a]->k 		= 10000000000000.0;
+				dom.Particles[a]->SeepageType	= 0;	
+			}
 			if (yb<0.0)
 			{
 				dom.Particles[a]->ID	= 3;
 				dom.Particles[a]->IsFree= false;
 				dom.Particles[a]->NoSlip= true;
 			}
-			if (xb>=(x-D) && xb<=(x+D) && yb>=(D-0.1*D*sin(M_PI/2.0/D*(xb-x+D))))
+			if (xb>=(x-D) && xb<=(x+D) && yb>=(D-0.1*D*sin(M_PI/2.0/D*(xb-x+D))) && dom.Particles[a]->IsFree && !Onset)
 			{
 		     		dom.Particles[a]->ID		= 20;
 			}
-//			if (dom.Particles[a]->ID == 3)
-//				dom.Particles[a]->k = 100000000.0;
 
 		}
 	}
 
-   	dom.DelParticles(20);
+	if (!Onset) dom.DelParticles(20);
     	DampF	= 0.02*CsW/h;
   	DampS	= 0.02*sqrt(E/(RhoS*hs*hs));
     	DampTime= 0.3;
