@@ -225,8 +225,8 @@ int main(int argc, char **argv) try
 	U	= 0.4;
 	Z0	= HS + 0.0*dx;
 	U0	= U;
-	RhoF	= 1010.0;
-	CsW	= 50.0;
+	RhoF	= 1000.0;
+	CsW	= 45.0;
 	Muw	= 0.8e-3;
         t1	= (0.25*h/(CsW));
 
@@ -306,10 +306,9 @@ int main(int argc, char **argv) try
 	K	= E/(3.0*(1.0-2.0*Nu));
 	G	= E/(2.0*(1.0+Nu));
 	n	= 0.5;
-	RhoS	= 2650.0*(1.0-n)+n*RhoF;
-	RhoS	= 1800.0;
-	CsS	= sqrt(K/RhoS)/0.9;
-	c	= 0.05;
+	RhoS	= 2500.0*(1.0-n)+n*RhoF;
+	CsS	= sqrt(K/RhoS);
+	c	= 0.2;
 	Phi	= 20.0;
 	Psi	= 0.0;
 	d	= 0.00048;

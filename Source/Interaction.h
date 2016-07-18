@@ -397,7 +397,7 @@ inline void Domain::CalcForce2233(Particle * P1, Particle * P2)
 
 inline void Domain::CalcForce13(Particle * P1, Particle * P2)
 {
-	double h	= (P1->h+P2->h)/2;
+	double h	= std::min(P1->h,P2->h);
 	Vec3_t xij	= P1->x - P2->x;
 
 	// Correction of xij for Periodic BC
@@ -453,8 +453,8 @@ inline void Domain::CalcForce13(Particle * P1, Particle * P2)
 					if (P1->ZWab<0.25)
 					{
 						double Cd = 24.0*(P2->Mu/P2->RefDensity)/(P1->d*norm(v)+0.01*h*h) + 2.0;
-						SFt = (3.0/(4.0*P1->d)*P2->RefDensity*(1.0-P1->n)*Cd*norm(v)*v) *K;
-						SFt(1) += (P2->RefDensity*(1.0-P1->n)*norm(v)*(P2->S-P1->S)) *K;
+						SFt = (3.0/(4.0*P1->d)*P2->RefDensity*(1.0-P1->n0)*Cd*norm(v)*v) *K;
+						SFt(1) += (P2->RefDensity*(1.0-P1->n0)*norm(v)*fabs(P2->S-P1->S)) *K;
 					}
 					else
 					{
@@ -477,8 +477,8 @@ inline void Domain::CalcForce13(Particle * P1, Particle * P2)
 					if (P2->ZWab<0.25)
 					{
 						double Cd = 24.0*(P1->Mu/P1->RefDensity)/(P2->d*norm(v)+0.01*h*h) + 2.0;
-						SFt = (3.0/(4.0*P2->d)*P1->RefDensity*(1.0-P2->n)*Cd*norm(v)*v) *K;
-						SFt(1) += (P1->RefDensity*(1.0-P2->n)*norm(v)*(P1->S-P2->S)) *K;;
+						SFt = (3.0/(4.0*P2->d)*P1->RefDensity*(1.0-P2->n0)*Cd*norm(v)*v) *K;
+						SFt(1) += (P1->RefDensity*(1.0-P2->n0)*norm(v)*fabs(P1->S-P2->S)) *K;;
 					}
 					else
 					{
