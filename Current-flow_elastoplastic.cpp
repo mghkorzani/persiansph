@@ -46,6 +46,7 @@ void UserInFlowCon(SPH::Domain & domi)
 
 				}
 			}
+			std::cout<<"check point = 0"<<std::endl;
 			check = 1;
 		}
 
@@ -126,6 +127,21 @@ void UserDamping(SPH::Domain & domi)
 	}
 	else
 	{
+		if (check == 1)
+		{
+			#pragma omp parallel for schedule (static) num_threads(domi.Nproc)
+			for (size_t i=0; i<domi.Particles.Size(); i++)
+			{
+				if (domi.Particles[i]->IsFree)
+				{ 
+					domi.Particles[i]->v = 0.0;;
+					domi.Particles[i]->vb = 0.0;;
+				}
+			}
+			std::cout<<"check point = 1"<<std::endl;
+			check = 2;
+		}
+
 		int temp;
 		for (int q1=0;  q1<2                ; q1++)
 		for (int q2=0;  q2<domi.CellNo[1]   ; q2++)
@@ -171,7 +187,7 @@ void UserDamping(SPH::Domain & domi)
 		}
 	}
 
-	if (domi.Time>=DampTime && domi.Time<3.0 && !Onset)
+	if (domi.Time>=DampTime && domi.Time<2.0 && !Onset)
 	{
 		#pragma omp parallel for schedule (static) num_threads(domi.Nproc)
 		for (size_t i=0; i<domi.Particles.Size(); i++)
@@ -191,7 +207,7 @@ void UserDamping(SPH::Domain & domi)
 void NewUserOutput(SPH::Particle * Particles, double & Prop1, double & Prop2,  double & Prop3)
 {
 	Prop1 = Particles->ZWab;
-	Prop2 = Particles->k;
+	Prop2 = Particles->n;
 	Prop3 = Particles->S;
 }
 
@@ -206,15 +222,15 @@ int main(int argc, char **argv) try
         dom.Dimension	= 2;
         dom.Nproc	= 24;
     	dom.VisEq	= 0;
-    	dom.KernelType	= 4;
-	dom.SWIType	= 1;
+    	dom.KernelType	= 0;
+	dom.SWIType	= 0;
     	dom.Scheme	= 0;
     	dom.Gravity	= 0.0 , -9.81 , 0.0 ;
 	g		= norm(dom.Gravity);
 
     	double x,y,h,t,t1,t2,L;
     	dx	= 0.005;
-    	h	= dx*1.1;
+    	h	= dx*1.2;
 	D	= 0.1;
 	HS	= 1.0*D;
 	H	= 3.5*D;
@@ -226,7 +242,7 @@ int main(int argc, char **argv) try
 	Z0	= HS + 0.0*dx;
 	U0	= U;
 	RhoF	= 1000.0;
-	CsW	= 45.0;
+	CsW	= 68.5;
 	Muw	= 0.8e-3;
         t1	= (0.25*h/(CsW));
 
@@ -237,7 +253,7 @@ int main(int argc, char **argv) try
         dom.BC.Periodic[0]	= true;
 
 
-    	dom.AddBoxLength(1 ,Vec3_t ( 0.0 , -4.0*dx , 0.0 ), L + dx/10.0 , H + HS + 8.0*dx + dx/10.0 ,  0 , dx/2.0 ,RhoF, h, 1 , 0 , false, false );
+    	dom.AddBoxLength(1 ,Vec3_t ( 0.0 , -3.0*dx , 0.0 ), L + dx/10.0 , H + HS + 6.0*dx + dx/10.0 ,  0 , dx/2.0 ,RhoF, h, 1 , 0 , false, false );
 
     	double yb,xb,R,mass,no;;
 
@@ -252,7 +268,7 @@ int main(int argc, char **argv) try
     		dom.Particles[a]->Mu		= Muw;
     		dom.Particles[a]->MuRef		= Muw;
     		dom.Particles[a]->Material	= 1;
-    		dom.Particles[a]->Shepard	= true;
+//    		dom.Particles[a]->Shepard	= true;
     		dom.Particles[a]->P0		= CsW*CsW*RhoF*0.0001;
     		dom.Particles[a]->Density	= RhoF*pow((1+7.0*g*(H+HS-yb)/(CsW*CsW)),(1.0/7.0));
     		dom.Particles[a]->Densityb	= RhoF*pow((1+7.0*g*(H+HS-yb)/(CsW*CsW)),(1.0/7.0));
@@ -292,7 +308,7 @@ int main(int argc, char **argv) try
         		dom.Particles[dom.Particles.Size()-1]->Mu	= Muw;
         		dom.Particles[dom.Particles.Size()-1]->MuRef	= Muw;
         		dom.Particles[dom.Particles.Size()-1]->Material	= 1;
-        		dom.Particles[dom.Particles.Size()-1]->NoSlip	= true;
+//        		dom.Particles[dom.Particles.Size()-1]->NoSlip	= true;
        		}
     	}
 
@@ -301,34 +317,36 @@ int main(int argc, char **argv) try
 	hs	= h/2.0;
 	dxs	= dx/2.0;
 
-	Nu	= 0.25;
-	E	= 10.0e6;
+	Nu	= 0.3;
+	E	= 25.0e6;
 	K	= E/(3.0*(1.0-2.0*Nu));
 	G	= E/(2.0*(1.0+Nu));
-	n	= 0.5;
+	n	= 0.35;
 	RhoS	= 2500.0*(1.0-n)+n*RhoF;
 	CsS	= sqrt(K/RhoS);
-	c	= 0.2;
-	Phi	= 20.0;
+	c	= 0.0;
+	Phi	= 30.0;
 	Psi	= 0.0;
 	d	= 0.00048;
         t2	= (0.25*hs/(CsS));
-	Onset	= true;
+        t2	= 6.0e-6;
+	Onset	= false;
 
         std::cout<<"CsS  = "<<CsS<<std::endl;
         std::cout<<"RhoS = "<<RhoS<<std::endl;
         std::cout<<"Phi  = "<<Phi<<std::endl;
+        std::cout<<"C    = "<<c<<std::endl;
 
 	hs	= h;
 	dxs	= dx;
-	dom.AddBoxLength(2 ,Vec3_t ( 0.0 , -4.0*dxs , 0.0 ), 0.1 + dxs/10.0 , HS + 4.0*dxs + dxs/10.0 ,  0 , dxs/2.0 ,RhoS, hs, 1 , 0 , false, false );
-	dom.AddBoxLength(2 ,Vec3_t ( 0.1 , -4.0*dxs , 0.0 ), 0.5 + dxs/10.0 , HS/2.0 + 4.0*dxs + dxs/10.0 ,  0 , dxs/2.0 ,RhoS, hs, 1 , 0 , false, false );
+	dom.AddBoxLength(2 ,Vec3_t ( 0.0 , -3.0*dxs , 0.0 ), 0.1 + dxs/10.0 , HS + 3.0*dxs + dxs/10.0 ,  0 , dxs/2.0 ,RhoS, hs, 1 , 0 , false, false );
+	dom.AddBoxLength(2 ,Vec3_t ( 0.1 , -3.0*dxs , 0.0 ), 0.5 + dxs/10.0 , HS/2.0 + 3.0*dxs + dxs/10.0 ,  0 , dxs/2.0 ,RhoS, hs, 1 , 0 , false, false );
 	hs	= h/2.0;
 	dxs	= dx/2.0;
 	dom.AddBoxLength(2 ,Vec3_t ( 0.1 , HS/2.0 , 0.0 ), 0.5 + dxs/10.0 , HS/2.0 + dxs/10.0 ,  0 , dxs/2.0 ,RhoS, hs, 1 , 0 , false, false );
 	hs	= h;
 	dxs	= dx;
-	dom.AddBoxLength(2 ,Vec3_t ( 0.6 , -4.0*dxs , 0.0 ), 0.4   + dxs/10.0 , HS + 4.0*dxs + dxs/10.0 ,  0 , dxs/2.0 ,RhoS, hs, 1 , 0 , false, false );
+	dom.AddBoxLength(2 ,Vec3_t ( 0.6 , -3.0*dxs , 0.0 ), 0.4   + dxs/10.0 , HS + 3.0*dxs + dxs/10.0 ,  0 , dxs/2.0 ,RhoS, hs, 1 , 0 , false, false );
 	hs	= h/2.0;
 	dxs	= dx/2.0;
 
@@ -354,13 +372,13 @@ int main(int argc, char **argv) try
 			dom.Particles[a]->Material	= 3;
 			dom.Particles[a]->Alpha		= 0.1;
 			dom.Particles[a]->Beta		= 0.1;
-			dom.Particles[a]->TI		= 0.5;
-			dom.Particles[a]->TIn		= 2.55;
-			dom.Particles[a]->TIInitDist	= dom.Particles[a]->h/1.1;
+//			dom.Particles[a]->TI		= 0.5;
+//			dom.Particles[a]->TIn		= 2.55;
+			dom.Particles[a]->TIInitDist	= dom.Particles[a]->h/1.2;
 			dom.Particles[a]->d		= d;
-	    		dom.Particles[a]->Shepard	= true;
+//	    		dom.Particles[a]->Shepard	= true;
 			dom.Particles[a]->VarPorosity	= true;
-			dom.Particles[a]->SeepageType	= 1;	// Kozeny–Carman Eq
+			dom.Particles[a]->SeepageType	= 1;	
 //			dom.Particles[a]->n		= n;
 			dom.Particles[a]->n0		= n;
 //			dom.Particles[a]->k		= k;
@@ -378,7 +396,7 @@ int main(int argc, char **argv) try
 
 			if (dom.Particles[a]->ID == 3)
 			{
-				dom.Particles[a]->k 		= 10000000000000.0;
+				dom.Particles[a]->k 		= 1.0e30;
 				dom.Particles[a]->SeepageType	= 0;	
 			}
 			if (yb<0.0)
@@ -406,7 +424,7 @@ int main(int argc, char **argv) try
         std::cout<<"t  = "<<t<<std::endl;
 
 	dom.OutputName[0]	= "ZWab";
-	dom.OutputName[1]	= "Pearmeability";
+	dom.OutputName[1]	= "Porosity";
 	dom.OutputName[2]	= "S_lift";
         dom.UserOutput		= & NewUserOutput;
 

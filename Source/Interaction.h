@@ -530,11 +530,14 @@ inline void Domain::CalcForce13(Particle * P1, Particle * P2)
 					omp_unset_lock(&P2->my_lock);
 				}
 				break;
+			case 3:
+				break;
 			default:
 				std::cout << "Soil-Water Interaction Type No is out of range. Please correct it and run again" << std::endl;
 				std::cout << "0 => The seepage force + The bouyant unit weight of soil" << std::endl;
 				std::cout << "1 => The seepage force + The surface erosion(Lift+Drag)) + The bouyant unit weight of soil" << std::endl;
 				std::cout << "2 => The seepage force + The pore water pressure from water particles " << std::endl;
+				std::cout << "3 => Zero interaction force" << std::endl;
 				abort();
 				break;
 		}
