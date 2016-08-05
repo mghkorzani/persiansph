@@ -141,6 +141,8 @@ public:
     double					Time;    	///< The simulation time at each step
     double					AutoSaveInt;	///< Automatic save interval time step
     double					deltat;		///< Time Step
+    double					deltatmin;	///< Minimum Time Step 
+    double					deltatint;	///< Initial Time Step
 
     int 					Dimension;    	///< Dimension of the problem
 
@@ -254,6 +256,8 @@ inline Domain::Domain ()
     Nproc	= 1;
 
     deltat	= 0.0;
+    deltatint	= 0.0;
+    deltatmin	= 0.0;
 
     TRPR = 0.0;
     BLPF = 0.0;
@@ -661,9 +665,12 @@ inline void Domain::CheckParticleLeave ()
 		std::cout<< DelParticles.Size()<< " particle(s) left the Domain"<<std::endl;
 		for (size_t i=0; i<DelParticles.Size(); i++)
 		{
-			std::cout<<Particles[DelParticles[i]]->x<<std::endl;
-			std::cout<<Particles[DelParticles[i]]->v<<std::endl;
-			std::cout<<Particles[DelParticles[i]]->a<<std::endl;
+			std::cout<<""<<std::endl;
+			std::cout<<"Particle Number   = "<<DelParticles[i]<<std::endl;
+			std::cout<<"Particle Material = "<<Particles[DelParticles[i]]->Material<<std::endl;
+			std::cout<<"x = "<<Particles[DelParticles[i]]->x<<std::endl;
+			std::cout<<"v = "<<Particles[DelParticles[i]]->v<<std::endl;
+			std::cout<<"a = "<<Particles[DelParticles[i]]->a<<std::endl;
 		}
 		Particles.DelItems(DelParticles);
 	}
@@ -1325,20 +1332,28 @@ inline void Domain::LastComputeAcceleration ()
 		FSMPairs[i].Clear();
 		NSMPairs[i].Clear();
 	}
-/*
+
 //	//Min time step check based on the acceleration
 	if (TimestepConstrain1)
 	{
-		#pragma omp parallel for schedule (static) num_threads(Nproc)
+		double test	= 0.0;
+		deltatmin	= deltatint;
+		#pragma omp parallel for schedule (static) private(test) num_threads(Nproc)
 		for (size_t i=0; i<Particles.Size(); i++)
-			if (deltat > (0.25*sqrt(Particles[i]->h/norm(Particles[i]->a))) && Particles[i]->Material == 1)
+		{	
+			if (Particles[i]->IsFree)
 			{
-				std::cout <<Particles[i]->a<< std::endl;
-				std::cout << "Please decrease the time step to"<< (0.25*sqrt(Particles[i]->h/norm(Particles[i]->a))) << std::endl;
-				abort();
+				test = sqrt(Particles[i]->h/norm(Particles[i]->a));
+				if (deltatmin > (0.005*test))
+				{
+					omp_set_lock(&dom_lock);
+						deltatmin = 0.005*test;
+					omp_unset_lock(&dom_lock);
+				}
 			}
+		}
 	}
-*/
+
 }
 
 inline void Domain::Move (double dt)
@@ -1706,7 +1721,9 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
 
     size_t idx_out = 1;
     double tout = Time;
-    deltat = dt;
+    deltat	= dt;
+    deltatint	= dt;
+    deltatmin	= dt;
 
     size_t save_out = 1;
     double sout = AutoSaveInt;
@@ -1746,7 +1763,30 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
             idx_out++;
             tout += dtOut;
         }
-    	Move(dt);
+
+	if (deltatint>deltatmin) 
+	{
+		if (deltat<deltatmin) 
+		{
+			deltat		= (deltat+deltatmin)/2.0;    	
+			std::cout<<"New Time Step = " <<deltat<<std::endl;
+		}
+		else
+			deltat		= deltatmin;    	
+		std::cout<<"New Time Step = " <<deltat<<std::endl;
+	}
+	else
+	{
+		if (deltatint!=deltat) 
+		{
+			deltat		= (deltat+deltatint)/2.0;    	
+			std::cout<<"New Time Step = " <<deltatint<<std::endl;
+		}
+		else
+			deltat		= deltatint;    	
+	}
+
+	Move(deltat);
 
         // Auto Save
        if (AutoSaveInt>0)
@@ -1764,8 +1804,7 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
     		sout += AutoSaveInt;
     	   }
        }
-
-       Time += dt;
+       Time += deltat;
 
 	if (BC.InOutFlow>0) InFlowBCLeave(); else CheckParticleLeave ();
 
@@ -1861,12 +1900,12 @@ inline void Domain::PrintInput(char const * FileKey)
     if (MuMax>0.0) t2 = 0.125*hmax*hmax*rhomax/MuMax; else t2 =1000000.0;
 
     oss << "Max time step should be less than Min value of { "<< t1 <<" , "<< t2 <<" } S\n";
-    oss << "Time Step = "<<deltat << " S\n";
+    oss << "Time Step = "<<deltatint << " S\n";
 
-    if (deltat > std::min(t1,t2))
+    if (deltatint > std::min(t1,t2))
     {
         std::cout << "Max time step should be less than Min value of { "<< t1 <<" , "<< t2 <<" }" << std::endl;
-        std::cout << "Time Step = "<<deltat << std::endl;
+        std::cout << "Time Step = "<<deltatint << std::endl;
     	std::cout << "Please decrease the time step and run again"<< std::endl;
     	abort();
     }

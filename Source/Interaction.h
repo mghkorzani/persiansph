@@ -51,7 +51,7 @@ inline void Domain::CalcForce11(Particle * P1, Particle * P2)
 		if (!P1->IsFree)
 		{
 			di = DensitySolid(P2->PresEq, P2->Cs, P2->P0,P1->Pressure, P2->RefDensity);
-			mi = P2->Mass;
+			mi = P1->FPMassC * P2->Mass;
 		}
 		else
 		{
@@ -62,7 +62,7 @@ inline void Domain::CalcForce11(Particle * P1, Particle * P2)
 		if (!P2->IsFree)
 		{
 			dj = DensitySolid(P1->PresEq, P1->Cs, P1->P0,P2->Pressure, P1->RefDensity);
-			mj = P1->Mass;
+			mj = P2->FPMassC * P1->Mass;
 		}
 		else
 		{
@@ -223,15 +223,15 @@ inline void Domain::CalcForce2233(Particle * P1, Particle * P2)
 
 		if (P1->Material*P2->Material == 9)
 		{
-			if (!P1->IsFree) {di = P2->Density;	mi = P2->Mass;} else {di = P1->Density;	mi = P1->Mass;}
-			if (!P2->IsFree) {dj = P1->Density;	mj = P1->Mass;} else {dj = P2->Density;	mj = P2->Mass;}
+			if (!P1->IsFree) {di = P2->Density;	mi = P1->FPMassC * P2->Mass;} else {di = P1->Density;	mi = P1->Mass;}
+			if (!P2->IsFree) {dj = P1->Density;	mj = P2->FPMassC * P1->Mass;} else {dj = P2->Density;	mj = P2->Mass;}
 		}
 		else
 		{
 			if (!P1->IsFree)
 			{
 				di = DensitySolid(P2->PresEq, P2->Cs, P2->P0,P1->Pressure, P2->RefDensity);
-				mi = P2->Mass;
+				mi = P1->FPMassC * P2->Mass;
 			}
 			else
 			{
@@ -241,7 +241,7 @@ inline void Domain::CalcForce2233(Particle * P1, Particle * P2)
 			if (!P2->IsFree)
 			{
 				dj = DensitySolid(P1->PresEq, P1->Cs, P1->P0,P2->Pressure, P1->RefDensity);
-				mj = P1->Mass;
+				mj = P2->FPMassC * P1->Mass;
 			}
 			else
 			{

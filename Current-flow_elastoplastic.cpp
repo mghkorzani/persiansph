@@ -178,7 +178,7 @@ void UserDamping(SPH::Domain & domi)
 		#pragma omp parallel for schedule (static) num_threads(domi.Nproc)
 		for (size_t i=0; i<domi.Particles.Size(); i++)
 		{
-			if (domi.Particles[i]->ID == 2 && (domi.Particles[i]->x(0) > 0.95 || domi.Particles[i]->x(0) <0.15) && domi.Particles[i]->ZWab<0.6)
+			if (domi.Particles[i]->ID == 2 && (domi.Particles[i]->x(0) > 0.85 || domi.Particles[i]->x(0) <0.10) && domi.Particles[i]->ZWab<0.6)
 			{ 
 				domi.Particles[i]->a =  0.0;
 				domi.Particles[i]->v =  0.0;
@@ -214,15 +214,27 @@ void NewUserOutput(SPH::Particle * Particles, double & Prop1, double & Prop2,  d
 
 using std::cout;
 using std::endl;
+using std::ifstream;
 
 int main(int argc, char **argv) try
 {
+	if (argc<2) throw new Fatal("This program must be called with one argument: the name of the data input file without the '.inp' suffix.\nExample:\t %s filekey\n",argv[0]);
+	String filekey  (argv[1]);
+	String filename (filekey+".inp");
+	ifstream infile(filename.CStr());
+	double IPhi;
+	double IC;
+	double IOnset;
+	infile >> IPhi;		infile.ignore(200,'\n');
+	infile >> IC;		infile.ignore(200,'\n');
+	infile >> IOnset;	infile.ignore(200,'\n');
+
         SPH::Domain	dom;
 
         dom.Dimension	= 2;
         dom.Nproc	= 24;
     	dom.VisEq	= 0;
-    	dom.KernelType	= 0;
+    	dom.KernelType	= 4;
 	dom.SWIType	= 0;
     	dom.Scheme	= 0;
     	dom.Gravity	= 0.0 , -9.81 , 0.0 ;
@@ -230,19 +242,19 @@ int main(int argc, char **argv) try
 
     	double x,y,h,t,t1,t2,L;
     	dx	= 0.005;
-    	h	= dx*1.2;
+    	h	= dx*1.1;
 	D	= 0.1;
 	HS	= 1.0*D;
 	H	= 3.5*D;
 	x	= 3.0*D;
 	y	= HS + 0.5*D;
-	L	= 10.0*D;
+	L	= 9.0*D;
 
 	U	= 0.4;
-	Z0	= HS + 0.0*dx;
+	Z0	= HS + 0.5*dx;
 	U0	= U;
 	RhoF	= 1000.0;
-	CsW	= 68.5;
+	CsW	= 10.0*sqrt(2.0*g*(H+HS))*1.5;
 	Muw	= 0.8e-3;
         t1	= (0.25*h/(CsW));
 
@@ -263,7 +275,8 @@ int main(int argc, char **argv) try
     		yb=dom.Particles[a]->x(1);
 
     		dom.Particles[a]->Cs		= CsW;
-    		dom.Particles[a]->Alpha		= 0.05;
+    		dom.Particles[a]->Alpha		= 0.2;
+    		dom.Particles[a]->Beta		= 0.2;
     		dom.Particles[a]->PresEq	= 1;
     		dom.Particles[a]->Mu		= Muw;
     		dom.Particles[a]->MuRef		= Muw;
@@ -318,35 +331,36 @@ int main(int argc, char **argv) try
 	dxs	= dx/2.0;
 
 	Nu	= 0.3;
-	E	= 25.0e6;
+	E	= 10.0e6;
 	K	= E/(3.0*(1.0-2.0*Nu));
 	G	= E/(2.0*(1.0+Nu));
-	n	= 0.35;
+	n	= 0.5;
 	RhoS	= 2500.0*(1.0-n)+n*RhoF;
-	CsS	= sqrt(K/RhoS);
-	c	= 0.0;
-	Phi	= 30.0;
+	CsS	= sqrt(K/(RhoS-RhoF));
+	c	= IC;
+	Phi	= IPhi;
 	Psi	= 0.0;
 	d	= 0.00048;
         t2	= (0.25*hs/(CsS));
-        t2	= 6.0e-6;
-	Onset	= false;
+	Onset	= bool (IOnset);
 
         std::cout<<"CsS  = "<<CsS<<std::endl;
+        std::cout<<"CsW  = "<<CsW<<std::endl;
         std::cout<<"RhoS = "<<RhoS<<std::endl;
         std::cout<<"Phi  = "<<Phi<<std::endl;
         std::cout<<"C    = "<<c<<std::endl;
+        std::cout<<"Onset= "<<Onset<<std::endl;
 
 	hs	= h;
 	dxs	= dx;
 	dom.AddBoxLength(2 ,Vec3_t ( 0.0 , -3.0*dxs , 0.0 ), 0.1 + dxs/10.0 , HS + 3.0*dxs + dxs/10.0 ,  0 , dxs/2.0 ,RhoS, hs, 1 , 0 , false, false );
-	dom.AddBoxLength(2 ,Vec3_t ( 0.1 , -3.0*dxs , 0.0 ), 0.5 + dxs/10.0 , HS/2.0 + 3.0*dxs + dxs/10.0 ,  0 , dxs/2.0 ,RhoS, hs, 1 , 0 , false, false );
+	dom.AddBoxLength(2 ,Vec3_t ( 0.1 , -3.0*dxs , 0.0 ), 0.4 + dxs/10.0 , HS/2.0 + 3.0*dxs + dxs/10.0 ,  0 , dxs/2.0 ,RhoS, hs, 1 , 0 , false, false );
 	hs	= h/2.0;
 	dxs	= dx/2.0;
-	dom.AddBoxLength(2 ,Vec3_t ( 0.1 , HS/2.0 , 0.0 ), 0.5 + dxs/10.0 , HS/2.0 + dxs/10.0 ,  0 , dxs/2.0 ,RhoS, hs, 1 , 0 , false, false );
+	dom.AddBoxLength(2 ,Vec3_t ( 0.1 , HS/2.0 , 0.0 ), 0.4 + dxs/10.0 , HS/2.0 + dxs/10.0 ,  0 , dxs/2.0 ,RhoS, hs, 1 , 0 , false, false );
 	hs	= h;
 	dxs	= dx;
-	dom.AddBoxLength(2 ,Vec3_t ( 0.6 , -3.0*dxs , 0.0 ), 0.4   + dxs/10.0 , HS + 3.0*dxs + dxs/10.0 ,  0 , dxs/2.0 ,RhoS, hs, 1 , 0 , false, false );
+	dom.AddBoxLength(2 ,Vec3_t ( 0.5 , -3.0*dxs , 0.0 ), L - 0.5   + dxs/10.0 , HS + 3.0*dxs + dxs/10.0 ,  0 , dxs/2.0 ,RhoS, hs, 1 , 0 , false, false );
 	hs	= h/2.0;
 	dxs	= dx/2.0;
 
@@ -370,13 +384,16 @@ int main(int argc, char **argv) try
 		if (dom.Particles[a]->ID==2 || dom.Particles[a]->ID==3)
 		{
 			dom.Particles[a]->Material	= 3;
-			dom.Particles[a]->Alpha		= 0.1;
-			dom.Particles[a]->Beta		= 0.1;
-//			dom.Particles[a]->TI		= 0.5;
-//			dom.Particles[a]->TIn		= 2.55;
-			dom.Particles[a]->TIInitDist	= dom.Particles[a]->h/1.2;
+			dom.Particles[a]->Alpha		= 0.3;
+			dom.Particles[a]->Beta		= 0.3;
+			if (c>0.0)
+			{
+				dom.Particles[a]->TI		= 0.5;
+				dom.Particles[a]->TIn		= 2.55;
+			}
+			dom.Particles[a]->TIInitDist	= dom.Particles[a]->h/1.1;
 			dom.Particles[a]->d		= d;
-//	    		dom.Particles[a]->Shepard	= true;
+	    		dom.Particles[a]->Shepard	= true;
 			dom.Particles[a]->VarPorosity	= true;
 			dom.Particles[a]->SeepageType	= 1;	
 //			dom.Particles[a]->n		= n;

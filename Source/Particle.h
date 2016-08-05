@@ -76,6 +76,7 @@ public:
     double 	Densityb;	///< Density of the particle n-1 (Modified Verlet)
     double 	dDensity;	///< Rate of density change in time based on state equations n
     double 	RefDensity;	///< Reference Density of Particle
+    double 	FPMassC;	///< Mass coefficient for fixed particles to avoid leaving particles 
     double 	Mass;		///< Mass of the particle
 
     Mat3_t	StrainRate;	///< Global shear Strain rate tensor n
@@ -182,6 +183,7 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
     RefDensity = Density0;
 
     Mass = Mass0;
+    FPMassC = 1.0;
     IsFree = !Fixed;
     h = h0;
     Pressure=0.0;

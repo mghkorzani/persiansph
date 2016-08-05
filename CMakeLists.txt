@@ -25,8 +25,8 @@ PROJECT                (New_Test)
 INCLUDE ($ENV{SPH}/Modules/FindPKG.cmake)
 
 SET(EXES
-#	Hydraulic_Heave
-	Current-flow_elastoplastic
+	Hydraulic_Heave
+#	Current-flow_elastoplastic
 #	Overtopping
 )
 
