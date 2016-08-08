@@ -1344,10 +1344,10 @@ inline void Domain::LastComputeAcceleration ()
 			if (Particles[i]->IsFree)
 			{
 				test = sqrt(Particles[i]->h/norm(Particles[i]->a));
-				if (deltatmin > (0.005*test))
+				if (deltatmin > (0.0025*test))
 				{
 					omp_set_lock(&dom_lock);
-						deltatmin = 0.005*test;
+						deltatmin = 0.0025*test;
 					omp_unset_lock(&dom_lock);
 				}
 			}
@@ -1767,23 +1767,21 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
 	if (deltatint>deltatmin) 
 	{
 		if (deltat<deltatmin) 
-		{
-			deltat		= (deltat+deltatmin)/2.0;    	
-			std::cout<<"New Time Step = " <<deltat<<std::endl;
-		}
+			deltat		= 2.0*deltat*deltatmin/(deltat+deltatmin);    	
 		else
-			deltat		= deltatmin;    	
+			deltat		= deltatmin;
+    	
 		std::cout<<"New Time Step = " <<deltat<<std::endl;
 	}
 	else
 	{
 		if (deltatint!=deltat) 
-		{
-			deltat		= (deltat+deltatint)/2.0;    	
-			std::cout<<"New Time Step = " <<deltatint<<std::endl;
-		}
+			deltat		= 2.0*deltat*deltatint/(deltat+deltatint);    	
 		else
-			deltat		= deltatint;    	
+			deltat		= deltatint;  
+  	
+		if ((deltatint-deltat)>(0.1*deltatint)) 
+			std::cout<<"New Time Step = " <<deltat<<std::endl;
 	}
 
 	Move(deltat);

@@ -87,6 +87,17 @@ void NewUserOutput(SPH::Particle * Particles, double & Prop1, double & Prop2,  d
 
 int main(int argc, char **argv) try
 {
+	if (argc<2) throw new Fatal("This program must be called with one argument: the name of the data input file without the '.inp' suffix.\nExample:\t %s filekey\n",argv[0]);
+	String filekey  (argv[1]);
+	String filename (filekey+".inp");
+	ifstream infile(filename.CStr());
+	double IPhi;
+	double IC;
+	double IQ;
+	infile >> IPhi;		infile.ignore(200,'\n');
+	infile >> IC;		infile.ignore(200,'\n');
+	infile >> IQ;		infile.ignore(200,'\n');
+
         SPH::Domain	dom;
 
         dom.Dimension	= 2;
@@ -97,7 +108,7 @@ int main(int argc, char **argv) try
     	dom.Scheme	= 0;
     	dom.Gravity	= 0.0 , -9.81 , 0.0 ;
 
-	u		= 0.5175;
+	u		= IQ;
 //	dom.BC.InOutFlow= 1;
 //	dom.BC.inv	= u,0.0,0.0;
 //	dom.BC.inDensity= 998.21;
@@ -106,7 +117,7 @@ int main(int argc, char **argv) try
 
 	double xb,yb,h,dx,T;
 
-	dx		= 0.0125;
+	dx		= 0.01;
 	h		= dx*1.3;
 	dom.InitialDist	= dx;
 
@@ -136,15 +147,18 @@ int main(int argc, char **argv) try
 		yb=dom.Particles[a]->x(1);
 		if (yb<0.0)
 		{
-			dom.Particles[a]->FPMassC  = 1.1;
+			if (xb<1.5)
+				dom.Particles[a]->FPMassC  = 1.1;
+			else
+				dom.Particles[a]->FPMassC  = 1.2;
 			dom.Particles[a]->ID	= 2;
-			dom.Particles[a]->NoSlip= false;
+			dom.Particles[a]->NoSlip= true;
 			dom.Particles[a]->IsFree= false;
 		}
 		if (yb>0.1 && xb<=-2.0)
 		{
 			dom.Particles[a]->ID	= 2;
-			dom.Particles[a]->NoSlip= false;
+			dom.Particles[a]->NoSlip= true;
 			dom.Particles[a]->IsFree= false;
 		}
 		if (xb>-2.0 && yb>0.55 && dom.Particles[a]->ID == 1)
@@ -169,22 +183,23 @@ int main(int argc, char **argv) try
 
 	rhoS		= 1490.0;
    	Rho		= 578.0;
-	Phi		= 37.0;
+	Phi		= IPhi;
 	Psi		= 0.0;
 	de		= 0.0255;
 	n		= 0.4052;
-	c		= 450.0;
-	E		= 20.0e6;
+	c		= IC;
+	E		= 50.0e6;
 	Nu		= 0.3;
 	K		= E/(3.0*(1.0-2.0*Nu));
 	G		= E/(2.0*(1.0+Nu));
-	CsS		= sqrt(K/(rhoS-Rho));
-	Ts		= (0.2*h/CsS);
+	CsS		= std::max(sqrt(K/(rhoS-Rho)),250.0);
+	Ts		= std::min((0.2*h/CsS),1.0e-5);
 
 	std::cout<<"CsS = "<<CsS<<std::endl;
 	std::cout<<"C   = "<<c<<std::endl;
 	std::cout<<"Phi = "<<Phi<<std::endl;
 	std::cout<<"Psi = "<<Psi<<std::endl;
+	std::cout<<"Q   = "<<u<<std::endl;
 
   	DampS	= 0.02*sqrt(E/(rhoS*h*h));
     	DampTime= 0.3;

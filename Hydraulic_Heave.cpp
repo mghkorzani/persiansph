@@ -60,15 +60,27 @@ void NewUserOutput(SPH::Particle * Particles, double & Prop1, double & Prop2,  d
 {
 	Prop1 = Particles->ZWab;
 	Prop2 = Particles->n;
-	Prop3 = Particles->S;
+	Prop3 = Particles->k;
 }
 
 
 using std::cout;
 using std::endl;
+using std::ifstream;
 
 int main(int argc, char **argv) try
 {
+	if (argc<2) throw new Fatal("This program must be called with one argument: the name of the data input file without the '.inp' suffix.\nExample:\t %s filekey\n",argv[0]);
+	String filekey  (argv[1]);
+	String filename (filekey+".inp");
+	ifstream infile(filename.CStr());
+	double IPhi;
+	double IC;
+	double ITime;
+	infile >> IPhi;		infile.ignore(200,'\n');
+	infile >> IC;		infile.ignore(200,'\n');
+	infile >> ITime;	infile.ignore(200,'\n');
+
         SPH::Domain	dom;
 
         dom.Dimension	= 2;
@@ -116,7 +128,7 @@ int main(int argc, char **argv) try
     		dom.Particles[a]->Mu		= Muw;
     		dom.Particles[a]->MuRef		= Muw;
     		dom.Particles[a]->Material	= 1;
-    		dom.Particles[a]->Shepard	= true;
+//    		dom.Particles[a]->Shepard	= true;
 //    		if (yb<(D+Em))
 //  		{
 	    		dom.Particles[a]->Density	= RhoF*pow((1+7.0*g*(H-yb)/(CsW*CsW)),(1.0/7.0));
@@ -166,12 +178,12 @@ int main(int argc, char **argv) try
 	n	= 0.35;
 	RhoS	= 2500.0*(1.0-n)+n*RhoF;
 	CsS	= sqrt(K/(RhoS-RhoF));
-	c	= 0.0;
-	Phi	= 25.0;
+	c	= IC;
+	Phi	= IPhi;
 	Psi	= 0.0;
 	d	= 0.0008;
         t2	= (0.25*h/(CsS));
-        t2	= 4.0e-6;
+        t2	= ITime;
 
         std::cout<<"CsS  = "<<CsS<<std::endl;
         std::cout<<"RhoS = "<<RhoS<<std::endl;
@@ -194,7 +206,7 @@ int main(int argc, char **argv) try
 			}
 			dom.Particles[a]->TIInitDist	= dx;
 			dom.Particles[a]->d		= d;
-	    		dom.Particles[a]->Shepard	= true;
+//	    		dom.Particles[a]->Shepard	= true;
 			dom.Particles[a]->VarPorosity	= true;
 			dom.Particles[a]->SeepageType	= 1;	
 			dom.Particles[a]->n0		= n;
@@ -214,7 +226,7 @@ int main(int argc, char **argv) try
 			{
 				dom.Particles[a]->ID		= 6;
 				dom.Particles[a]->IsFree	= false;
-				dom.Particles[a]->NoSlip	= true;
+				dom.Particles[a]->NoSlip	= false;
 				dom.Particles[a]->d		= d*1.0e20;
 			}
 	    		if (xb<-L/2.0 || xb>L/2.0)
@@ -252,7 +264,7 @@ int main(int argc, char **argv) try
 
    	DampF	= 0.02*CsW/h;
   	DampS	= 0.02*sqrt(E/(RhoS*h*h));
-    	DampTime= 0.0;
+    	DampTime= 0.2;
 
         t	= std::min(t1,t2);
         std::cout<<"t1 = "<<t1<<std::endl;
@@ -261,7 +273,7 @@ int main(int argc, char **argv) try
 
 	dom.OutputName[0]	= "ZWab";
 	dom.OutputName[1]	= "Porosity";
-	dom.OutputName[2]	= "S_lift";
+	dom.OutputName[2]	= "Permeability";
         dom.UserOutput		= & NewUserOutput;
 
    	dom.Solve(/*tf*/700.0,/*dt*/t,/*dtOut*/0.01,"test",100000);
