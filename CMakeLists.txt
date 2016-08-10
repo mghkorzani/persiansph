@@ -25,9 +25,11 @@ PROJECT                (New_Test)
 INCLUDE ($ENV{SPH}/Modules/FindPKG.cmake)
 
 SET(EXES
-	Overtopping
-	Hydraulic_Heave
-	Current-flow_elastoplastic
+	Drag
+	Poiseuille
+#	Overtopping
+#	Hydraulic_Heave
+#	Current-flow_elastoplastic
 )
 
 FOREACH(var ${EXES})

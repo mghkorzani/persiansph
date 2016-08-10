@@ -32,34 +32,35 @@ int main(int argc, char **argv) try
 	dom.Dimension		= 2;
 	dom.BC.Periodic[1]	= true;
 //	dom.BC.Periodic[0]	= true;
-	dom.VisEq			= 3;
+	dom.VisEq		= 3;
 	dom.KernelType		= 4;
-	dom.Nproc			= 24;
-	dom.Scheme			= 0;
+	dom.Nproc		= 24;
+	dom.Scheme		= 0;
 
 	double xb,yb,h,rho,mass,U,Cs,P0,Mu,dx,R,Rc,Re,T;
 	size_t no;
 
 	Mu		= 1.002e-3;
 	rho		= 998.21;
-	dx		= 0.002;
+	dx		= 0.003;
 	h		= dx*1.1;
 	Rc		= 0.05;
-	mass	= dx*dx*rho;
+	mass		= dx*dx*rho;
 	Re		= 100.0;
 	U		= Re*Mu/(rho*2.0*Rc);
 	Cs		= U*10.0;
-	P0		= Cs*Cs*rho*0.2;
-	T		= (0.15*h/(Cs+U));
+	P0		= Cs*Cs*rho*0.08;
+	T		= (0.25*h/(Cs+U));
+	dom.DtAcc	= 0.1;
 
 	dom.BC.InOutFlow	= 3;
-	dom.BC.allv			= U,0.0,0.0;
+	dom.BC.allv		= U,0.0,0.0;
 	dom.BC.inDensity	= rho;
-	dom.BC.inv			= U,0.0,0.0;
-	dom.BC.outv			= U,0.0,0.0;
-	dom.BC.outDensity	= rho;
+	dom.BC.inv		= U,0.0,0.0;
+//	dom.BC.outv		= U,0.0,0.0;
+//	dom.BC.outDensity	= rho;
 	dom.InitialDist 	= dx;
-	dom.BC.MassConservation = true;
+//	dom.BC.MassConservation = true;
 
 	std::cout<<"Re = "<<Re<<std::endl;
 	std::cout<<"V  = "<<U<<std::endl;
@@ -68,7 +69,7 @@ int main(int argc, char **argv) try
 	std::cout<<"Time Step = "<<T<<std::endl;
 	std::cout<<"Resolution = "<<(2.0*Rc/dx)<<std::endl;
 
-	dom.AddBoxLength(1 ,Vec3_t ( -10.0*Rc , -5.0*Rc , 0.0 ), 20.0*Rc , 10.0*Rc  ,  0 , dx/2.0 ,rho, h, 1 , 0 , false, false );
+	dom.AddBoxLength(1 ,Vec3_t ( -8.0*Rc , -8.0*Rc , 0.0 ), 16.0*Rc , 16.0*Rc  ,  0 , dx/2.0 ,rho, h, 1 , 0 , false, false );
 
 	for (size_t a=0; a<dom.Particles.Size(); a++)
 	{
@@ -98,6 +99,7 @@ int main(int argc, char **argv) try
 
 	for (size_t a=0; a<dom.Particles.Size(); a++)
 	{
+		dom.Particles[a]->Shepard	= true;
 		dom.Particles[a]->Cs		= Cs;
 		dom.Particles[a]->P0		= P0;
 		dom.Particles[a]->Mu		= Mu;

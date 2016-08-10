@@ -143,6 +143,7 @@ public:
     double					deltat;		///< Time Step
     double					deltatmin;	///< Minimum Time Step 
     double					deltatint;	///< Initial Time Step
+    double					DtAcc;		///< Coefficient for determining Time Step based on acceleration
 
     int 					Dimension;    	///< Dimension of the problem
 
@@ -258,6 +259,7 @@ inline Domain::Domain ()
     deltat	= 0.0;
     deltatint	= 0.0;
     deltatmin	= 0.0;
+    DtAcc = 0.0025;
 
     TRPR = 0.0;
     BLPF = 0.0;
@@ -1344,10 +1346,10 @@ inline void Domain::LastComputeAcceleration ()
 			if (Particles[i]->IsFree)
 			{
 				test = sqrt(Particles[i]->h/norm(Particles[i]->a));
-				if (deltatmin > (0.0025*test))
+				if (deltatmin > (DtAcc*test))
 				{
 					omp_set_lock(&dom_lock);
-						deltatmin = 0.0025*test;
+						deltatmin = DtAcc*test;
 					omp_unset_lock(&dom_lock);
 				}
 			}
@@ -1362,17 +1364,31 @@ inline void Domain::Move (double dt)
 	for (size_t i=0; i<Particles.Size(); i++)
 		if (Particles[i]->IsFree)
 		{
-			if (!Particles[i]->InOut)
-				Particles[i]->Move(dt,DomSize,TRPR,BLPF,Scheme,I);
-			else
-				Particles[i]->x(0) += dt*Particles[i]->v(0);
+			if (Particles[i]->InOut>0)
+			{
+				Particles[i]->a = 0.0;
+				if (Particles[i]->InOut == 1)
+				{
+					Particles[i]->dDensity = 0.0;
+					Particles[i]->ZWab = 0.0;
+				}
+				else
+				{
+					if (BC.outDensity>0.0) 
+					{
+						Particles[i]->dDensity = 0.0;
+						Particles[i]->ZWab = 0.0;
+					}
+				}
+			}				
+		Particles[i]->Move(dt,DomSize,TRPR,BLPF,Scheme,I);
 		}
 
 }
 
 inline void Domain::InFlowBCLeave()
 {
-	size_t a;
+	size_t a,b;
 	Array <int> DelPart,TempPart;
 	Array<std::pair<Vec3_t,size_t> > AddPart;
 
@@ -1381,7 +1397,7 @@ inline void Domain::InFlowBCLeave()
 		if ((Particles[i]->x(0) > TRPR(0)) || (Particles[i]->x(1) > TRPR(1)) || (Particles[i]->x(2) > TRPR(2)) ||
 				(Particles[i]->x(0) < BLPF(0)) || (Particles[i]->x(1) < BLPF(1)) || (Particles[i]->x(2) < BLPF(2)))
 		{
-			Particles[i]->InOut	= false;
+			Particles[i]->InOut	= 0;
 			omp_set_lock(&dom_lock);
 			DelPart.Push(i);
 			omp_unset_lock(&dom_lock);
@@ -1392,9 +1408,11 @@ inline void Domain::InFlowBCLeave()
 		for (size_t i=0 ; i<BC.InPart.Size() ; i++)
 			if(Particles[BC.InPart[i]]->x(0) > BC.InFlowLoc1)
 			{
-				Vec3_t temp1	= Particles[BC.InPart[i]]->x;
-				Particles[BC.InPart[i]]->InOut	= false;
-				temp1(0) -=  (BC.InFlowLoc3-BC.InFlowLoc2+InitialDist);
+				Vec3_t temp1	 = Particles[BC.InPart[i]]->x;
+				temp1(0)	-= (BC.InFlowLoc3-BC.InFlowLoc2+InitialDist);
+				Particles[BC.InPart[i]]->InOut		= 0;
+				Particles[BC.InPart[i]]->FirstStep	= false;
+				Particles[BC.InPart[i]]->ShepardCounter	= 0;
 				AddPart.Push(std::make_pair(temp1,BC.InPart[i]));
 				TempPart.Push(i);
 			}
@@ -1407,66 +1425,110 @@ inline void Domain::InFlowBCLeave()
 		for (size_t i=0 ; i<DelPart.Size() ; i++)
 		{
 			a = DelPart[i];
-			Particles[a]->PresEq	= Particles[AddPart[i].second]->PresEq;
-			Particles[a]->Alpha		= Particles[AddPart[i].second]->Alpha;
-			Particles[a]->Beta		= Particles[AddPart[i].second]->Beta;
-			Particles[a]->Mu		= Particles[AddPart[i].second]->Mu;
-			Particles[a]->MuRef		= Particles[AddPart[i].second]->MuRef;
-			Particles[a]->m			= Particles[AddPart[i].second]->m;
-			Particles[a]->T0		= Particles[AddPart[i].second]->T0;
-			Particles[a]->RefDensity= Particles[AddPart[i].second]->RefDensity;
-			Particles[a]->Material	= 1;
-			Particles[a]->Cs		= Particles[AddPart[i].second]->Cs;
+			b = AddPart[i].second;
 			Particles[a]->x 		= AddPart[i].first;
-			Particles[a]->ID 		= Particles[AddPart[i].second]->ID;
-			Particles[a]->Mass 		= Particles[AddPart[i].second]->Mass;
-			Particles[a]->h			= Particles[AddPart[i].second]->h;
-			Particles[a]->InOut		= true;
+			Particles[a]->Material		= 1;
+			Particles[a]->InOut		= 1;
+			Particles[a]->FirstStep		= false;
+
+			Particles[a]->P0		= Particles[b]->P0;
+			Particles[a]->PresEq		= Particles[b]->PresEq;
+			Particles[a]->Cs		= Particles[b]->Cs;
+
+			Particles[a]->Alpha		= Particles[b]->Alpha;
+			Particles[a]->Beta		= Particles[b]->Beta;
+			Particles[a]->Mu		= Particles[b]->Mu;
+			Particles[a]->MuRef		= Particles[b]->MuRef;
+			Particles[a]->T0		= 0.0; // Inflow is not capable of injecting non-Newtonian fluid
+
+			Particles[a]->Mass 		= Particles[b]->Mass;
+			Particles[a]->h			= Particles[b]->h;
+
+			Particles[a]->ID 		= Particles[b]->ID;
+
+			Particles[a]->TI		= 0.0; // Inflow is not capable of condidering the tensile instability
+
+			Particles[a]->RefDensity	= Particles[b]->RefDensity; // The density for inflow must always be defined 
+
+			Particles[a]->ct		= Particles[b]->ct;
+
+			Particles[a]->Shepard		= Particles[b]->Shepard;
+			Particles[a]->ShepardStep	= Particles[b]->ShepardStep;
+			Particles[a]->ShepardCounter	= Particles[b]->ShepardCounter;
 			BC.InPart.Push(a);
 		}
-		for (size_t i=DelPart.Size() ; i<AddPart.Size() ; i++)
-		{
-			Particles.Push(new Particle(Particles[AddPart[i].second]->ID,AddPart[i].first,Particles[AddPart[i].second]->v,Particles[AddPart[i].second]->Mass,Particles[AddPart[i].second]->RefDensity,Particles[AddPart[i].second]->h,false));
-			a = Particles.Size()-1;
-			Particles[a]->PresEq	= Particles[AddPart[i].second]->PresEq;
-			Particles[a]->Alpha		= Particles[AddPart[i].second]->Alpha;
-			Particles[a]->Beta		= Particles[AddPart[i].second]->Beta;
-			Particles[a]->Mu		= Particles[AddPart[i].second]->Mu;
-			Particles[a]->MuRef		= Particles[AddPart[i].second]->MuRef;
-			Particles[a]->m			= Particles[AddPart[i].second]->m;
-			Particles[a]->T0		= Particles[AddPart[i].second]->T0;
-			Particles[a]->RefDensity= Particles[AddPart[i].second]->RefDensity;
-			Particles[a]->Material	= 1;
-			Particles[a]->Cs		= Particles[AddPart[i].second]->Cs;
-			Particles[a]->InOut		= true;
-			BC.InPart.Push(a);
-		}
+
+		if (AddPart.Size() != DelPart.Size())
+			for (size_t i=DelPart.Size() ; i<AddPart.Size() ; i++)
+			{
+				b = AddPart[i].second;
+
+				Particles.Push(new Particle(Particles[b]->ID,AddPart[i].first,Particles[b]->v,Particles[b]->Mass,Particles[b]->RefDensity,Particles[b]->h,false));
+
+				a = Particles.Size()-1;
+				Particles[a]->Material		= 1;
+				Particles[a]->InOut		= 1;
+				Particles[a]->FirstStep		= false;
+
+				Particles[a]->P0		= Particles[b]->P0;
+				Particles[a]->PresEq		= Particles[b]->PresEq;
+				Particles[a]->Cs		= Particles[b]->Cs;
+
+				Particles[a]->Alpha		= Particles[b]->Alpha;
+				Particles[a]->Beta		= Particles[b]->Beta;
+				Particles[a]->Mu		= Particles[b]->Mu;
+				Particles[a]->MuRef		= Particles[b]->MuRef;
+				Particles[a]->T0		= 0.0; // Inflow is not capable of injecting non-Newtonian fluid
+
+				Particles[a]->TI		= 0.0; // Inflow is not capable of condidering the tensile instability
+
+				Particles[a]->ct		= Particles[b]->ct;
+
+				Particles[a]->Shepard		= Particles[b]->Shepard;
+				Particles[a]->ShepardStep	= Particles[b]->ShepardStep;
+				Particles[a]->ShepardCounter	= Particles[b]->ShepardCounter;
+				BC.InPart.Push(a);
+			}
+
 		DelPart.Clear();
 		AddPart.Clear();
 	}
-
-	// this condition satisfies BC.InOutFlow==2 and ParticleLeaveDomain automatically.
-	if (AddPart.Size() < DelPart.Size())
+	else
 	{
 		for (size_t i=0 ; i<AddPart.Size() ; i++)
 		{
 			a = DelPart[i];
-			Particles[a]->PresEq	= Particles[AddPart[i].second]->PresEq;
-			Particles[a]->Alpha		= Particles[AddPart[i].second]->Alpha;
-			Particles[a]->Beta		= Particles[AddPart[i].second]->Beta;
-			Particles[a]->Mu		= Particles[AddPart[i].second]->Mu;
-			Particles[a]->MuRef		= Particles[AddPart[i].second]->MuRef;
-			Particles[a]->m			= Particles[AddPart[i].second]->m;
-			Particles[a]->T0		= Particles[AddPart[i].second]->T0;
-			Particles[a]->RefDensity= Particles[AddPart[i].second]->RefDensity;
-			Particles[a]->Material	= 1;
-			Particles[a]->Cs		= Particles[AddPart[i].second]->Cs;
+			b = AddPart[i].second;
 			Particles[a]->x 		= AddPart[i].first;
-			Particles[a]->ID 		= Particles[AddPart[i].second]->ID;
-			Particles[a]->Mass 		= Particles[AddPart[i].second]->Mass;
-			Particles[a]->h			= Particles[AddPart[i].second]->h;
-			Particles[a]->InOut		= true;
-//			BC.InPart.Push(a);
+			Particles[a]->Material		= 1;
+			Particles[a]->InOut		= 1;
+			Particles[a]->FirstStep		= false;
+
+			Particles[a]->P0		= Particles[b]->P0;
+			Particles[a]->PresEq		= Particles[b]->PresEq;
+			Particles[a]->Cs		= Particles[b]->Cs;
+
+			Particles[a]->Alpha		= Particles[b]->Alpha;
+			Particles[a]->Beta		= Particles[b]->Beta;
+			Particles[a]->Mu		= Particles[b]->Mu;
+			Particles[a]->MuRef		= Particles[b]->MuRef;
+			Particles[a]->T0		= 0.0; // Inflow is not capable of injecting non-Newtonian fluid
+
+			Particles[a]->Mass 		= Particles[b]->Mass;
+			Particles[a]->h			= Particles[b]->h;
+
+			Particles[a]->ID 		= Particles[b]->ID;
+
+			Particles[a]->TI		= 0.0; // Inflow is not capable of condidering the tensile instability
+
+			Particles[a]->RefDensity	= Particles[b]->RefDensity; // The density for inflow must always be defined 
+
+			Particles[a]->ct		= Particles[b]->ct;
+
+			Particles[a]->Shepard		= Particles[b]->Shepard;
+			Particles[a]->ShepardStep	= Particles[b]->ShepardStep;
+			Particles[a]->ShepardCounter	= Particles[b]->ShepardCounter;
+			BC.InPart.Push(a);
 		}
 		for (size_t i=AddPart.Size() ; i<DelPart.Size() ; i++)
 		{
@@ -1487,6 +1549,12 @@ inline void Domain::InFlowBCFresh()
 	{
 		if (BC.InOutFlow==1 || BC.InOutFlow==3)
 		{
+			if (!(norm(BC.inv)>0.0) || !(BC.inDensity>0.0))
+			{
+				std::cout<< "BC.inv or BC.inDensity are not defined, please define them and run the code again."<<std::endl;
+				abort();
+			}
+
 			BC.InPart.Clear();
 			BC.InFlowLoc1  = BLPF(0) + BC.cellfac*hmax;
 			temp1 = (int) (floor((BC.InFlowLoc1 - BLPF(0)) / CellSize(0)));
@@ -1503,7 +1571,7 @@ inline void Domain::InFlowBCFresh()
 						if (Particles[temp]->IsFree && (Particles[temp]->x(0) <= BC.InFlowLoc1) )
 						{
 							BC.InPart.Push(temp);
-							Particles[temp]->InOut = true;
+							Particles[temp]->InOut = 1;
 						}
 						temp = Particles[temp]->LL;
 					}
@@ -1539,7 +1607,7 @@ inline void Domain::InFlowBCFresh()
 				temp = HOC[q1][q2][q3];
 				while (temp != -1)
 				{
-					if (Particles[temp]->IsFree && (Particles[temp]->x(0) <= BC.InFlowLoc1) && Particles[temp]->InOut)
+					if (Particles[temp]->IsFree && (Particles[temp]->x(0) <= BC.InFlowLoc1) && Particles[temp]->InOut==1)
 						BC.InPart.Push(temp);
 					temp = Particles[temp]->LL;
 				}
@@ -1566,7 +1634,7 @@ inline void Domain::InFlowBCFresh()
 					if (Particles[temp]->IsFree && (Particles[temp]->x(0) >= BC.OutFlowLoc) )
 					{
 						BC.OutPart.Push(temp);
-						Particles[temp]->InOut = true;
+						Particles[temp]->InOut = 2;
 					}
 					temp = Particles[temp]->LL;
 				}
@@ -1576,54 +1644,45 @@ inline void Domain::InFlowBCFresh()
 
 	Vec3_t vel;
 	double den;
-	double fluxin=0.0, fluxout=0.0;
 	if (BC.InPart.Size()>0)
 		#pragma omp parallel for schedule(static) private(vel,den) num_threads(Nproc)
 		for (size_t i=0 ; i<BC.InPart.Size() ; i++)
 		{
-			InCon(Particles[BC.InPart[i]]->x,vel,den,BC);
-			Particles[BC.InPart[i]]->Material	= 1;
-			if (BC.MassConservation) fluxin += norm(Particles[BC.InPart[i]]->v);
-			if (norm(BC.inv)>0.0)
-			{
-				Particles[BC.InPart[i]]->v  = vel;
-				Particles[BC.InPart[i]]->vb = vel;
-			}
-			if (BC.inDensity>0.0)
-			{
-				Particles[BC.InPart[i]]->Density  = den;
-				Particles[BC.InPart[i]]->Densityb = den;
-//				Particles[BC.InPart[i]]->RefDensity = BC.inDensity;
-	    			Particles[BC.InPart[i]]->Pressure = EOS(Particles[BC.InPart[i]]->PresEq, Particles[BC.InPart[i]]->Cs, Particles[BC.InPart[i]]->P0,Particles[BC.InPart[i]]->Density, Particles[BC.InPart[i]]->RefDensity);
-			}
+			size_t a = BC.InPart[i];
+			InCon(Particles[a]->x,vel,den,BC);
+			Particles[a]->v  = vel;
+			Particles[a]->vb = vel;
+			Particles[a]->va = vel;
+			Particles[a]->Density  = den;
+			Particles[a]->Densityb = den;
+			Particles[a]->Densitya = den;
+    			Particles[a]->Pressure = EOS(Particles[a]->PresEq, Particles[a]->Cs, Particles[a]->P0,Particles[a]->Density, Particles[a]->RefDensity);
 		}
 
 	double temp11;
 	if (BC.MassConservation) 
-	{
-                for (size_t i=0 ; i<BC.OutPart.Size() ; i++)
-			fluxout += norm(Particles[BC.OutPart[i]]->v);	
-		temp11 = std::min(fluxin/fluxout,1.0);
-	} 
-	else temp11 = 1.0;
-//	std::cout<<temp11<<std::endl;
+		temp11 = BC.InPart.Size()*1.0/(BC.OutPart.Size()*1.0);
+	else 
+		temp11 = 1.0;
 
 	if (BC.OutPart.Size()>0)
 		#pragma omp parallel for schedule(static) private(vel,den) num_threads(Nproc)
 		for (size_t i=0 ; i<BC.OutPart.Size() ; i++)
-		{
-			OutCon(Particles[BC.OutPart[i]]->x,vel,den,BC);
+		{	
+			size_t a = BC.OutPart[i];
+			OutCon(Particles[a]->x,vel,den,BC);
 			if (norm(BC.outv)>0.0)
 			{
-				Particles[BC.OutPart[i]]->v  = temp11*vel;
-				Particles[BC.OutPart[i]]->vb = temp11*vel;
+				Particles[a]->v  = temp11*vel;
+				Particles[a]->vb = temp11*vel;
+				Particles[a]->va = temp11*vel;
 			}
 			if (BC.outDensity>0.0)
 			{
-				Particles[BC.OutPart[i]]->Density  = den;
-				Particles[BC.OutPart[i]]->Densityb = den;
-//				Particles[BC.OutPart[i]]->RefDensity = BC.outDensity;
-    				Particles[BC.OutPart[i]]->Pressure = EOS(Particles[BC.OutPart[i]]->PresEq, Particles[BC.OutPart[i]]->Cs, Particles[BC.OutPart[i]]->P0,Particles[BC.OutPart[i]]->Density, Particles[BC.OutPart[i]]->RefDensity);
+				Particles[a]->Density  = den;
+				Particles[a]->Densityb = den;
+ 				Particles[a]->Densitya = den;
+    				Particles[a]->Pressure = EOS(Particles[a]->PresEq, Particles[a]->Cs, Particles[a]->P0,Particles[a]->Density, Particles[a]->RefDensity);
 			}
 		}
 }
@@ -1636,20 +1695,18 @@ inline void Domain::WholeVelocity()
     	Vec3_t vel = 0.0;
     	double den = 0.0;
 
-		#pragma omp parallel for schedule (static) private(vel,den) num_threads(Nproc)
+	#pragma omp parallel for schedule (static) private(vel,den) num_threads(Nproc)
     	for (size_t i=0 ; i<Particles.Size() ; i++)
     	{
-			AllCon(Particles[i]->x,vel,den,BC);
+		AllCon(Particles[i]->x,vel,den,BC);
     		if (Particles[i]->IsFree && norm(BC.allv)>0.0)
     		{
-				Particles[i]->v  = vel;
-    		}
+			Particles[i]->v		= vel;
+ 		}
     		if (Particles[i]->IsFree && BC.allDensity>0.0)
     		{
-				Particles[i]->Density  = den;
-				Particles[i]->Densityb = den;
-//				Particles[i]->RefDensity = BC.allDensity;
-    			Particles[i]->Pressure = EOS(Particles[i]->PresEq, Particles[i]->Cs, Particles[i]->P0,Particles[i]->Density, Particles[i]->RefDensity);
+			Particles[i]->Density	= den;
+			Particles[i]->Pressure	= EOS(Particles[i]->PresEq, Particles[i]->Cs, Particles[i]->P0,Particles[i]->Density, Particles[i]->RefDensity);
     		}
     	}
     }

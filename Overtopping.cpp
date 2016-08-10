@@ -31,7 +31,7 @@ double DampS,DampTime,Cs,u;
 void UserInFlowCon(Vec3_t & position, Vec3_t & Vel, double & Den, SPH::Boundary & bdry)
 {
 	Vel = u,0.0,0.0;
-	Den = 998.21*pow((1+7.0*9.81*(0.6-position(1))/(Cs*Cs)),(1.0/7.0));
+	Den = 998.21*pow((1+7.0*9.81*(0.65-position(1))/(Cs*Cs)),(1.0/7.0));
 }
 
 void UserDamping(SPH::Domain & domi)
@@ -117,7 +117,7 @@ int main(int argc, char **argv) try
 
 	double xb,yb,h,dx,T;
 
-	dx		= 0.01;
+	dx		= 0.0125;
 	h		= dx*1.3;
 	dom.InitialDist	= dx;
 
@@ -147,10 +147,7 @@ int main(int argc, char **argv) try
 		yb=dom.Particles[a]->x(1);
 		if (yb<0.0)
 		{
-			if (xb<1.5)
-				dom.Particles[a]->FPMassC  = 1.1;
-			else
-				dom.Particles[a]->FPMassC  = 1.2;
+			dom.Particles[a]->FPMassC  = 1.2;
 			dom.Particles[a]->ID	= 2;
 			dom.Particles[a]->NoSlip= true;
 			dom.Particles[a]->IsFree= false;

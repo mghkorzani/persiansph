@@ -98,12 +98,13 @@ int main(int argc, char **argv) try
     	double h,t,t1,t2,Muw;
     	dx	= 0.002;
     	h	= dx*1.2;
+	dom.InitialDist	= dx;
 
 	L	= 0.5;
 	H	= 0.30;
 	D	= 0.03;
 	Em	= 0.04;
-	Hl	= 0.14;
+	Hl	= 0.22;
 
 	RhoF	= 1000.0;
 	CsW	= 10.0*sqrt(2.0*g*H);
@@ -122,8 +123,8 @@ int main(int argc, char **argv) try
     		yb=dom.Particles[a]->x(1);
 
     		dom.Particles[a]->Cs		= CsW;
-    		dom.Particles[a]->Alpha		= 0.1;
-    		dom.Particles[a]->Beta		= 0.1;
+    		dom.Particles[a]->Alpha		= 0.05;
+    		dom.Particles[a]->Beta		= 0.05;
     		dom.Particles[a]->PresEq	= 1;
     		dom.Particles[a]->Mu		= Muw;
     		dom.Particles[a]->MuRef		= Muw;
@@ -169,10 +170,10 @@ int main(int argc, char **argv) try
    	}
 	dom.DelParticles(10);
 
-	double Nu,E,K,G,CsS,RhoS,c,Phi,Psi,n,d;
+	double Nu,E,K,G,CsS,RhoS,c,Phi,Psi,n,d,Phi2;
 
 	Nu	= 0.3;
-	E	= 10.0e6;
+	E	= 25.0e6;
 	K	= E/(3.0*(1.0-2.0*Nu));
 	G	= E/(2.0*(1.0+Nu));
 	n	= 0.35;
@@ -180,14 +181,17 @@ int main(int argc, char **argv) try
 	CsS	= sqrt(K/(RhoS-RhoF));
 	c	= IC;
 	Phi	= IPhi;
+	Phi2	= 35.0;
 	Psi	= 0.0;
 	d	= 0.0008;
         t2	= (0.25*h/(CsS));
+        std::cout<<"t2 = "<<t2<<std::endl;
         t2	= ITime;
 
         std::cout<<"CsS  = "<<CsS<<std::endl;
         std::cout<<"RhoS = "<<RhoS<<std::endl;
         std::cout<<"Phi  = "<<Phi<<std::endl;
+        std::cout<<"Phi2 = "<<Phi2<<std::endl;
         std::cout<<"C    = "<<c<<std::endl;
 
 	dom.AddBoxLength(5 ,Vec3_t ( -L/2.0-4.0*dx , -4.0*dx , 0.0 ), L + 8.0*dx + dx/10.0 , H + 8.0*dx + dx/10.0 ,  0 , dx/2.0 ,RhoS, h, 1 , 0 , false, false );
@@ -197,8 +201,8 @@ int main(int argc, char **argv) try
 		if (dom.Particles[a]->ID==5)
 		{
 			dom.Particles[a]->Material	= 3;
-			dom.Particles[a]->Alpha		= 0.2;
-			dom.Particles[a]->Beta		= 0.2;
+			dom.Particles[a]->Alpha		= 0.1;
+			dom.Particles[a]->Beta		= 0.1;
 			if (c>0.0)
 			{
 				dom.Particles[a]->TI	= 0.5;
@@ -254,6 +258,7 @@ int main(int argc, char **argv) try
 	    		if (xb>0.0 && dom.Particles[a]->ID==5 && yb>(D+Em) )
 	    		{
 	    			dom.Particles[a]->ID		= 7;
+				dom.Particles[a]->phi		= Phi2/180.0*M_PI;
 				dom.Particles[a]->d		= d*10.0;
 				dom.Particles[a]->SeepageType	= 3;	
 	    		}

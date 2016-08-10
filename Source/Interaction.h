@@ -159,14 +159,14 @@ inline void Domain::CalcForce11(Particle * P1, Particle * P2)
 		// Calculating the forces for the particle 1 & 2				
 		Vec3_t temp	= 0.0;
 		double temp1	= 0.0;
-//		temp		= ( P1->Pressure/(di*di) + P2->Pressure/(dj*dj) + PIij + TIij ) * GK*xij + VI;
-		temp		= ( (P1->Pressure + P2->Pressure)/(di*dj)       + PIij + TIij ) * GK*xij + VI;
+//		temp		= -1.0*( P1->Pressure/(di*di) + P2->Pressure/(dj*dj) + PIij + TIij ) * GK*xij + VI;
+		temp		= -1.0*( (P1->Pressure + P2->Pressure)/(di*dj)       + PIij + TIij ) * GK*xij + VI;
 		if (Dimension == 2) temp(2) = 0.0;
 		temp1		= dot( vij , GK*xij );
 
 		omp_set_lock(&P1->my_lock);
-			P1->a		+= -mj * temp;
-			P1->dDensity	+=  mj * (di/dj) * temp1;
+			P1->a		+= mj * temp;
+			P1->dDensity	+= mj * (di/dj) * temp1;
 
 			if (P1->IsFree) 
 			{
@@ -184,8 +184,8 @@ inline void Domain::CalcForce11(Particle * P1, Particle * P2)
 
 
 		omp_set_lock(&P2->my_lock);
-			P2->a		-= -mi * temp;
-			P2->dDensity	+=  mi * (dj/di) * temp1;
+			P2->a		-= mi * temp;
+			P2->dDensity	+= mi * (dj/di) * temp1;
 
 			if (P2->IsFree)
 			{

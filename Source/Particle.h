@@ -51,7 +51,7 @@ public:
     double	SumDen;		///< Summation of mb*Wab for neighbour particles of the particle a (for Shepard filter)
 
     bool   	IsFree;		///< Check the particle if it is free to move or not
-    bool   	InOut;		///< Check the particle if it is in-flow or out-flow or not
+    size_t   	InOut;		///< Check the particle if it is in-flow or out-flow or not
     bool   	IsSat;		///< Check the particle if it is Saturated or not
     bool   	SatCheck;	///< Check the particle Saturation at each time step
     bool   	NoSlip;		///< No-Slip BC
@@ -210,7 +210,7 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
     Sigmay = 0.0;
     NoSlip = false;
     Shepard = false;
-    InOut = false;
+    InOut = 0;
     FirstStep = true;
     V = Mass/RefDensity;
     RhoF = 0.0;
