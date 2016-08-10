@@ -82,6 +82,7 @@ public:
     Mat3_t	StrainRate;	///< Global shear Strain rate tensor n
     Mat3_t	RotationRate;	///< Global rotation tensor n
     double	ShearRate;	///< Global shear rate for fluids
+    double	SBar;		///< shear component for LES
 
     Mat3_t	ShearStress;	///< Deviatoric shear stress tensor (deviatoric part of the Cauchy stress tensor) n+1
     Mat3_t	ShearStressa;	///< Deviatoric shear stress tensor (deviatoric part of the Cauchy stress tensor) n+1/2 (Leapfrog)
@@ -107,6 +108,8 @@ public:
     double 	T0;		///< Yield stress for Bingham fluids
     double 	m;		///< Normalization value for Bingham fluids
     size_t	VisM;		///< Non-Newtonian viscosity method
+    bool	LES;		///< Large eddy simulation using sub-particle scale
+    double	CSmag;		///< Coefficient of Smagorinsky-Lilly model
 	
     double 	G;		///< Shear modulus
     double 	K;		///< Bulk modulus
@@ -222,6 +225,10 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
     VarPorosity = false;
     SeepageType = 0;
     S = 0;
+	LES = false;
+	SBar = 0.0;
+	CSmag = 0.17;
+
 
 
     set_to_zero(Strainb);
@@ -267,11 +274,19 @@ inline void Particle::Move(double dt, Vec3_t Domainsize, Vec3_t domainmax, Vec3_
 
 inline void Particle::Mat1(double dt)
 {
-	Pressure = EOS(PresEq, Cs, P0,Density, RefDensity);
-
-	ShearRate = sqrt(0.5*(StrainRate(0,0)*StrainRate(0,0) + 2.0*StrainRate(0,1)*StrainRate(1,0) +
+	Pressure 	= EOS(PresEq, Cs, P0,Density, RefDensity);
+	double temp	= (StrainRate(0,0)*StrainRate(0,0) + 2.0*StrainRate(0,1)*StrainRate(1,0) +
 			2.0*StrainRate(0,2)*StrainRate(2,0) + StrainRate(1,1)*StrainRate(1,1) +
-			2.0*StrainRate(1,2)*StrainRate(2,1) + StrainRate(2,2)*StrainRate(2,2)));
+			2.0*StrainRate(1,2)*StrainRate(2,1) + StrainRate(2,2)*StrainRate(2,2));
+
+	ShearRate	= sqrt(0.5*temp);
+	SBar		= sqrt(2.0*temp);
+	
+	// LES model
+	if (LES)
+	{
+		Mu	= MuRef + RefDensity*pow((CSmag*h),2.0)*SBar;
+	}
 
 	// Bingham viscosity calculation
 	if (T0>0.0)

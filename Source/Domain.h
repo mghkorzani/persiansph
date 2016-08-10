@@ -1455,6 +1455,9 @@ inline void Domain::InFlowBCLeave()
 			Particles[a]->Shepard		= Particles[b]->Shepard;
 			Particles[a]->ShepardStep	= Particles[b]->ShepardStep;
 			Particles[a]->ShepardCounter	= Particles[b]->ShepardCounter;
+
+			Particles[a]->LES		= Particles[b]->LES;
+			Particles[a]->CSmag		= Particles[b]->CSmag;
 			BC.InPart.Push(a);
 		}
 
@@ -1487,6 +1490,9 @@ inline void Domain::InFlowBCLeave()
 				Particles[a]->Shepard		= Particles[b]->Shepard;
 				Particles[a]->ShepardStep	= Particles[b]->ShepardStep;
 				Particles[a]->ShepardCounter	= Particles[b]->ShepardCounter;
+
+				Particles[a]->LES		= Particles[b]->LES;
+				Particles[a]->CSmag		= Particles[b]->CSmag;
 				BC.InPart.Push(a);
 			}
 
@@ -1528,6 +1534,9 @@ inline void Domain::InFlowBCLeave()
 			Particles[a]->Shepard		= Particles[b]->Shepard;
 			Particles[a]->ShepardStep	= Particles[b]->ShepardStep;
 			Particles[a]->ShepardCounter	= Particles[b]->ShepardCounter;
+
+			Particles[a]->LES		= Particles[b]->LES;
+			Particles[a]->CSmag		= Particles[b]->CSmag;
 			BC.InPart.Push(a);
 		}
 		for (size_t i=AddPart.Size() ; i<DelPart.Size() ; i++)
@@ -1671,7 +1680,7 @@ inline void Domain::InFlowBCFresh()
 		{	
 			size_t a = BC.OutPart[i];
 			OutCon(Particles[a]->x,vel,den,BC);
-			if (norm(BC.outv)>0.0)
+			if (norm(BC.outv)>0.0 || temp11 != 1.0)
 			{
 				Particles[a]->v  = temp11*vel;
 				Particles[a]->vb = temp11*vel;

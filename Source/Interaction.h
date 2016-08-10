@@ -119,7 +119,7 @@ inline void Domain::CalcForce11(Particle * P1, Particle * P2)
 				if (!P1->IsFree) Mu = P2->Mu;
 				if (!P2->IsFree) Mu = P1->Mu;
 			}
-			if (P1->T0>0.0 || P2->T0>0.0)
+			if (P1->T0>0.0 || P2->T0>0.0 || (P1->LES*P2->LES))
 			{		
 				StrainRate =	2.0*vab(0)*xij(0)            , vab(0)*xij(1)+vab(1)*xij(0) , vab(0)*xij(2)+vab(2)*xij(0) ,
 						vab(0)*xij(1)+vab(1)*xij(0)  , 2.0*vab(1)*xij(1)           , vab(1)*xij(2)+vab(2)*xij(1) ,
@@ -170,7 +170,7 @@ inline void Domain::CalcForce11(Particle * P1, Particle * P2)
 
 			if (P1->IsFree) 
 			{
-				if (P1->T0>0.0 || P2->T0>0.0)	P1->StrainRate	 = P1->StrainRate + mj/dj*StrainRate; 
+				if (P1->T0>0.0 || P1->LES)	P1->StrainRate	 = P1->StrainRate + mj/dj*StrainRate; 
 				if (SWIType == 1)		P1->S		 = P1->S + mj/dj*vab(0)*xij(1)*-GK;  
 								P1->ZWab	+= mj/dj* K;
 			}
@@ -189,7 +189,7 @@ inline void Domain::CalcForce11(Particle * P1, Particle * P2)
 
 			if (P2->IsFree)
 			{
-				if (P1->T0>0.0 || P2->T0>0.0)	P2->StrainRate	 = P2->StrainRate + mi/di*StrainRate; 
+				if (P2->T0>0.0 || P2->LES)	P2->StrainRate	 = P2->StrainRate + mi/di*StrainRate; 
 				if (SWIType ==1)		P2->S		 = P2->S + mi/di*vab(0)*xij(1)*-GK;
 								P2->ZWab	+= mi/di* K;
 			}
