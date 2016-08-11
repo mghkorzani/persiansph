@@ -418,7 +418,7 @@ inline void Domain::CalcForce13(Particle * P1, Particle * P2)
 				if (P1->Material == 3 )
 				{
 					v = P2->v-P1->v;
-					Seepage(P1->SeepageType, P1->k, P1->k2, P2->Mu, P2->RefDensity, SF1, SF2);
+					Seepage(P1->SeepageType, P1->k, P1->k2, P2->MuRef, P2->RefDensity, SF1, SF2);
 					SFt = (SF1*v + SF2*norm(v)*v) *K;
 					if (Dimension == 2) SFt(2) = 0.0;
 
@@ -433,7 +433,7 @@ inline void Domain::CalcForce13(Particle * P1, Particle * P2)
 				else
 				{
 					v = P1->v-P2->v;
-					Seepage(P2->SeepageType, P2->k, P2->k2, P1->Mu, P1->RefDensity, SF1, SF2);
+					Seepage(P2->SeepageType, P2->k, P2->k2, P1->MuRef, P1->RefDensity, SF1, SF2);
 					SFt = (SF1*v + SF2*norm(v)*v) *K;
 					if (Dimension == 2) SFt(2) = 0.0;
 
@@ -452,13 +452,13 @@ inline void Domain::CalcForce13(Particle * P1, Particle * P2)
 					v = P2->v-P1->v;
 					if (P1->ZWab<0.25)
 					{
-						double Cd = 24.0*(P2->Mu/P2->RefDensity)/(P1->d*norm(v)+0.01*h*h) + 2.0;
+						double Cd = 24.0*(P2->MuRef/P2->RefDensity)/(P1->d*norm(v)+0.01*h*h) + 2.0;
 						SFt = (3.0/(4.0*P1->d)*P2->RefDensity*(1.0-P1->n0)*Cd*norm(v)*v) *K;
 						SFt(1) += (P2->RefDensity*(1.0-P1->n0)*norm(v)*fabs(P2->S-P1->S)) *K;
 					}
 					else
 					{
-						Seepage(P1->SeepageType, P1->k, P1->k2, P2->Mu, P2->RefDensity, SF1, SF2);
+						Seepage(P1->SeepageType, P1->k, P1->k2, P2->MuRef, P2->RefDensity, SF1, SF2);
 						SFt = (SF1*v + SF2*norm(v)*v) *K;
 					}			
 					if (Dimension == 2) SFt(2) = 0.0;
@@ -476,13 +476,13 @@ inline void Domain::CalcForce13(Particle * P1, Particle * P2)
 					v = P1->v-P2->v;
 					if (P2->ZWab<0.25)
 					{
-						double Cd = 24.0*(P1->Mu/P1->RefDensity)/(P2->d*norm(v)+0.01*h*h) + 2.0;
+						double Cd = 24.0*(P1->MuRef/P1->RefDensity)/(P2->d*norm(v)+0.01*h*h) + 2.0;
 						SFt = (3.0/(4.0*P2->d)*P1->RefDensity*(1.0-P2->n0)*Cd*norm(v)*v) *K;
 						SFt(1) += (P1->RefDensity*(1.0-P2->n0)*norm(v)*fabs(P1->S-P2->S)) *K;;
 					}
 					else
 					{
-						Seepage(P2->SeepageType, P2->k, P2->k2, P1->Mu, P1->RefDensity, SF1, SF2);
+						Seepage(P2->SeepageType, P2->k, P2->k2, P1->MuRef, P1->RefDensity, SF1, SF2);
 						SFt = (SF1*v + SF2*norm(v)*v) *K;
 					}			
 					if (Dimension == 2) SFt(2) = 0.0;
@@ -501,7 +501,7 @@ inline void Domain::CalcForce13(Particle * P1, Particle * P2)
 				{
 					double GK	= GradKernel(Dimension, KernelType, rij, h)/(P1->Density*P2->Density);
 					v = P2->v-P1->v;
-					Seepage(P1->SeepageType, P1->k, P1->k2, P2->Mu, P2->RefDensity, SF1, SF2);
+					Seepage(P1->SeepageType, P1->k, P1->k2, P2->MuRef, P2->RefDensity, SF1, SF2);
 					SFt = (SF1*v + SF2*norm(v)*v) *K;
 					if (Dimension == 2) SFt(2) = 0.0;
 
@@ -517,7 +517,7 @@ inline void Domain::CalcForce13(Particle * P1, Particle * P2)
 				{
 					double GK	= GradKernel(Dimension, KernelType, rij, h)/(P1->Density*P2->Density);
 					v = P1->v-P2->v;
-					Seepage(P2->SeepageType, P2->k, P2->k2, P1->Mu, P1->RefDensity, SF1, SF2);
+					Seepage(P2->SeepageType, P2->k, P2->k2, P1->MuRef, P1->RefDensity, SF1, SF2);
 					SFt = (SF1*v + SF2*norm(v)*v) *K;
 					if (Dimension == 2) SFt(2) = 0.0;
 

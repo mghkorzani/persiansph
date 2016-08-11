@@ -185,7 +185,7 @@ int main(int argc, char **argv) try
 	de		= 0.0255;
 	n		= 0.4052;
 	c		= IC;
-	E		= 50.0e6;
+	E		= 25.0e6;
 	Nu		= 0.3;
 	K		= E/(3.0*(1.0-2.0*Nu));
 	G		= E/(2.0*(1.0+Nu));
@@ -209,8 +209,8 @@ int main(int argc, char **argv) try
 		if (dom.Particles[a]->ID==3)
 		{
 			dom.Particles[a]->Material	= 3;
-			dom.Particles[a]->Alpha		= 0.1;
-			dom.Particles[a]->Beta		= 0.1;
+			dom.Particles[a]->Alpha		= 0.2;
+			dom.Particles[a]->Beta		= 0.2;
 			dom.Particles[a]->TI		= 0.5;
 			dom.Particles[a]->TIn		= 2.55;
 			dom.Particles[a]->TIInitDist	= dx;

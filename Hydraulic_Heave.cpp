@@ -96,7 +96,7 @@ int main(int argc, char **argv) try
 
 
     	double h,t,t1,t2,Muw;
-    	dx	= 0.002;
+    	dx	= 0.0025;
     	h	= dx*1.2;
 	dom.InitialDist	= dx;
 
@@ -104,7 +104,7 @@ int main(int argc, char **argv) try
 	H	= 0.30;
 	D	= 0.03;
 	Em	= 0.04;
-	Hl	= 0.22;
+	Hl	= 0.14;
 
 	RhoF	= 1000.0;
 	CsW	= 10.0*sqrt(2.0*g*H);
@@ -201,8 +201,8 @@ int main(int argc, char **argv) try
 		if (dom.Particles[a]->ID==5)
 		{
 			dom.Particles[a]->Material	= 3;
-			dom.Particles[a]->Alpha		= 0.1;
-			dom.Particles[a]->Beta		= 0.1;
+			dom.Particles[a]->Alpha		= 0.2;
+			dom.Particles[a]->Beta		= 0.2;
 			if (c>0.0)
 			{
 				dom.Particles[a]->TI	= 0.5;

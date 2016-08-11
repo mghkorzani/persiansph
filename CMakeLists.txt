@@ -25,10 +25,10 @@ PROJECT                (New_Test)
 INCLUDE ($ENV{SPH}/Modules/FindPKG.cmake)
 
 SET(EXES
-	Drag_LES
+#	Drag_LES
 #	Poiseuille
-#	Overtopping
-#	Hydraulic_Heave
+	Overtopping
+	Hydraulic_Heave
 #	Current-flow_elastoplastic
 )
 
