@@ -67,7 +67,8 @@ void UserInFlowCon(SPH::Domain & domi)
 							domi.Particles[temp]->Density  = RhoF*pow((1+7.0*g*(H+HS-domi.Particles[temp]->x(1))/(CsW*CsW)),(1.0/7.0));
 							domi.Particles[temp]->Densityb = RhoF*pow((1+7.0*g*(H+HS-domi.Particles[temp]->x(1))/(CsW*CsW)),(1.0/7.0));
 		    					domi.Particles[temp]->Pressure = SPH::EOS(domi.Particles[temp]->PresEq, domi.Particles[temp]->Cs, domi.Particles[temp]->P0,
-														domi.Particles[temp]->Density,domi.Particles[temp]->RefDensity);	
+														domi.Particles[temp]->Density,domi.Particles[temp]->RefDensity);
+							domi.Particles[temp]->Mu	= domi.Particles[temp]->MuRef; 	
 						}
 						if (domi.Particles[temp]->x(1)> Z0)
 						{
@@ -167,7 +168,7 @@ void UserDamping(SPH::Domain & domi)
 						if (domi.Particles[temp]->x(1)<=Z0 && domi.Particles[temp]->ID==2)
 						{
 //							domi.Particles[temp]->a(0) = 0.0;
-//							domi.Particles[temp]->a(1) = 0.0;
+							domi.Particles[temp]->a(1) = 0.0;
 							domi.Particles[temp]->a(2) = 0.0;
 						}
 					}
@@ -178,7 +179,7 @@ void UserDamping(SPH::Domain & domi)
 		#pragma omp parallel for schedule (static) num_threads(domi.Nproc)
 		for (size_t i=0; i<domi.Particles.Size(); i++)
 		{
-			if (domi.Particles[i]->ID == 2 && (domi.Particles[i]->x(0) > 0.85 || domi.Particles[i]->x(0) <0.10) && domi.Particles[i]->ZWab<0.6)
+			if (domi.Particles[i]->ID == 2 && (domi.Particles[i]->x(0) > 0.90 || domi.Particles[i]->x(0) <0.2) && domi.Particles[i]->ZWab<0.6)
 			{ 
 				domi.Particles[i]->a =  0.0;
 				domi.Particles[i]->v =  0.0;
@@ -206,9 +207,9 @@ void UserDamping(SPH::Domain & domi)
 
 void NewUserOutput(SPH::Particle * Particles, double & Prop1, double & Prop2,  double & Prop3)
 {
-	Prop1 = Particles->ZWab;
+	Prop1 = Particles->Mu-Particles->MuRef;
 	Prop2 = Particles->n;
-	Prop3 = Particles->S;
+	Prop3 = Particles->k;
 }
 
 
@@ -248,13 +249,13 @@ int main(int argc, char **argv) try
 	H	= 3.5*D;
 	x	= 3.0*D;
 	y	= HS + 0.5*D;
-	L	= 9.0*D;
+	L	= 10.0*D;
 
 	U	= 0.4;
 	Z0	= HS + 0.5*dx;
 	U0	= U;
 	RhoF	= 1000.0;
-	CsW	= 10.0*sqrt(2.0*g*(H+HS))*1.5;
+	CsW	= 10.0*sqrt(2.0*g*(H+HS))*2.0;
 	Muw	= 0.8e-3;
         t1	= (0.25*h/(CsW));
 
@@ -275,13 +276,14 @@ int main(int argc, char **argv) try
     		yb=dom.Particles[a]->x(1);
 
     		dom.Particles[a]->Cs		= CsW;
-    		dom.Particles[a]->Alpha		= 0.2;
-    		dom.Particles[a]->Beta		= 0.2;
+    		dom.Particles[a]->Alpha		= 0.05;
+    		dom.Particles[a]->Beta		= 0.05;
     		dom.Particles[a]->PresEq	= 1;
     		dom.Particles[a]->Mu		= Muw;
     		dom.Particles[a]->MuRef		= Muw;
     		dom.Particles[a]->Material	= 1;
 //    		dom.Particles[a]->Shepard	= true;
+    		dom.Particles[a]->LES		= true;
     		dom.Particles[a]->P0		= CsW*CsW*RhoF*0.0001;
     		dom.Particles[a]->Density	= RhoF*pow((1+7.0*g*(H+HS-yb)/(CsW*CsW)),(1.0/7.0));
     		dom.Particles[a]->Densityb	= RhoF*pow((1+7.0*g*(H+HS-yb)/(CsW*CsW)),(1.0/7.0));
@@ -321,7 +323,8 @@ int main(int argc, char **argv) try
         		dom.Particles[dom.Particles.Size()-1]->Mu	= Muw;
         		dom.Particles[dom.Particles.Size()-1]->MuRef	= Muw;
         		dom.Particles[dom.Particles.Size()-1]->Material	= 1;
-//        		dom.Particles[dom.Particles.Size()-1]->NoSlip	= true;
+        		dom.Particles[dom.Particles.Size()-1]->NoSlip	= true;
+			dom.Particles[dom.Particles.Size()-1]->FPMassC  = 1.2;
        		}
     	}
 
@@ -337,6 +340,7 @@ int main(int argc, char **argv) try
 	n	= 0.5;
 	RhoS	= 2500.0*(1.0-n)+n*RhoF;
 	CsS	= sqrt(K/(RhoS-RhoF));
+	CsS	= sqrt(K/RhoS);
 	c	= IC;
 	Phi	= IPhi;
 	Psi	= 0.0;
@@ -384,8 +388,8 @@ int main(int argc, char **argv) try
 		if (dom.Particles[a]->ID==2 || dom.Particles[a]->ID==3)
 		{
 			dom.Particles[a]->Material	= 3;
-			dom.Particles[a]->Alpha		= 0.3;
-			dom.Particles[a]->Beta		= 0.3;
+			dom.Particles[a]->Alpha		= 0.2;
+			dom.Particles[a]->Beta		= 0.2;
 			if (c>0.0)
 			{
 				dom.Particles[a]->TI		= 0.5;
@@ -393,8 +397,8 @@ int main(int argc, char **argv) try
 			}
 			dom.Particles[a]->TIInitDist	= dom.Particles[a]->h/1.1;
 			dom.Particles[a]->d		= d;
-	    		dom.Particles[a]->Shepard	= true;
-			dom.Particles[a]->VarPorosity	= true;
+//	    		dom.Particles[a]->Shepard	= true;
+//			dom.Particles[a]->VarPorosity	= true;
 			dom.Particles[a]->SeepageType	= 1;	
 //			dom.Particles[a]->n		= n;
 			dom.Particles[a]->n0		= n;
@@ -440,9 +444,9 @@ int main(int argc, char **argv) try
         std::cout<<"t2 = "<<t2<<std::endl;
         std::cout<<"t  = "<<t<<std::endl;
 
-	dom.OutputName[0]	= "ZWab";
+	dom.OutputName[0]	= "MuLES";
 	dom.OutputName[1]	= "Porosity";
-	dom.OutputName[2]	= "S_lift";
+	dom.OutputName[2]	= "Permeability";
         dom.UserOutput		= & NewUserOutput;
 
    	dom.Solve(/*tf*/700.0,/*dt*/t,/*dtOut*/0.1,"test",100000);

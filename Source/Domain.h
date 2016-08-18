@@ -1849,6 +1849,7 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
 		if ((deltatint-deltat)>(0.1*deltatint)) 
 			std::cout<<"New Time Step = " <<deltat<<std::endl;
 	}
+	if (deltat<(deltatint/1.0e5)) throw new Fatal("Too small time step, please choose a smaller time step initially to make the simulation more stable");
 
 	Move(deltat);
 

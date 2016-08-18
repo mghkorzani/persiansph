@@ -66,6 +66,7 @@ void UserDamping(SPH::Domain & domi)
 			}
 
 		}
+/*
 		if (domi.Time<10.0)
 		{
 			#pragma omp parallel for schedule (static) num_threads(domi.Nproc)
@@ -74,7 +75,7 @@ void UserDamping(SPH::Domain & domi)
 				if (domi.Particles[i]->IsFree && domi.Particles[i]->Material == 3) domi.Particles[i]->a = 0.0;
 			}
 		}
-
+*/
 	}
 }
 
@@ -103,7 +104,7 @@ int main(int argc, char **argv) try
         dom.Dimension	= 2;
         dom.Nproc	= 24;
     	dom.VisEq	= 0;
-    	dom.KernelType	= 2;
+    	dom.KernelType	= 4;
 	dom.SWIType	= 3;
     	dom.Scheme	= 0;
     	dom.Gravity	= 0.0 , -9.81 , 0.0 ;
@@ -118,13 +119,13 @@ int main(int argc, char **argv) try
 	double xb,yb,h,dx,T;
 
 	dx		= 0.0125;
-	h		= dx*1.3;
+	h		= dx*1.111;
 	dom.InitialDist	= dx;
 
 	double rhoF,Mu,CsF,Tf;
 	rhoF		= 998.23;
 	Mu		= 1.0e-3;
-	CsF		= 10.0*4.0;
+	CsF		= 10.0*5.0;
 	Tf		= (0.25*h/CsF);
 
 	Cs = CsF;
@@ -141,13 +142,14 @@ int main(int argc, char **argv) try
 		dom.Particles[a]->MuRef		= Mu;
 		dom.Particles[a]->Material	= 1;
 		dom.Particles[a]->Cs		= CsF;
-		dom.Particles[a]->Shepard	= true;
-		dom.Particles[a]->ShepardStep	= 20;
+//		dom.Particles[a]->Shepard	= true;
+//		dom.Particles[a]->LES		= true;
+//		dom.Particles[a]->ShepardStep	= 20;
 		xb=dom.Particles[a]->x(0);
 		yb=dom.Particles[a]->x(1);
 		if (yb<0.0)
 		{
-			dom.Particles[a]->FPMassC  = 1.2;
+			dom.Particles[a]->FPMassC  = 1.3;
 			dom.Particles[a]->ID	= 2;
 			dom.Particles[a]->NoSlip= true;
 			dom.Particles[a]->IsFree= false;
@@ -158,21 +160,15 @@ int main(int argc, char **argv) try
 			dom.Particles[a]->NoSlip= true;
 			dom.Particles[a]->IsFree= false;
 		}
-		if (xb>-2.0 && yb>0.55 && dom.Particles[a]->ID == 1)
+		if (xb>-2.0 && yb>0.3 && dom.Particles[a]->ID == 1)
+			dom.Particles[a]->ID	= 5;
+		if (xb>0.5 && dom.Particles[a]->ID == 1)
 			dom.Particles[a]->ID	= 5;
 
-		if (xb>-2.0 && yb>(-(1.0/1.5)*(xb-1.6)) && dom.Particles[a]->ID == 1)
-			dom.Particles[a]->ID	= 5;
-
-		if (xb>-2.0 && xb<0.775 && dom.Particles[a]->ID == 1)
+		if (xb>-2.0 && dom.Particles[a]->ID == 1)
 		{
-			dom.Particles[a]->Density  = rhoF*pow((1+7.0*9.81*(0.55-dom.Particles[a]->x(1))/(CsF*CsF)),(1.0/7.0));
-			dom.Particles[a]->Densityb = rhoF*pow((1+7.0*9.81*(0.55-dom.Particles[a]->x(1))/(CsF*CsF)),(1.0/7.0));
-		}
-		if (xb>0.775 && dom.Particles[a]->ID == 1)
-		{
-			dom.Particles[a]->Density  = rhoF*pow((1+7.0*9.81*((-(1.0/1.5)*(xb-1.6))-dom.Particles[a]->x(1))/(CsF*CsF)),(1.0/7.0));
-			dom.Particles[a]->Densityb = rhoF*pow((1+7.0*9.81*((-(1.0/1.5)*(xb-1.6))-dom.Particles[a]->x(1))/(CsF*CsF)),(1.0/7.0));
+			dom.Particles[a]->Density  = rhoF*pow((1+7.0*9.81*(0.3-dom.Particles[a]->x(1))/(CsF*CsF)),(1.0/7.0));
+			dom.Particles[a]->Densityb = rhoF*pow((1+7.0*9.81*(0.3-dom.Particles[a]->x(1))/(CsF*CsF)),(1.0/7.0));
 		}
 	}
 
@@ -181,16 +177,18 @@ int main(int argc, char **argv) try
 	rhoS		= 1490.0;
    	Rho		= 578.0;
 	Phi		= IPhi;
-	Psi		= 0.0;
+	if (Phi > 30.0) Psi = (Phi-30.0); else Psi = 0.0;
 	de		= 0.0255;
 	n		= 0.4052;
 	c		= IC;
-	E		= 25.0e6;
+	E		= 30.0e6;
 	Nu		= 0.3;
 	K		= E/(3.0*(1.0-2.0*Nu));
 	G		= E/(2.0*(1.0+Nu));
 	CsS		= std::max(sqrt(K/(rhoS-Rho)),250.0);
-	Ts		= std::min((0.2*h/CsS),1.0e-5);
+	Ts		= std::min((0.2*h/CsS),9.0e-6);
+	if (Psi > 0.0) Ts /=2.0;
+
 
 	std::cout<<"CsS = "<<CsS<<std::endl;
 	std::cout<<"C   = "<<c<<std::endl;
@@ -209,8 +207,8 @@ int main(int argc, char **argv) try
 		if (dom.Particles[a]->ID==3)
 		{
 			dom.Particles[a]->Material	= 3;
-			dom.Particles[a]->Alpha		= 0.2;
-			dom.Particles[a]->Beta		= 0.2;
+			dom.Particles[a]->Alpha		= 0.1;
+			dom.Particles[a]->Beta		= 0.1;
 			dom.Particles[a]->TI		= 0.5;
 			dom.Particles[a]->TIn		= 2.55;
 			dom.Particles[a]->TIInitDist	= dx;
