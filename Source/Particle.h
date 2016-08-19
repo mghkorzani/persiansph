@@ -594,6 +594,8 @@ inline void Particle::Mat3MVerlet(Mat3_t I, double dt)
 		else
 			n = n0;
 	}
+	else
+		n = n0;
 
 
 }
@@ -819,6 +821,9 @@ inline void Particle::Mat3Leapfrog(Mat3_t I, double dt)
 		else
 			n = n0;
 	}
+	else
+		n = n0;
+
 
 }
 

@@ -1753,6 +1753,7 @@ inline void Domain::InitialChecks()
 
 
 		if (Particles[i]->Material == 3)
+		{
 			switch(Particles[i]->SeepageType)
 			{
 				case 0:
@@ -1777,6 +1778,8 @@ inline void Domain::InitialChecks()
 					abort();
 					break;
 			}
+			Particles[i]->n = Particles[i]->n0;
+		}
 	}
 }
 
