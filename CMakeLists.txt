@@ -27,10 +27,11 @@ INCLUDE ($ENV{SPH}/Modules/FindPKG.cmake)
 SET(EXES
 #	Drag_LES
 #	Poiseuille
-#	Overtopping
+	Overtopping
 #	Hydraulic_Heave
 #	Current-flow_elastoplastic
 	Jet_Scouring
+	Fluidization
 )
 
 FOREACH(var ${EXES})

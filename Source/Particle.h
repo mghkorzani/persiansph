@@ -560,34 +560,39 @@ inline void Particle::Mat3MVerlet(Mat3_t I, double dt)
 		Strain	= 2.0*dt*StrainRate + Strainb;
 	Strainb	= Stress;
 
-	if (VarPorosity && IsFree)
+	if (VarPorosity)
 	{
-		double ev = (Strain(0,0)+Strain(1,1)+Strain(2,2))/3.0;
-		n = (n0+ev)/(1.0+ev);
-		switch(SeepageType)
+		if (IsFree)
 		{
-			case 0:
-				break;
-			case 1:
-				k = n*n*n*d*d/(180.0*(1.0-n)*(1.0-n));
-				break;
-			case 2:
-				k = n*n*n*d*d/(150.0*(1.0-n)*(1.0-n));
-				k2= 1.75*(1.0-n)/(n*n*n*d);
-				break;
-			case 3:
-				k = n*n*n*d*d/(150.0*(1.0-n)*(1.0-n));
-				k2= 0.4/(n*n*d);
-				break;
-			default:
-				std::cout << "Seepage Type No is out of range. Please correct it and run again" << std::endl;
-				std::cout << "0 => Darcy's Law" << std::endl;
-				std::cout << "1 => Darcy's Law & Kozeny–Carman Eq" << std::endl;
-				std::cout << "2 => The Forchheimer Eq & Ergun Coeffs" << std::endl;
-				std::cout << "3 => The Forchheimer Eq & Den Adel Coeffs" << std::endl;
-				abort();
-				break;
+			double ev = (Strain(0,0)+Strain(1,1)+Strain(2,2))/3.0;
+			n = (n0+ev)/(1.0+ev);
+			switch(SeepageType)
+			{
+				case 0:
+					break;
+				case 1:
+					k = n*n*n*d*d/(180.0*(1.0-n)*(1.0-n));
+					break;
+				case 2:
+					k = n*n*n*d*d/(150.0*(1.0-n)*(1.0-n));
+					k2= 1.75*(1.0-n)/(n*n*n*d);
+					break;
+				case 3:
+					k = n*n*n*d*d/(150.0*(1.0-n)*(1.0-n));
+					k2= 0.4/(n*n*d);
+					break;
+				default:
+					std::cout << "Seepage Type No is out of range. Please correct it and run again" << std::endl;
+					std::cout << "0 => Darcy's Law" << std::endl;
+					std::cout << "1 => Darcy's Law & Kozeny–Carman Eq" << std::endl;
+					std::cout << "2 => The Forchheimer Eq & Ergun Coeffs" << std::endl;
+					std::cout << "3 => The Forchheimer Eq & Den Adel Coeffs" << std::endl;
+					abort();
+					break;
+			}
 		}
+		else
+			n = n0;
 	}
 
 
@@ -780,34 +785,39 @@ inline void Particle::Mat3Leapfrog(Mat3_t I, double dt)
 	Straina	= dt*StrainRate + Straina;
 	Strain	= 1.0/2.0*(Straina+Strainb);
 
-	if (VarPorosity && IsFree)
+	if (VarPorosity)
 	{
-		double ev = (Strain(0,0)+Strain(1,1)+Strain(2,2))/3.0;
-		n = (n0+ev)/(1.0+ev);
-		switch(SeepageType)
+		if (IsFree)
 		{
-			case 0:
-				break;
-			case 1:
-				k = n*n*n*d*d/(180.0*(1.0-n)*(1.0-n));
-				break;
-			case 2:
-				k = n*n*n*d*d/(150.0*(1.0-n)*(1.0-n));
-				k2= 1.75*(1.0-n)/(n*n*n*d);
-				break;
-			case 3:
-				k = n*n*n*d*d/(150.0*(1.0-n)*(1.0-n));
-				k2= 0.4/(n*n*d);
-				break;
-			default:
-				std::cout << "Seepage Type No is out of range. Please correct it and run again" << std::endl;
-				std::cout << "0 => Darcy's Law" << std::endl;
-				std::cout << "1 => Darcy's Law & Kozeny–Carman Eq" << std::endl;
-				std::cout << "2 => The Forchheimer Eq & Ergun Coeffs" << std::endl;
-				std::cout << "3 => The Forchheimer Eq & Den Adel Coeffs" << std::endl;
-				abort();
-				break;
+			double ev = (Strain(0,0)+Strain(1,1)+Strain(2,2))/3.0;
+			n = (n0+ev)/(1.0+ev);
+			switch(SeepageType)
+			{
+				case 0:
+					break;
+				case 1:
+					k = n*n*n*d*d/(180.0*(1.0-n)*(1.0-n));
+					break;
+				case 2:
+					k = n*n*n*d*d/(150.0*(1.0-n)*(1.0-n));
+					k2= 1.75*(1.0-n)/(n*n*n*d);
+					break;
+				case 3:
+					k = n*n*n*d*d/(150.0*(1.0-n)*(1.0-n));
+					k2= 0.4/(n*n*d);
+					break;
+				default:
+					std::cout << "Seepage Type No is out of range. Please correct it and run again" << std::endl;
+					std::cout << "0 => Darcy's Law" << std::endl;
+					std::cout << "1 => Darcy's Law & Kozeny–Carman Eq" << std::endl;
+					std::cout << "2 => The Forchheimer Eq & Ergun Coeffs" << std::endl;
+					std::cout << "3 => The Forchheimer Eq & Den Adel Coeffs" << std::endl;
+					abort();
+					break;
+			}
 		}
+		else
+			n = n0;
 	}
 
 }
