@@ -45,7 +45,7 @@ void UserDamping(SPH::Domain & domi)
 			{
 				if (domi.Particles[i]->IsFree)
 				{ 
-					if (domi.Particles[i]->Material == 1)	domi.Particles[i]->LES	= true;
+//					if (domi.Particles[i]->Material == 1)	domi.Particles[i]->LES	= true;
 					if (domi.Particles[i]->ID == 4)		domi.Particles[i]->ID	= 1;
 					domi.Particles[i]->v = 0.0;;
 					domi.Particles[i]->vb = 0.0;;
@@ -190,6 +190,7 @@ int main(int argc, char **argv) try
 
    	}
 	dom.DelParticles(10);
+//	dom.DelParticles(2);
 
 	double Nu,E,K,G,CsS,RhoS,c,Phi,Psi,n,d,Phi2;
 
@@ -200,11 +201,11 @@ int main(int argc, char **argv) try
 	n	= 0.34;
 	RhoS	= 2650.0*(1.0-n)+n*RhoF;
 	CsS	= sqrt(K/(RhoS-RhoF));
-	c	= 0.0;
+	c	= 1.0;
 	Phi	= 35.0;
 	Psi	= 0.0;
 	d	= 0.00085;
-        t2	= (0.15*h/CsS);
+        t2	= (0.2*h/CsS);
 
         std::cout<<"CsS  = "<<CsS<<std::endl;
         std::cout<<"RhoS = "<<RhoS<<std::endl;
@@ -212,7 +213,7 @@ int main(int argc, char **argv) try
         std::cout<<"Phi2 = "<<Phi2<<std::endl;
         std::cout<<"C    = "<<c<<std::endl;
 
-	dom.AddBoxLength(5 ,Vec3_t ( 0.7 , -4.0*dx , 0.0 ), 0.45 + 4.0*dx + dx/10.0 , 0.05 + 4.0*dx + dx/10.0 ,  0 , dx/2.0 ,RhoS, h, 1 , 0 , false, false );
+	dom.AddBoxLength(5 ,Vec3_t ( 0.7 , -4.0*dx , 0.0 ), 0.8 + dx/10.0 , 0.05 + 4.0*dx + dx/10.0 ,  0 , dx/2.0 ,RhoS, h, 1 , 0 , false, false );
 
 	for (size_t a=0; a<dom.Particles.Size(); a++)
 	{
@@ -243,15 +244,17 @@ int main(int argc, char **argv) try
 
 			xb=dom.Particles[a]->x(0);
 			yb=dom.Particles[a]->x(1);
+	    		if (xb>(1.15+4.0*dx) && yb<(0.05-4.0*dx) && dom.Particles[a]->ID==5)
+	    			dom.Particles[a]->ID		= 10;
 
-			if (yb<0.0)
+			if (yb<0.0 && dom.Particles[a]->ID==5)
 			{
 				dom.Particles[a]->ID		= 6;
 				dom.Particles[a]->IsFree	= false;
 				dom.Particles[a]->NoSlip	= true;
 				dom.Particles[a]->d		= d*1.0e20;
 			}
-	    		if (xb<(0.7+4.0*dx) || xb>1.15)
+	    		if ((xb<(0.7+4.0*dx) || xb>1.15)  && dom.Particles[a]->ID==5)
 	    		{
 	    			dom.Particles[a]->ID		= 6;
 	    			dom.Particles[a]->IsFree	= false;
@@ -260,6 +263,7 @@ int main(int argc, char **argv) try
 	    		}
 		}
 	}
+	dom.DelParticles(10);
 
    	DampF	= 0.02*CsW/h;
   	DampS	= 0.02*sqrt(E/(RhoS*h*h));

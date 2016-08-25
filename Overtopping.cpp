@@ -27,7 +27,7 @@ using std::endl;
 using std::ifstream;
 
 int check = 0;
-double DampS,DampTime,Cs,u;
+double DampS,DampTime,Cs,u,c;
 void UserInFlowCon(Vec3_t & position, Vec3_t & Vel, double & Den, SPH::Boundary & bdry)
 {
 	Vel = u,0.0,0.0;
@@ -66,16 +66,20 @@ void UserDamping(SPH::Domain & domi)
 			}
 
 		}
-/*
-		if (domi.Time<10.0)
+		#pragma omp parallel for schedule (static) num_threads(domi.Nproc)
+		for (size_t i=0; i<domi.Particles.Size(); i++)
 		{
-			#pragma omp parallel for schedule (static) num_threads(domi.Nproc)
-			for (size_t i=0; i<domi.Particles.Size(); i++)
+			if (domi.Particles[i]->Material == 3 && domi.Particles[i]->IsSat)
 			{
-				if (domi.Particles[i]->IsFree && domi.Particles[i]->Material == 3) domi.Particles[i]->a = 0.0;
+				domi.Particles[i]->c		= 0.0;
+				domi.Particles[i]->TI		= 0.0;
+			}
+			if (domi.Particles[i]->Material == 3 && !(domi.Particles[i]->IsSat))
+			{
+				domi.Particles[i]->c		= c;
+				domi.Particles[i]->TI		= 0.5;
 			}
 		}
-*/
 	}
 }
 
@@ -83,7 +87,7 @@ void NewUserOutput(SPH::Particle * Particles, double & Prop1, double & Prop2,  d
 {
 	Prop1 = Particles->ZWab;
 	Prop2 = Particles->n;
-	Prop3 = Particles->S;
+	Prop3 = Particles->c;
 }
 
 int main(int argc, char **argv) try
@@ -118,7 +122,7 @@ int main(int argc, char **argv) try
 
 	double xb,yb,h,dx,T;
 
-	dx		= 0.0125;
+	dx		= 0.02;
 	h		= dx*1.111;
 	dom.InitialDist	= dx;
 
@@ -131,8 +135,8 @@ int main(int argc, char **argv) try
 	Cs = CsF;
 
 
-	dom.AddBoxLength(1 ,Vec3_t ( -2.0 - 5.0*dx , -3.0*dx , 0.0 ), 4.0 + 5.0*dx + dx/10.0 , 1.0 + 3.0*dx + dx/10.0  ,  0 , dx/2.0 ,rhoF, h,1 , 0 , false,false);
-	dom.AddBoxLength(1 ,Vec3_t (  2.0          , -10.0*dx, 0.0 ), 3.0*dx + dx/10.0       , 10.0*dx + dx/10.0       ,  0 , dx/2.0 ,rhoF, h,1 , 0 , false,false);
+	dom.AddBoxLength(1 ,Vec3_t ( -2.0 - 5.0*dx , -3.0*dx , 0.0 ), 4.2 + 5.0*dx + dx/10.0 , 1.0 + 3.0*dx + dx/10.0  ,  0 , dx/2.0 ,rhoF, h,1 , 0 , false,false);
+	dom.AddBoxLength(1 ,Vec3_t (  2.2          , -10.0*dx, 0.0 ), 3.0*dx + dx/10.0       , 10.0*dx + dx/10.0       ,  0 , dx/2.0 ,rhoF, h,1 , 0 , false,false);
 
 	for (size_t a=0; a<dom.Particles.Size(); a++)
 	{
@@ -142,7 +146,7 @@ int main(int argc, char **argv) try
 		dom.Particles[a]->MuRef		= Mu;
 		dom.Particles[a]->Material	= 1;
 		dom.Particles[a]->Cs		= CsF;
-//		dom.Particles[a]->Shepard	= true;
+		dom.Particles[a]->Shepard	= true;
 //		dom.Particles[a]->LES		= true;
 //		dom.Particles[a]->ShepardStep	= 20;
 		xb=dom.Particles[a]->x(0);
@@ -172,22 +176,21 @@ int main(int argc, char **argv) try
 		}
 	}
 
-	double K,G,Nu,E,rhoS,CsS,Phi,c,Psi,Ts,n,de,Rho;
+	double K,G,Nu,E,rhoS,CsS,Phi,Psi,Ts,n,de,Rho;
 
 	rhoS		= 1490.0;
    	Rho		= 578.0;
 	Phi		= IPhi;
-	if (Phi > 30.0) Psi = (Phi-30.0); else Psi = 0.0;
+	Psi		= 0.0;
 	de		= 0.0255;
 	n		= 0.4052;
 	c		= IC;
-	E		= 30.0e6;
+	E		= 20.0e6;
 	Nu		= 0.3;
 	K		= E/(3.0*(1.0-2.0*Nu));
 	G		= E/(2.0*(1.0+Nu));
-	CsS		= std::max(sqrt(K/(rhoS-Rho)),250.0);
-	Ts		= std::min((0.2*h/CsS),9.0e-6);
-	if (Psi > 0.0) Ts /=2.0;
+	CsS		= sqrt(K/(rhoS-Rho));
+	Ts		= (0.25*h/CsS);
 
 
 	std::cout<<"CsS = "<<CsS<<std::endl;
@@ -197,10 +200,10 @@ int main(int argc, char **argv) try
 	std::cout<<"Q   = "<<u<<std::endl;
 
   	DampS	= 0.02*sqrt(E/(rhoS*h*h));
-    	DampTime= 0.3;
+    	DampTime= 0.2;
 
 
-	dom.AddBoxLength(3 ,Vec3_t ( -2.0 , -3.0*dx , 0.0 ), 4.0 + dx/10.0 , 1.0 + 3.0*dx + dx/10.0  ,  0 , dx/2.0 ,rhoS, h,1 , 0 , false,false);
+	dom.AddBoxLength(3 ,Vec3_t ( -2.0 , -3.0*dx , 0.0 ), 4.2 + dx/10.0 , 1.0 + 3.0*dx + dx/10.0  ,  0 , dx/2.0 ,rhoS, h,1 , 0 , false,false);
 
 	for (size_t a=0; a<dom.Particles.Size(); a++)
 	{
@@ -234,9 +237,9 @@ int main(int argc, char **argv) try
 				dom.Particles[a]->NoSlip= true;
 				dom.Particles[a]->d	= de*1.0e10;
 			}
-			if (yb>(-(1.0/1.5)*(xb-1.6)) && dom.Particles[a]->ID == 3)
+			if (yb>=(-(1.0/1.5)*(xb-1.6)) && dom.Particles[a]->ID == 3)
 				dom.Particles[a]->ID	= 5;
-			if (yb>( (1.0/1.5)*(xb+1.6)) && dom.Particles[a]->ID == 3)
+			if (yb>=( (1.0/1.5)*(xb+1.6)) && dom.Particles[a]->ID == 3)
 				dom.Particles[a]->ID	= 5;
 		}
 	}
@@ -250,7 +253,7 @@ int main(int argc, char **argv) try
 
 	dom.OutputName[0]	= "ZWab";
 	dom.OutputName[1]	= "Porosity";
-	dom.OutputName[2]	= "S_lift";
+	dom.OutputName[2]	= "Cohesion";
         dom.UserOutput		= & NewUserOutput;
 
 	dom.Solve(/*tf*/50000.0,/*dt*/T,/*dtOut*/0.1,"test06",2000);
