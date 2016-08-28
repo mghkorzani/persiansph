@@ -79,7 +79,7 @@ inline Boundary::Boundary()
 	InFlowLoc2 = 0.0;
 	InFlowLoc3 = 0.0;
 	OutFlowLoc = 0.0;
-	cellfac = 4.0;
+	cellfac = 3.9;
 	inoutcounter = 0;
 	MassConservation = false;
 }

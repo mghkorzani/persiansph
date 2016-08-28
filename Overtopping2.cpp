@@ -31,7 +31,7 @@ double DampS,DampTime,Cs,u,c;
 void UserInFlowCon(Vec3_t & position, Vec3_t & Vel, double & Den, SPH::Boundary & bdry)
 {
 	Vel = u,0.0,0.0;
-	Den = 998.21*pow((1+7.0*9.81*(0.65-position(1))/(Cs*Cs)),(1.0/7.0));
+	Den = 998.21*pow((1+7.0*9.81*(1.11-position(1))/(Cs*Cs)),(1.0/7.0));;
 }
 
 void UserDamping(SPH::Domain & domi)
@@ -116,7 +116,7 @@ int main(int argc, char **argv) try
 
 	double xb,yb,h,dx,T;
 
-	dx		= 0.0125;
+	dx		= 0.01;
 	h		= dx*1.3;
 	dom.InitialDist	= dx;
 	
@@ -128,9 +128,10 @@ int main(int argc, char **argv) try
 
 	Cs = CsF;
 
+	dom.DomMax(1)	= 1.3;
 
-	dom.AddBoxLength(1 ,Vec3_t ( -2.0 - 5.0*dx , -3.0*dx , 0.0 ), 4.2 + 5.0*dx + dx/10.0 , 1.0 + 3.0*dx + dx/10.0  ,  0 , dx/2.0 ,rhoF, h,1 , 0 , false,false);
-	dom.AddBoxLength(1 ,Vec3_t (  2.2          , -10.0*dx, 0.0 ), 3.0*dx + dx/10.0       , 10.0*dx + dx/10.0       ,  0 , dx/2.0 ,rhoF, h,1 , 0 , false,false);
+	dom.AddBoxLength(1 ,Vec3_t ( -0.2 - 5.0*dx , -3.0*dx , 0.0 ), 2.7 + 5.0*dx + dx/10.0 , 1.0 + 0.1 + 3.0*dx + dx/10.0  ,  0 , dx/2.0 ,rhoF, h,1 , 0 , false,false);
+	dom.AddBoxLength(1 ,Vec3_t (  2.5          , -10.0*dx, 0.0 ), 3.0*dx + dx/10.0       , 10.0*dx + dx/10.0       ,  0 , dx/2.0 ,rhoF, h,1 , 0 , false,false);
 
 	for (size_t a=0; a<dom.Particles.Size(); a++)
 	{
@@ -152,14 +153,21 @@ int main(int argc, char **argv) try
 //			dom.Particles[a]->NoSlip= true;
 			dom.Particles[a]->IsFree= false;
 		}
-		if (yb>0.1 && xb<=-2.0)
+		if (yb<1.0 && xb<=-0.0)
 		{
 			dom.Particles[a]->ID	= 2;
 //			dom.Particles[a]->NoSlip= true;
 			dom.Particles[a]->IsFree= false;
 		}
-		if (xb>-2.0 && dom.Particles[a]->ID == 1)
+		if (xb>0.0 && dom.Particles[a]->ID == 1)
 			dom.Particles[a]->ID	= 5;
+		if (xb<-3.0*dx && yb < (1.0-3.0*dx) && dom.Particles[a]->ID == 2)
+			dom.Particles[a]->ID	= 5;
+		if (dom.Particles[a]->ID == 1)
+		{
+			dom.Particles[a]->Density  = rhoF*pow((1+7.0*9.81*(1.05-dom.Particles[a]->x(1))/(CsF*CsF)),(1.0/7.0));
+			dom.Particles[a]->Densityb = rhoF*pow((1+7.0*9.81*(1.05-dom.Particles[a]->x(1))/(CsF*CsF)),(1.0/7.0));
+		}
 	}
 
 	double K,G,Nu,E,rhoS,CsS,Phi,Psi,Ts,n,de,Rho;
@@ -190,7 +198,7 @@ int main(int argc, char **argv) try
     	DampTime= 0.2;
 
 
-	dom.AddBoxLength(3 ,Vec3_t ( -2.0 , -3.0*dx , 0.0 ), 4.2 + dx/10.0 , 1.0 + 3.0*dx + dx/10.0  ,  0 , dx/2.0 ,rhoS, h,1 , 0 , false,false);
+	dom.AddBoxLength(3 ,Vec3_t ( -3.0*dx , -3.0*dx , 0.0 ), 2.5 + dx/10.0 , 1.0 + 3.0*dx + dx/10.0  ,  0 , dx/2.0 ,rhoS, h,1 , 0 , false,false);
 
 	for (size_t a=0; a<dom.Particles.Size(); a++)
 	{
@@ -226,12 +234,19 @@ int main(int argc, char **argv) try
 				dom.Particles[a]->d	= de*1.0e10;
 				dom.Particles[a]->c	= 0.01*c;
 			}
-			if (yb>=(-(1.0/1.5)*(xb-1.6)) && dom.Particles[a]->ID == 3)
-				dom.Particles[a]->ID	= 5;
-			if (yb>=( (1.0/1.5)*(xb+1.6)) && dom.Particles[a]->ID == 3)
+			if (xb<0.0)
+			{
+				dom.Particles[a]->ID	= 4;
+				dom.Particles[a]->IsFree= false;
+				dom.Particles[a]->NoSlip= true;
+				dom.Particles[a]->d	= de*1.0e10;
+				dom.Particles[a]->c	= 0.01*c;
+			}
+			if (yb>=(-(1.0/1.5)*(xb-1.7)) && dom.Particles[a]->ID == 3)
 				dom.Particles[a]->ID	= 5;
 		}
 	}
+
 	dom.DelParticles(5);
 
 	T	= std::min(Tf,Ts);
@@ -244,8 +259,10 @@ int main(int argc, char **argv) try
 	dom.OutputName[1]	= "Porosity";
 	dom.OutputName[2]	= "Cohesion";
         dom.UserOutput		= & NewUserOutput;
+	
+//	dom.WriteXDMF("maz");
 
-	dom.Solve(/*tf*/50000.0,/*dt*/T,/*dtOut*/0.1,"test06",8000);
+	dom.Solve(/*tf*/50000.0,/*dt*/T,/*dtOut*/0.1,"test06",2000);
 	return 0;
 }
 MECHSYS_CATCH

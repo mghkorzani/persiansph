@@ -20,7 +20,7 @@
 
 #include "Domain.h"
 #include "Interaction.h"
-	double g,dx,RhoF,CsW,DampTime,DampF,DampS,L,H,V;
+	double g,dx,RhoF,CsW,DampTime,DampF,DampS,L,H,Q,V,q1=0.0;
 	int	check=0;
 void UserInFlowCon(Vec3_t & position, Vec3_t & Vel, double & Den, SPH::Boundary & bdry)
 {
@@ -35,7 +35,7 @@ void UserOutFlowCon(Vec3_t & position, Vec3_t & Vel, double & Den, SPH::Boundary
 
 void UserDamping(SPH::Domain & domi)
 {
-	if (domi.Time<DampTime)
+	if (domi.Time<=DampTime)
 	{
 		#pragma omp parallel for schedule (static) num_threads(domi.Nproc)
 		for (size_t i=0; i<domi.Particles.Size(); i++)
@@ -46,6 +46,11 @@ void UserDamping(SPH::Domain & domi)
 	}
 	else
 	{
+		if (Q<=0.12)
+		{
+			Q	= 0.01*(domi.Time-DampTime);
+			V	= (Q/1000.0)/(0.15*0.15);
+		}
 		if (check==0)
 		{
 			#pragma omp parallel for schedule (static) num_threads(domi.Nproc)
@@ -67,39 +72,35 @@ void UserDamping(SPH::Domain & domi)
 			domi.OutCon		= & UserOutFlowCon;
 		}
 		check = 1;
+		if (Q>q1)
+		{
+			std::cout<<"Q = "<<Q<<std::endl;
+			q1 += 0.01;
+		}
 	}
 		
 }
 
 void UserDamping1(SPH::Domain & domi)
 {
-	if (domi.Time<DampTime)
+	#pragma omp parallel for schedule (static) num_threads(domi.Nproc)
+	for (size_t i=0; i<domi.Particles.Size(); i++)
 	{
-	}
-	else
-	{
-		#pragma omp parallel for schedule (static) num_threads(domi.Nproc)
-		for (size_t i=0; i<domi.Particles.Size(); i++)
+		if (domi.Particles[i]->IsFree && domi.Particles[i]->Material == 3 && !(domi.Particles[i]->IsSat)) 
 		{
-			if (domi.Particles[i]->IsFree && domi.Particles[i]->Material == 3 && !(domi.Particles[i]->IsSat)) 
-			{
-				domi.Particles[i]->Mass		= domi.Particles[i]->V*(domi.Particles[i]->RefDensity - domi.Particles[i]->RhoF);
-				domi.Particles[i]->Density	= domi.Particles[i]->Density - domi.Particles[i]->RhoF;
-				domi.Particles[i]->Densityb	= domi.Particles[i]->Densityb - domi.Particles[i]->RhoF;
-				domi.Particles[i]->RefDensity	= domi.Particles[i]->RefDensity - domi.Particles[i]->RhoF;
-				domi.Particles[i]->IsSat	= true;
-				domi.Particles[i]->SatCheck	= true;
-			}
-			if (domi.Particles[i]->IsFree && domi.Particles[i]->Material == 3 ) 
-			{
-				domi.Particles[i]->IsSat	= true;
-				domi.Particles[i]->SatCheck	= true;
-			}
-	//		if (domi.Particles[i]->IsFree && domi.Particles[i]->Material == 1) domi.Particles[i]->a  -= Vec3_t(-9.81 , 0.0 , 0.0);
+			domi.Particles[i]->Mass		= domi.Particles[i]->V*(domi.Particles[i]->RefDensity - domi.Particles[i]->RhoF);
+			domi.Particles[i]->Density	= domi.Particles[i]->Density - domi.Particles[i]->RhoF;
+			domi.Particles[i]->Densityb	= domi.Particles[i]->Densityb - domi.Particles[i]->RhoF;
+			domi.Particles[i]->RefDensity	= domi.Particles[i]->RefDensity - domi.Particles[i]->RhoF;
+			domi.Particles[i]->IsSat	= true;
+			domi.Particles[i]->SatCheck	= true;
 		}
-
+		if (domi.Particles[i]->IsFree && domi.Particles[i]->Material == 3 ) 
+		{
+			domi.Particles[i]->IsSat	= true;
+			domi.Particles[i]->SatCheck	= true;
+		}
 	}
-		
 }
 
 
@@ -122,7 +123,7 @@ int main(int argc, char **argv) try
         dom.Dimension	= 2;
         dom.Nproc	= 24;
     	dom.VisEq	= 0;
-    	dom.KernelType	= 4;
+    	dom.KernelType	= 2;
 	dom.SWIType	= 3;
     	dom.Scheme	= 0;
     	dom.Gravity	= -9.81, 0.0 , 0.0 ;
@@ -134,20 +135,20 @@ int main(int argc, char **argv) try
         dom.GeneralBefore	= & UserDamping1;
 
 
-    	double h,t,t1,t2,Muw,Q,h1,h2,h3,h0;
+    	double h,t,t1,t2,Muw,h1,h2,h3,h0;
     	dx	= 0.00125;
-    	h	= dx*1.1;
+    	h	= dx*1.3;
 	dom.InitialDist	= dx;
 
 //	L	= 0.15;
-	L	= 0.1;
+	L	= 0.06;
 	h0	= 0.0;
 	h1	= 0.0125;
 	h2	= 0.0125;
 	h3	= 0.025;
 
-	H	= h0+h1+h2+h3+0.05;
-	Q	= 0.17;
+	H	= h0+h1+h2+h3+0.025;
+	Q	= 0.05;
 	V	= (Q/1000.0)/(0.15*0.15);
 	RhoF	= 1000.0;
 	CsW	= 10.0*sqrt(2.0*g*H);
@@ -188,7 +189,7 @@ int main(int argc, char **argv) try
 	double Nu,E,K,G,CsS,RhoS,c,Phi,Psi,n1,n2,n3,d1,d2,d3;
 
 	Nu	= 0.3;
-	E	= 10.0e6;
+	E	= 5.0e6;
 	K	= E/(3.0*(1.0-2.0*Nu));
 	G	= E/(2.0*(1.0+Nu));
 	n1	= 0.36;
@@ -220,16 +221,17 @@ int main(int argc, char **argv) try
 		if (dom.Particles[a]->ID==5)
 		{
 			dom.Particles[a]->Material	= 3;
-			dom.Particles[a]->Alpha		= 0.1;
-			dom.Particles[a]->Beta		= 0.1;
+			dom.Particles[a]->Alpha		= 0.2;
+			dom.Particles[a]->Beta		= 0.2;
 			if (c>0.0)
 			{
 				dom.Particles[a]->TI	= 0.5;
 				dom.Particles[a]->TIn	= 2.55;
 			}
 			dom.Particles[a]->TIInitDist	= dx;
+			dom.Particles[a]->Shepard	= true;
 			dom.Particles[a]->VarPorosity	= true;
-			dom.Particles[a]->SeepageType	= 3;	
+			dom.Particles[a]->SeepageType	= 2;	
 			dom.Particles[a]->RhoF		= RhoF;
 			dom.Particles[a]->Cs		= CsS;
 			dom.Particles[a]->G		= G;
@@ -284,7 +286,7 @@ int main(int argc, char **argv) try
 
    	DampF	= 0.02*CsW/h;
   	DampS	= 0.02*sqrt(E/(RhoS*h*h));
-//    	DampTime= 0.02;
+    	DampTime= 0.02;
 //    	DampTime= 0.0;
 
         t	= std::min(t1,t2);
@@ -297,7 +299,7 @@ int main(int argc, char **argv) try
 	dom.OutputName[2]	= "Permeability";
         dom.UserOutput		= & NewUserOutput;
 
-   	dom.Solve(/*tf*/700.0,/*dt*/t,/*dtOut*/0.01,"test",100000);
+   	dom.Solve(/*tf*/50.0,/*dt*/t,/*dtOut*/0.1,"test",100000);
         return 0;
 }
 MECHSYS_CATCH
