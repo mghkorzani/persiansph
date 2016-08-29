@@ -1828,6 +1828,8 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
                 fn.Printf    ("%s_%04d", TheFileKey, idx_out);
                 WriteXDMF    (fn.CStr());
                 std::cout << "\n" << "Output No. " << idx_out << " at " << Time << " has been generated" << std::endl;
+		std::cout<<"Time Step = " <<deltat<<std::endl;
+		std::cout<<""<<std::endl;
            	}
             idx_out++;
             tout += dtOut;
@@ -1840,7 +1842,7 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
 		else
 			deltat		= deltatmin;
     	
-		std::cout<<"New Time Step = " <<deltat<<std::endl;
+//		std::cout<<"New Time Step = " <<deltat<<std::endl;
 	}
 	else
 	{
@@ -1849,8 +1851,8 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
 		else
 			deltat		= deltatint;  
   	
-		if ((deltatint-deltat)>(0.1*deltatint)) 
-			std::cout<<"New Time Step = " <<deltat<<std::endl;
+//		if ((deltatint-deltat)>(0.1*deltatint)) 
+//			std::cout<<"New Time Step = " <<deltat<<std::endl;
 	}
 	if (deltat<(deltatint/1.0e5)) throw new Fatal("Too small time step, please choose a smaller time step initially to make the simulation more stable");
 

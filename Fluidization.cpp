@@ -231,7 +231,7 @@ int main(int argc, char **argv) try
 			dom.Particles[a]->TIInitDist	= dx;
 			dom.Particles[a]->Shepard	= true;
 			dom.Particles[a]->VarPorosity	= true;
-			dom.Particles[a]->SeepageType	= 2;	
+			dom.Particles[a]->SeepageType	= 3;	
 			dom.Particles[a]->RhoF		= RhoF;
 			dom.Particles[a]->Cs		= CsS;
 			dom.Particles[a]->G		= G;
@@ -299,7 +299,7 @@ int main(int argc, char **argv) try
 	dom.OutputName[2]	= "Permeability";
         dom.UserOutput		= & NewUserOutput;
 
-   	dom.Solve(/*tf*/50.0,/*dt*/t,/*dtOut*/0.1,"test",100000);
+   	dom.Solve(/*tf*/99.8,/*dt*/t,/*dtOut*/0.1,"test",100000);
         return 0;
 }
 MECHSYS_CATCH

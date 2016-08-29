@@ -71,7 +71,9 @@ void UserDamping(SPH::Domain & domi)
 		{
 			if (domi.Particles[i]->Material == 3 && domi.Particles[i]->IsSat)
 			{
-				domi.Particles[i]->c		= 0.01*c;
+				domi.Particles[i]->c		= 0.0;
+				domi.Particles[i]->TI		= 0.0;
+				if (domi.Particles[i]->IsFree) domi.Particles[i]->ScalebackMat3(domi.Scheme);
 			}
 		}
 	}
@@ -107,7 +109,7 @@ int main(int argc, char **argv) try
     	dom.Scheme	= 0;
     	dom.Gravity	= 0.0 , -9.81 , 0.0 ;
 
-	u		= IQ/0.1;
+	u		= IQ/0.2;
 //	dom.BC.InOutFlow= 1;
 //	dom.BC.inv	= u,0.0,0.0;
 //	dom.BC.inDensity= 998.21;
@@ -152,7 +154,7 @@ int main(int argc, char **argv) try
 //			dom.Particles[a]->NoSlip= true;
 			dom.Particles[a]->IsFree= false;
 		}
-		if (yb>0.1 && xb<=-2.0)
+		if (yb>0.2 && xb<=-2.0)
 		{
 			dom.Particles[a]->ID	= 2;
 //			dom.Particles[a]->NoSlip= true;
@@ -176,7 +178,7 @@ int main(int argc, char **argv) try
 	K		= E/(3.0*(1.0-2.0*Nu));
 	G		= E/(2.0*(1.0+Nu));
 	CsS		= sqrt(K/(rhoS-Rho));
-	Ts		= (0.05*h/CsS);
+	Ts		= (0.25*h/CsS);
 
 
 	std::cout<<"CsS = "<<CsS<<std::endl;
@@ -224,7 +226,8 @@ int main(int argc, char **argv) try
 				dom.Particles[a]->IsFree= false;
 				dom.Particles[a]->NoSlip= true;
 				dom.Particles[a]->d	= de*1.0e10;
-				dom.Particles[a]->c	= 0.01*c;
+				dom.Particles[a]->c	= 0.0;
+				dom.Particles[a]->TI	= 0.0;
 			}
 			if (yb>=(-(1.0/1.5)*(xb-1.6)) && dom.Particles[a]->ID == 3)
 				dom.Particles[a]->ID	= 5;

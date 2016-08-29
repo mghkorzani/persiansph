@@ -154,6 +154,7 @@ public:
     void Mat3MVerlet	(Mat3_t I, double dt);
     void Mat2Leapfrog	(double dt);
     void Mat3Leapfrog	(Mat3_t I, double dt);
+    void ScalebackMat3	(size_t Scheme);
 };
 
 inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double Mass0, double Density0, double h0,bool Fixed)
@@ -598,6 +599,74 @@ inline void Particle::Mat3MVerlet(Mat3_t I, double dt)
 		n = n0;
 
 
+}
+
+inline void Particle::ScalebackMat3(size_t Scheme)
+{
+	double I1,J2,alpha,kf;
+
+	// Drucker-Prager failure criterion for plane strain
+	alpha	= tan(phi) / sqrt(9.0+12.0*tan(phi)*tan(phi));
+	kf	= 3.0 * c  / sqrt(9.0+12.0*tan(phi)*tan(phi));
+
+	// Bring back stressb to the apex of the failure criteria
+	I1	= Sigmab(0,0) + Sigmab(1,1) + Sigmab(2,2);
+	if ((kf-alpha*I1)<0.0)
+	{
+		double Ratio;
+		if (alpha == 0.0) Ratio =0.0; else Ratio = kf/alpha;
+		Sigmab(0,0) -= 1.0/3.0*(I1-Ratio);
+		Sigmab(1,1) -= 1.0/3.0*(I1-Ratio);
+		Sigmab(2,2) -= 1.0/3.0*(I1-Ratio);
+		I1 	     = Ratio;
+	}
+
+	ShearStress	= Sigmab - 1.0/3.0* I1 *OrthoSys::I;
+	J2			= 0.5*(ShearStress(0,0)*ShearStress(0,0) + 2.0*ShearStress(0,1)*ShearStress(1,0) +
+				2.0*ShearStress(0,2)*ShearStress(2,0) + ShearStress(1,1)*ShearStress(1,1) +
+				2.0*ShearStress(1,2)*ShearStress(2,1) + ShearStress(2,2)*ShearStress(2,2));
+
+	if ((sqrt(J2)+alpha*I1-kf)>0.0 && sqrt(J2)>0.0) Sigmab = I1/3.0*OrthoSys::I + (kf-alpha*I1)/sqrt(J2) * ShearStress;
+
+	// Bring back stress to the apex of the failure criteria
+	if (Scheme == 0)
+	{
+		I1	= Sigma(0,0) + Sigma(1,1) + Sigma(2,2);
+		if ((kf-alpha*I1)<0.0)
+		{
+			double Ratio;
+			if (alpha == 0.0) Ratio =0.0; else Ratio = kf/alpha;
+			Sigma(0,0) -= 1.0/3.0*(I1-Ratio);
+			Sigma(1,1) -= 1.0/3.0*(I1-Ratio);
+			Sigma(2,2) -= 1.0/3.0*(I1-Ratio);
+			I1 	    = Ratio;
+		}
+
+		ShearStress	= Sigma - 1.0/3.0* I1 *OrthoSys::I;
+		J2			= 0.5*(ShearStress(0,0)*ShearStress(0,0) + 2.0*ShearStress(0,1)*ShearStress(1,0) +
+					2.0*ShearStress(0,2)*ShearStress(2,0) + ShearStress(1,1)*ShearStress(1,1) +
+					2.0*ShearStress(1,2)*ShearStress(2,1) + ShearStress(2,2)*ShearStress(2,2));
+
+		if ((sqrt(J2)+alpha*I1-kf)>0.0 && sqrt(J2)>0.0) Sigma = I1/3.0*OrthoSys::I + (kf-alpha*I1)/sqrt(J2) * ShearStress;
+	}
+	else
+	{
+		I1	= Sigmaa(0,0) + Sigmaa(1,1) + Sigmaa(2,2);
+		if ((kf-alpha*I1)<0.0)
+		{
+			double Ratio;
+			if (alpha == 0.0) Ratio =0.0; else Ratio = kf/alpha;
+			Sigmaa(0,0) -= 1.0/3.0*(I1-Ratio);
+			Sigmaa(1,1) -= 1.0/3.0*(I1-Ratio);
+			Sigmaa(2,2) -= 1.0/3.0*(I1-Ratio);
+			I1 			= Ratio;
+		}
+		ShearStress	= Sigmaa - 1.0/3.0* I1 *OrthoSys::I;
+		J2			= 0.5*(ShearStress(0,0)*ShearStress(0,0) + 2.0*ShearStress(0,1)*ShearStress(1,0) +
+						2.0*ShearStress(0,2)*ShearStress(2,0) + ShearStress(1,1)*ShearStress(1,1) +
+						2.0*ShearStress(1,2)*ShearStress(2,1) + ShearStress(2,2)*ShearStress(2,2));
+		if ((sqrt(J2)+alpha*I1-kf)>0.0 && sqrt(J2)>0.0) Sigmaa = I1/3.0*OrthoSys::I + (kf-alpha*I1)/sqrt(J2) * ShearStress;
+	}
 }
 
 inline void Particle::Move_Leapfrog(Mat3_t I, double dt)
