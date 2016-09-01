@@ -30,7 +30,8 @@ void UserDamping(SPH::Domain & domi)
 		#pragma omp parallel for schedule (static) num_threads(domi.Nproc)
 		for (size_t i=0; i<domi.Particles.Size(); i++)
 		{
-			if (domi.Particles[i]->IsFree && domi.Particles[i]->Material == 1)	domi.Particles[i]->a = 0.0;
+			if (domi.Particles[i]->IsFree && domi.Particles[i]->ID == 4)		domi.Particles[i]->a = 0.0;
+			if (domi.Particles[i]->IsFree && domi.Particles[i]->Material == 1)	domi.Particles[i]->a -= DampF * domi.Particles[i]->v;
 			if (domi.Particles[i]->IsFree && domi.Particles[i]->Material == 3)	domi.Particles[i]->a -= DampS * domi.Particles[i]->v;
 		}
 	}
@@ -45,11 +46,13 @@ void UserDamping(SPH::Domain & domi)
 				if (domi.Particles[i]->IsFree)
 				{ 
 //					if (domi.Particles[i]->Material == 1)	domi.Particles[i]->LES	= true;
+					if (domi.Particles[i]->ID == 4)	domi.Particles[i]->ID == 1;
 					domi.Particles[i]->v = 0.0;;
 					domi.Particles[i]->vb = 0.0;;
 				}
 			}
 			domi.DelParticles(7);
+			domi.DelParticles(3);
 
 		}
 		check = 1;
@@ -136,6 +139,13 @@ int main(int argc, char **argv) try
     			dom.Particles[a]->NoSlip	= true;
     		}
 
+	    	if (xb>0.0 && xb<4.0*dx && yb>Hs && dom.Particles[a]->ID==1)
+		{
+    			dom.Particles[a]->ID		= 3;
+    			dom.Particles[a]->IsFree	= false;
+    			dom.Particles[a]->NoSlip	= true;
+    		}
+
    		if (xb>0.0 && yb>Hs && dom.Particles[a]->ID==1)
     			dom.Particles[a]->ID		= 10;
    		if (yb>(H+Hs) && dom.Particles[a]->ID==1)
@@ -152,6 +162,12 @@ int main(int argc, char **argv) try
 	    		dom.Particles[a]->Density	= RhoF*pow((1+7.0*g*(Hs-yb)/(CsW*CsW)),(1.0/7.0));
     			dom.Particles[a]->Densityb	= RhoF*pow((1+7.0*g*(Hs-yb)/(CsW*CsW)),(1.0/7.0));
     		}
+
+	    	if (xb>0.0 && xb<4.0*dx && yb<Hs && dom.Particles[a]->ID==1)
+		{
+    			dom.Particles[a]->ID		= 4;
+    		}
+
 
    	}
 	dom.DelParticles(10);
@@ -192,7 +208,7 @@ int main(int argc, char **argv) try
 			}
 			dom.Particles[a]->TIInitDist	= dx;
 			dom.Particles[a]->d		= d;
-	    		dom.Particles[a]->Shepard	= true;
+//	    		dom.Particles[a]->Shepard	= true;
 //			dom.Particles[a]->VarPorosity	= true;
 			dom.Particles[a]->SeepageType	= 1;	
 			dom.Particles[a]->n0		= n;

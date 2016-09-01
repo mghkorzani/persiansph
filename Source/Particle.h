@@ -565,7 +565,7 @@ inline void Particle::Mat3MVerlet(Mat3_t I, double dt)
 	{
 		if (IsFree)
 		{
-			double ev = (Strain(0,0)+Strain(1,1)+Strain(2,2))/3.0;
+			double ev = (Strain(0,0)+Strain(1,1)+Strain(2,2));
 			n = (n0+ev)/(1.0+ev);
 			switch(SeepageType)
 			{
@@ -860,7 +860,7 @@ inline void Particle::Mat3Leapfrog(Mat3_t I, double dt)
 	{
 		if (IsFree)
 		{
-			double ev = (Strain(0,0)+Strain(1,1)+Strain(2,2))/3.0;
+			double ev = (Strain(0,0)+Strain(1,1)+Strain(2,2));
 			n = (n0+ev)/(1.0+ev);
 			switch(SeepageType)
 			{

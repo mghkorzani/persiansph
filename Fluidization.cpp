@@ -20,7 +20,7 @@
 
 #include "Domain.h"
 #include "Interaction.h"
-	double g,dx,RhoF,CsW,DampTime,DampF,DampS,L,H,Q,V,q1=0.0;
+	double g,dx,RhoF,CsW,DampTime,DampF,DampS,L,H,Q,V,q1=0.0,Muw,d;
 	int	check=0;
 void UserInFlowCon(Vec3_t & position, Vec3_t & Vel, double & Den, SPH::Boundary & bdry)
 {
@@ -72,9 +72,20 @@ void UserDamping(SPH::Domain & domi)
 			domi.OutCon		= & UserOutFlowCon;
 		}
 		check = 1;
+
+		#pragma omp parallel for schedule (static) num_threads(domi.Nproc)
+		for (size_t i=0; i<domi.Particles.Size(); i++)
+		{
+			if (domi.Particles[i]->Material == 1)
+			{ 
+				domi.Particles[i]->a(1) = 0.0;
+			}
+		}
+
 		if (Q>q1)
 		{
 			std::cout<<"Q = "<<Q<<std::endl;
+			std::cout<<"Re = "<<(d*RhoF*V/Muw)<<std::endl;
 			q1 += 0.01;
 		}
 	}
@@ -135,7 +146,7 @@ int main(int argc, char **argv) try
         dom.GeneralBefore	= & UserDamping1;
 
 
-    	double h,t,t1,t2,Muw,h1,h2,h3,h0;
+    	double h,t,t1,t2,h1,h2,h3,h0;
     	dx	= 0.00125;
     	h	= dx*1.3;
 	dom.InitialDist	= dx;
@@ -167,13 +178,13 @@ int main(int argc, char **argv) try
     		yb=dom.Particles[a]->x(1);
 
     		dom.Particles[a]->Cs		= CsW;
-    		dom.Particles[a]->Alpha		= 0.1;
-    		dom.Particles[a]->Beta		= 0.1;
+    		dom.Particles[a]->Alpha		= 0.05;
+    		dom.Particles[a]->Beta		= 0.05;
     		dom.Particles[a]->PresEq	= 1;
     		dom.Particles[a]->Mu		= Muw;
     		dom.Particles[a]->MuRef		= Muw;
     		dom.Particles[a]->Material	= 1;
-//    		dom.Particles[a]->Shepard	= true;
+    		dom.Particles[a]->Shepard	= true;
     		dom.Particles[a]->Density	= RhoF*pow((1+7.0*g*(H-xb)/(CsW*CsW)),(1.0/7.0));
 		dom.Particles[a]->Densityb	= RhoF*pow((1+7.0*g*(H-xb)/(CsW*CsW)),(1.0/7.0));
 /*
@@ -203,6 +214,7 @@ int main(int argc, char **argv) try
 	d1	= 0.003;
 	d2	= 0.002;
 	d3	= 0.0005125;
+	d	= d3;
         t2	= (0.25*h/(CsS));
 
         std::cout<<"t2 = "<<t2<<std::endl;
@@ -229,9 +241,9 @@ int main(int argc, char **argv) try
 				dom.Particles[a]->TIn	= 2.55;
 			}
 			dom.Particles[a]->TIInitDist	= dx;
-			dom.Particles[a]->Shepard	= true;
+//			dom.Particles[a]->Shepard	= true;
 			dom.Particles[a]->VarPorosity	= true;
-			dom.Particles[a]->SeepageType	= 3;	
+			dom.Particles[a]->SeepageType	= 1;	
 			dom.Particles[a]->RhoF		= RhoF;
 			dom.Particles[a]->Cs		= CsS;
 			dom.Particles[a]->G		= G;
