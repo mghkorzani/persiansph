@@ -70,10 +70,9 @@ void UserDamping(SPH::Domain & domi)
 		#pragma omp parallel for schedule (static) num_threads(domi.Nproc)
 		for (size_t i=0; i<domi.Particles.Size(); i++)
 		{
-			if (domi.Particles[i]->Material == 3 && domi.Particles[i]->IsSat && domi.Particles[i]->c>0.0 && domi.Particles[i]->IsFree)
+			if (domi.Particles[i]->Material == 3 && domi.Particles[i]->IsSat && domi.Particles[i]->c>0.0 && domi.Particles[i]->IsFree && domi.Particles[i]->x(0)>0.5)
 			{
-				domi.Particles[i]->c		= 0.01*c;
-//				domi.Particles[i]->TI		= 0.0;
+				domi.Particles[i]->c		= 0.0;
 				domi.Particles[i]->ScalebackMat3(domi.Scheme);
 			}
 		}
@@ -106,7 +105,7 @@ int main(int argc, char **argv) try
         dom.Dimension	= 2;
         dom.Nproc	= 24;
     	dom.VisEq	= 0;
-    	dom.KernelType	= 2;
+    	dom.KernelType	= 0;
 	dom.SWIType	= 3;
     	dom.Scheme	= 0;
     	dom.Gravity	= 0.0 , -9.81 , 0.0 ;
@@ -120,9 +119,10 @@ int main(int argc, char **argv) try
 
 	double xb,yb,h,dx,T;
 
-	dx		= 0.0125;
-	h		= dx*1.3;
+	dx		= 0.01;
+	h		= dx*1.2;
 	dom.InitialDist	= dx;
+	dom.BC.cellfac	= 4.25;
 	
 	double rhoF,Mu,CsF,Tf;
 	rhoF		= 998.23;
@@ -134,8 +134,8 @@ int main(int argc, char **argv) try
 
 	dom.DomMax(1)	= 1.15;
 
-	dom.AddBoxLength(1 ,Vec3_t ( -0.2 - 5.0*dx , -3.0*dx , 0.0 ), 2.7 + 5.0*dx + dx/10.0 , 1.0 + 0.05 + 3.0*dx + dx/10.0  ,  0 , dx/2.0 ,rhoF, h,1 , 0 , false,false);
-	dom.AddBoxLength(1 ,Vec3_t (  2.5          , -10.0*dx, 0.0 ), 3.0*dx + dx/10.0       , 10.0*dx + dx/10.0       ,  0 , dx/2.0 ,rhoF, h,1 , 0 , false,false);
+	dom.AddBoxLength(1 ,Vec3_t ( -0.2 - 6.1*dx , -3.0*dx , 0.0 ), 3.5 + 6.1*dx + dx/10.0 , 1.0 + 0.05 + 3.0*dx + dx/10.0  ,  0 , dx/2.0 ,rhoF, h,1 , 0 , false,false);
+	dom.AddBoxLength(1 ,Vec3_t (  3.3          , -10.0*dx, 0.0 ), 3.0*dx + dx/10.0       , 10.0*dx + dx/10.0       ,  0 , dx/2.0 ,rhoF, h,1 , 0 , false,false);
 
 	for (size_t a=0; a<dom.Particles.Size(); a++)
 	{
@@ -145,7 +145,7 @@ int main(int argc, char **argv) try
 		dom.Particles[a]->MuRef		= Mu;
 		dom.Particles[a]->Material	= 1;
 		dom.Particles[a]->Cs		= CsF;
-//		dom.Particles[a]->Shepard	= true;
+		dom.Particles[a]->Shepard	= true;
 //		dom.Particles[a]->LES		= true;
 //		dom.Particles[a]->ShepardStep	= 20;
 		xb=dom.Particles[a]->x(0);
@@ -154,7 +154,7 @@ int main(int argc, char **argv) try
 		{
 			dom.Particles[a]->FPMassC  = 1.1;
 			dom.Particles[a]->ID	= 2;
-			dom.Particles[a]->NoSlip= true;
+//			dom.Particles[a]->NoSlip= true;
 			dom.Particles[a]->IsFree= false;
 		}
 		if (yb<1.0 && xb<=-0.0)
@@ -184,12 +184,12 @@ int main(int argc, char **argv) try
 	de		= 0.026;
 	n		= 0.41;
 	c		= IC;
-	E		= 20.0e6;
+	E		= 10.0e6;
 	Nu		= 0.3;
 	K		= E/(3.0*(1.0-2.0*Nu));
 	G		= E/(2.0*(1.0+Nu));
 	CsS		= sqrt(K/(rhoS-Rho));
-	Ts		= (0.2*h/CsS);
+	Ts		= (0.25*h/CsS);
 
 
 	std::cout<<"CsS = "<<CsS<<std::endl;
@@ -203,15 +203,15 @@ int main(int argc, char **argv) try
     	DampTime= 0.2;
 
 
-	dom.AddBoxLength(3 ,Vec3_t ( -3.0*dx , -3.0*dx , 0.0 ), 2.5 + dx/10.0 , 1.0 + 3.0*dx + dx/10.0  ,  0 , dx/2.0 ,rhoS, h,1 , 0 , false,false);
+	dom.AddBoxLength(3 ,Vec3_t ( -3.0*dx , -3.0*dx , 0.0 ), 3.3 + 3.0*dx + dx/10.0 , 1.0 + 3.0*dx + dx/10.0  ,  0 , dx/2.0 ,rhoS, h,1 , 0 , false,false);
 
 	for (size_t a=0; a<dom.Particles.Size(); a++)
 	{
 		if (dom.Particles[a]->ID==3)
 		{
 			dom.Particles[a]->Material	= 3;
-			dom.Particles[a]->Alpha		= 0.2;
-			dom.Particles[a]->Beta		= 0.2;
+			dom.Particles[a]->Alpha		= 0.1;
+			dom.Particles[a]->Beta		= 0.1;
 			dom.Particles[a]->TI		= 0.5;
 			dom.Particles[a]->TIn		= 2.55;
 			dom.Particles[a]->TIInitDist	= dx;
@@ -237,8 +237,7 @@ int main(int argc, char **argv) try
 				dom.Particles[a]->IsFree= false;
 				dom.Particles[a]->NoSlip= true;
 				dom.Particles[a]->d	= de*1.0e10;
-				dom.Particles[a]->c	= 0.01*c;
-//				dom.Particles[a]->TI	= 0.0;
+				dom.Particles[a]->c	= 0.0;
 			}
 			if (xb<0.0)
 			{
@@ -246,8 +245,7 @@ int main(int argc, char **argv) try
 				dom.Particles[a]->IsFree= false;
 				dom.Particles[a]->NoSlip= true;
 				dom.Particles[a]->d	= de*1.0e10;
-				dom.Particles[a]->c	= 0.01*c;
-//				dom.Particles[a]->TI	= 0.0;
+				dom.Particles[a]->c	= 0.0;
 			}
 			if (yb>=(-(1.0/1.5)*(xb-1.7)) && dom.Particles[a]->ID == 3)
 				dom.Particles[a]->ID	= 5;
@@ -256,7 +254,7 @@ int main(int argc, char **argv) try
 
 	dom.DelParticles(5);
 
-	T	= std::min(Tf,Ts);
+	T	= std::min(Tf,Ts)/2.0;
 
 	std::cout<<"Tf = "<<Tf<<std::endl;
 	std::cout<<"Ts = "<<Ts<<std::endl;
@@ -269,7 +267,7 @@ int main(int argc, char **argv) try
 	
 //	dom.WriteXDMF("maz");
 
-	dom.Solve(/*tf*/50000.0,/*dt*/T,/*dtOut*/0.1,"test06",2000);
+	dom.Solve(/*tf*/50000.0,/*dt*/T,/*dtOut*/0.1,"test06",3000);
 	return 0;
 }
 MECHSYS_CATCH
