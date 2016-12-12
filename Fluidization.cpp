@@ -25,12 +25,12 @@
 void UserInFlowCon(Vec3_t & position, Vec3_t & Vel, double & Den, SPH::Boundary & bdry)
 {
 	Vel = V,0.0,0.0;
-	Den = RhoF*pow((1+7.0*(g*H+0.5*V*V)/(CsW*CsW)),(1.0/7.0));
+	Den = RhoF*pow((1+7.0*(g*(H-4.25*dx)+0.5*V*V)/(CsW*CsW)),(1.0/7.0));
 }
 void UserOutFlowCon(Vec3_t & position, Vec3_t & Vel, double & Den, SPH::Boundary & bdry)
 {
 	Vel = V,0.0,0.0;
-	Den = RhoF*pow((1+7.0*(g*0.01)/(CsW*CsW)),(1.0/7.0));
+	Den = RhoF*pow((1+7.0*(g*(4.25*dx)+0.5*V*V)/(CsW*CsW)),(1.0/7.0));
 }
 
 void UserDamping(SPH::Domain & domi)
@@ -134,7 +134,7 @@ int main(int argc, char **argv) try
         dom.Dimension	= 2;
         dom.Nproc	= 24;
     	dom.VisEq	= 0;
-    	dom.KernelType	= 2;
+    	dom.KernelType	= 0;
 	dom.SWIType	= 3;
     	dom.Scheme	= 0;
     	dom.Gravity	= -9.81, 0.0 , 0.0 ;
@@ -147,9 +147,10 @@ int main(int argc, char **argv) try
 
 
     	double h,t,t1,t2,h1,h2,h3,h0;
-    	dx	= 0.00125;
-    	h	= dx*1.3;
+    	dx	= 0.001;
+    	h	= dx*1.2;
 	dom.InitialDist	= dx;
+	dom.BC.cellfac	= 4.25;
 
 //	L	= 0.15;
 	L	= 0.06;
@@ -168,7 +169,7 @@ int main(int argc, char **argv) try
 
 
 
-    	dom.AddBoxLength(1 ,Vec3_t ( 0.0 , -L/2.0 , 0.0 ), H + dx/10.0 , L + dx/10.0 ,  0 , dx/2.0 ,RhoF, h, 1 , 0 , false, false );
+    	dom.AddBoxLength(1 ,Vec3_t ( -6.1*dx , -L/2.0 , 0.0 ), H + dx/10.0 , L + dx/10.0 ,  0 , dx/2.0 ,RhoF, h, 1 , 0 , false, false );
 
     	double yb,xb;
 
@@ -179,7 +180,7 @@ int main(int argc, char **argv) try
 
     		dom.Particles[a]->Cs		= CsW;
     		dom.Particles[a]->Alpha		= 0.05;
-    		dom.Particles[a]->Beta		= 0.05;
+//    		dom.Particles[a]->Beta		= 0.05;
     		dom.Particles[a]->PresEq	= 1;
     		dom.Particles[a]->Mu		= Muw;
     		dom.Particles[a]->MuRef		= Muw;
@@ -233,15 +234,15 @@ int main(int argc, char **argv) try
 		if (dom.Particles[a]->ID==5)
 		{
 			dom.Particles[a]->Material	= 3;
-			dom.Particles[a]->Alpha		= 0.2;
-			dom.Particles[a]->Beta		= 0.2;
+			dom.Particles[a]->Alpha		= 0.1;
+			dom.Particles[a]->Beta		= 0.1;
 			if (c>0.0)
 			{
 				dom.Particles[a]->TI	= 0.5;
 				dom.Particles[a]->TIn	= 2.55;
 			}
 			dom.Particles[a]->TIInitDist	= dx;
-//			dom.Particles[a]->Shepard	= true;
+			dom.Particles[a]->Shepard	= true;
 			dom.Particles[a]->VarPorosity	= true;
 			dom.Particles[a]->SeepageType	= 1;	
 			dom.Particles[a]->RhoF		= RhoF;
@@ -302,6 +303,7 @@ int main(int argc, char **argv) try
 //    	DampTime= 0.0;
 
         t	= std::min(t1,t2);
+        t	= 2.0e-6;
         std::cout<<"t1 = "<<t1<<std::endl;
         std::cout<<"t2 = "<<t2<<std::endl;
         std::cout<<"t  = "<<t<<std::endl;

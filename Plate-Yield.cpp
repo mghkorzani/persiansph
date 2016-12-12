@@ -18,8 +18,8 @@
 * PersianSPH; if not, see <http://www.gnu.org/licenses/>                           *
 ************************************************************************************/
 
-#include "./Source/Domain.h"
-#include "./Source/Interaction.h"
+#include "Domain.h"
+#include "Interaction.h"
 
 void UserAcc(SPH::Domain & domi)
 {
@@ -39,17 +39,13 @@ using std::endl;
 
 int main(int argc, char **argv) try
 {
-        SPH::Domain		dom;
+       SPH::Domain	dom;
 
         dom.Dimension	= 2;
-        dom.Nproc		= 24;
-    	dom.KernelType	= 0;
-    	dom.Shepard		= false;
-    	dom.Scheme		= 0;
-
-    	dom.TI			= 0.3;
-    	dom.Alpha		= 1.0;
-    	dom.XSPH		= 0.5;
+        dom.Nproc	= 24;
+    	dom.KernelType	= 4;
+    	dom.Scheme	= 0;
+     	dom.XSPH	= 0.5; //Very important
 
         double dx,h,rho,K,G,Cs;
     	double H,L,n;
@@ -80,11 +76,15 @@ int main(int argc, char **argv) try
 
     	for (size_t a=0; a<dom.Particles.Size(); a++)
     	{
-    		dom.Particles[a]->G			= G;
+    		dom.Particles[a]->G		= G;
+    		dom.Particles[a]->PresEq	= 0;
     		dom.Particles[a]->Cs		= Cs;
+    		dom.Particles[a]->Shepard	= false;
     		dom.Particles[a]->Material	= 2;
     		dom.Particles[a]->Fail		= 1;
     		dom.Particles[a]->Sigmay	= 3000.0;
+    		dom.Particles[a]->Alpha		= 1.0;
+    		dom.Particles[a]->TI		= 0.3;
     		x = dom.Particles[a]->x(0);
     		if (x<-L/2.0)
     			dom.Particles[a]->ID=2;

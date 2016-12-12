@@ -18,25 +18,25 @@
 * PersianSPH; if not, see <http://www.gnu.org/licenses/>                           *
 ************************************************************************************/
 
-#include "./Source/Domain.h"
-#include "./Source/Interaction.h"
+#include "Domain.h"
+#include "Interaction.h"
 
 using std::cout;
 using std::endl;
+void NewUserOutput(SPH::Particle * Particles, double & Prop1, double & Prop2,  double & Prop3)
+{
+	Prop1 = Particles->ZWab;
+}
 
 int main(int argc, char **argv) try
 {
-        SPH::Domain		dom;
+        SPH::Domain	dom;
 
         dom.Dimension	= 2;
-        dom.Nproc		= 8;
-    	dom.KernelType	= 0;
-    	dom.Shepard		= false;
-    	dom.Scheme		= 0;
-
-    	dom.TI			= 0.3;
-    	dom.Alpha		= 1.0;
-    	dom.XSPH		= 0.5;
+        dom.Nproc	= 24;
+    	dom.KernelType	= 4;
+    	dom.Scheme	= 0;
+     	dom.XSPH	= 0.5; //Very important
 
         double dx,h,rho,K,G,Cs;
     	double H,L,n;
@@ -44,13 +44,12 @@ int main(int argc, char **argv) try
     	H	= 0.02;
     	L	= 0.2;
     	n	= 20.0;
-
     	rho	= 1000.0;
     	K	= 3.25e6;
     	G	= 7.15e5;
     	dx	= H / n;
-    	h	= dx*1.5;
-        Cs			= sqrt(K/rho);
+    	h	= dx*1.3; //Very important
+        Cs	= sqrt(K/rho);
     	dom.InitialDist	= dx;
 
         double timestep;
@@ -60,6 +59,7 @@ int main(int argc, char **argv) try
         dom.DomMax(1) = 0.10;
         dom.DomMin(1) =-0.10;
         dom.DomMax(0) = 0.22;
+
 
      	dom.AddBoxLength(1 ,Vec3_t ( -L/2.0 , -H/2.0-4.0*dx , 0.0 ), 1.5*L + dx/10.0 , H + 8.0*dx + dx/10.0 ,  0 , dx/2.0 ,rho, h, 1 , 0 , false, false );
 
@@ -90,10 +90,14 @@ int main(int argc, char **argv) try
 
     	for (size_t a=0; a<dom.Particles.Size(); a++)
     	{
-    		dom.Particles[a]->G			= G;
+    		dom.Particles[a]->G		= G;
     		dom.Particles[a]->PresEq	= 0;
     		dom.Particles[a]->Cs		= Cs;
     		dom.Particles[a]->Material	= 2;
+    		dom.Particles[a]->Shepard	= false;
+    		dom.Particles[a]->Alpha		= 1.0;
+    		dom.Particles[a]->TI		= 0.3;
+
     		x = dom.Particles[a]->x(0);
     		if (x>0.0)
     		{
@@ -102,9 +106,20 @@ int main(int argc, char **argv) try
     			dom.Particles[a]->vb(1) = Vy;
     		}
     	}
+	double T, Nu;
+	Nu	= (3.0*K-2.0*G)/(6.0*K+2.0*G);
+	T	= std::sqrt((4.0*M_PI*M_PI*6.0*rho*(1-Nu))/(G*H*H*k*k*k*k));
+	cout<<"Nu = "<<Nu<<endl;
+	cout<<"T  = "<<T<<endl;
+	cout<<"TCs/L  = "<<T*Cs/L<<endl;
+
+	dom.OutputName[0]	= "ZWab";
+        dom.UserOutput		= & NewUserOutput;
+	
+
 
 //    	dom.WriteXDMF("maz");
-    	dom.Solve(/*tf*/1000.0,/*dt*/timestep,/*dtOut*/0.001,"test06",1000);
+    	dom.Solve(/*tf*/1000.0,/*dt*/timestep,/*dtOut*/0.002,"test06",1000);
         return 0;
 }
 MECHSYS_CATCH

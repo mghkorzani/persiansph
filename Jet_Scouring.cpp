@@ -40,13 +40,13 @@ void UserDamping(SPH::Domain & domi)
 		if (check==0)
 		{
 			domi.SWIType	= 1;
+			domi.DelParticles(4);
 			#pragma omp parallel for schedule (static) num_threads(domi.Nproc)
 			for (size_t i=0; i<domi.Particles.Size(); i++)
 			{
 				if (domi.Particles[i]->IsFree)
 				{ 
 //					if (domi.Particles[i]->Material == 1)	domi.Particles[i]->LES	= true;
-					if (domi.Particles[i]->ID == 4)		domi.Particles[i]->ID	= 1;
 					domi.Particles[i]->v = 0.0;;
 					domi.Particles[i]->vb = 0.0;;
 				}
@@ -87,7 +87,7 @@ int main(int argc, char **argv) try
 
 
     	double h,t,t1,t2,Muw;
-    	dx	= 0.0025;
+    	dx	= 0.002;
     	h	= dx*1.2;
 	dom.InitialDist	= dx;
 
@@ -195,17 +195,17 @@ int main(int argc, char **argv) try
 	double Nu,E,K,G,CsS,RhoS,c,Phi,Psi,n,d;
 
 	Nu	= 0.3;
-	E	= 25.0e6;
+	E	= 10.0e6;
 	K	= E/(3.0*(1.0-2.0*Nu));
 	G	= E/(2.0*(1.0+Nu));
 	n	= 0.55;
 	RhoS	= 2650.0*(1.0-n)+n*RhoF;
 	CsS	= sqrt(K/(RhoS-RhoF));
-	c	= 1.0;
+	c	= 0.0;
 	Phi	= 35.0;
 	Psi	= 0.0;
 	d	= 0.00085;
-        t2	= (0.2*h/CsS);
+        t2	= (0.025*h/CsS);
 
         std::cout<<"CsS  = "<<CsS<<std::endl;
         std::cout<<"RhoS = "<<RhoS<<std::endl;
@@ -219,8 +219,8 @@ int main(int argc, char **argv) try
 		if (dom.Particles[a]->ID==5)
 		{
 			dom.Particles[a]->Material	= 3;
-			dom.Particles[a]->Alpha		= 0.2;
-			dom.Particles[a]->Beta		= 0.2;
+			dom.Particles[a]->Alpha		= 0.1;
+			dom.Particles[a]->Beta		= 0.1;
 			if (c>0.0)
 			{
 				dom.Particles[a]->TI	= 0.5;
@@ -228,10 +228,11 @@ int main(int argc, char **argv) try
 			}
 			dom.Particles[a]->TIInitDist	= dx;
 			dom.Particles[a]->d		= d;
-	    		dom.Particles[a]->Shepard	= true;
-//			dom.Particles[a]->VarPorosity	= true;
+//	    		dom.Particles[a]->Shepard	= true;
+			dom.Particles[a]->VarPorosity	= true;
 			dom.Particles[a]->SeepageType	= 1;	
 			dom.Particles[a]->n0		= n;
+			dom.Particles[a]->n		= n;
 			dom.Particles[a]->RhoF		= RhoF;
 			dom.Particles[a]->Cs		= CsS;
 			dom.Particles[a]->G		= G;
@@ -244,7 +245,7 @@ int main(int argc, char **argv) try
 			xb=dom.Particles[a]->x(0);
 			yb=dom.Particles[a]->x(1);
 	    		if (xb>(1.15+4.0*dx) && yb<(0.05-4.0*dx) && dom.Particles[a]->ID==5)
-	    			dom.Particles[a]->ID		= 10;
+	    			dom.Particles[a]->ID	= 10;
 
 			if (yb<0.0 && dom.Particles[a]->ID==5)
 			{
@@ -279,7 +280,7 @@ int main(int argc, char **argv) try
         dom.UserOutput		= & NewUserOutput;
 
 //	dom.WriteXDMF("maz");
-   	dom.Solve(/*tf*/4.9,/*dt*/t,/*dtOut*/0.01,"test",1000);
+   	dom.Solve(/*tf*/5.0,/*dt*/t,/*dtOut*/0.01,"test",1000);
 
         return 0;
 }

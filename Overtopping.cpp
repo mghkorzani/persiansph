@@ -72,7 +72,6 @@ void UserDamping(SPH::Domain & domi)
 			if (domi.Particles[i]->Material == 3 && domi.Particles[i]->IsSat && domi.Particles[i]->c>0.0 && domi.Particles[i]->IsFree)
 			{
 				domi.Particles[i]->c		= 0.0;
-				domi.Particles[i]->TI		= 0.0;
 				domi.Particles[i]->ScalebackMat3(domi.Scheme);
 			}
 		}
@@ -104,7 +103,7 @@ int main(int argc, char **argv) try
         dom.Dimension	= 2;
         dom.Nproc	= 24;
     	dom.VisEq	= 0;
-    	dom.KernelType	= 2;
+    	dom.KernelType	= 0;
 	dom.SWIType	= 3;
     	dom.Scheme	= 0;
     	dom.Gravity	= 0.0 , -9.81 , 0.0 ;
@@ -118,26 +117,27 @@ int main(int argc, char **argv) try
 
 	double xb,yb,h,dx,T;
 
-	dx		= 0.0125;
-	h		= dx*1.3;
+	dx		= 0.01;
+	h		= dx*1.20;
 	dom.InitialDist	= dx;
+	dom.BC.cellfac	= 4.25;
 	
 	double rhoF,Mu,CsF,Tf;
 	rhoF		= 998.23;
 	Mu		= 1.0e-3;
-	CsF		= 10.0*6.0;
+	CsF		= 10.0*5.0;
 	Tf		= (0.25*h/CsF);
 
 	Cs = CsF;
 
 
-	dom.AddBoxLength(1 ,Vec3_t ( -2.0 - 5.0*dx , -3.0*dx , 0.0 ), 4.2 + 5.0*dx + dx/10.0 , 1.0 + 3.0*dx + dx/10.0  ,  0 , dx/2.0 ,rhoF, h,1 , 0 , false,false);
-	dom.AddBoxLength(1 ,Vec3_t (  2.2          , -10.0*dx, 0.0 ), 3.0*dx + dx/10.0       , 10.0*dx + dx/10.0       ,  0 , dx/2.0 ,rhoF, h,1 , 0 , false,false);
+	dom.AddBoxLength(1 ,Vec3_t ( -2.0 - 6.1*dx , -3.0*dx , 0.0 ), 5.5 + 6.1*dx + dx/10.0 , 1.0 + 3.0*dx + dx/10.0  ,  0 , dx/2.0 ,rhoF, h,1 , 0 , false,false);
+	dom.AddBoxLength(1 ,Vec3_t (  3.5          , -10.0*dx, 0.0 ), 3.0*dx + dx/10.0       , 10.0*dx + dx/10.0       ,  0 , dx/2.0 ,rhoF, h,1 , 0 , false,false);
 
 	for (size_t a=0; a<dom.Particles.Size(); a++)
 	{
 		dom.Particles[a]->PresEq	= 1;
-		dom.Particles[a]->Alpha		= 0.05;
+		dom.Particles[a]->Alpha		= 0.1;
 		dom.Particles[a]->Mu		= Mu;
 		dom.Particles[a]->MuRef		= Mu;
 		dom.Particles[a]->Material	= 1;
@@ -151,7 +151,7 @@ int main(int argc, char **argv) try
 		{
 			dom.Particles[a]->FPMassC  = 1.1;
 			dom.Particles[a]->ID	= 2;
-			dom.Particles[a]->NoSlip= true;
+//			dom.Particles[a]->NoSlip= true;
 			dom.Particles[a]->IsFree= false;
 		}
 		if (yb>0.2 && xb<=-2.0)
@@ -173,7 +173,7 @@ int main(int argc, char **argv) try
 	de		= 0.026;
 	n		= 0.41;
 	c		= IC;
-	E		= 20.0e6;
+	E		= 10.0e6;
 	Nu		= 0.3;
 	K		= E/(3.0*(1.0-2.0*Nu));
 	G		= E/(2.0*(1.0+Nu));
@@ -192,15 +192,15 @@ int main(int argc, char **argv) try
     	DampTime= 0.2;
 
 
-	dom.AddBoxLength(3 ,Vec3_t ( -2.0 , -3.0*dx , 0.0 ), 4.2 + dx/10.0 , 1.0 + 3.0*dx + dx/10.0  ,  0 , dx/2.0 ,rhoS, h,1 , 0 , false,false);
+	dom.AddBoxLength(3 ,Vec3_t ( -2.0 , -3.0*dx , 0.0 ), 5.5 + dx/10.0 , 1.0 + 3.0*dx + dx/10.0  ,  0 , dx/2.0 ,rhoS, h,1 , 0 , false,false);
 
 	for (size_t a=0; a<dom.Particles.Size(); a++)
 	{
 		if (dom.Particles[a]->ID==3)
 		{
 			dom.Particles[a]->Material	= 3;
-			dom.Particles[a]->Alpha		= 0.2;
-			dom.Particles[a]->Beta		= 0.2;
+			dom.Particles[a]->Alpha		= 0.1;
+			dom.Particles[a]->Beta		= 0.1;
 			dom.Particles[a]->TI		= 0.5;
 			dom.Particles[a]->TIn		= 2.55;
 			dom.Particles[a]->TIInitDist	= dx;
@@ -227,7 +227,6 @@ int main(int argc, char **argv) try
 				dom.Particles[a]->NoSlip= true;
 				dom.Particles[a]->d	= de*1.0e10;
 				dom.Particles[a]->c	= 0.0;
-				dom.Particles[a]->TI	= 0.0;
 			}
 			if (yb>=(-(1.0/1.5)*(xb-1.6)) && dom.Particles[a]->ID == 3)
 				dom.Particles[a]->ID	= 5;
@@ -237,8 +236,7 @@ int main(int argc, char **argv) try
 	}
 	dom.DelParticles(5);
 
-	T	= std::min(Tf,Ts);
-	T	= std::min(T,1.0e-5);
+	T	= std::min(Tf,Ts)/2.0;
 
 	std::cout<<"Tf = "<<Tf<<std::endl;
 	std::cout<<"Ts = "<<Ts<<std::endl;
@@ -249,7 +247,7 @@ int main(int argc, char **argv) try
 	dom.OutputName[2]	= "Cohesion";
         dom.UserOutput		= & NewUserOutput;
 
-	dom.Solve(/*tf*/50000.0,/*dt*/T,/*dtOut*/0.1,"test06",8000);
+	dom.Solve(/*tf*/50000.0,/*dt*/T,/*dtOut*/0.1,"test06",3000);
 	return 0;
 }
 MECHSYS_CATCH

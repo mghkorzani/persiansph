@@ -185,7 +185,7 @@ int main(int argc, char **argv) try
 	Phi	= 38.0;
 	Psi	= 0.0;
 	d	= 0.00392;
-        t2	= (0.2*h/CsS);
+        t2	= (0.05*h/CsS);
 
         std::cout<<"CsS  = "<<CsS<<std::endl;
         std::cout<<"RhoS = "<<RhoS<<std::endl;
@@ -199,8 +199,8 @@ int main(int argc, char **argv) try
 		if (dom.Particles[a]->ID==5)
 		{
 			dom.Particles[a]->Material	= 3;
-			dom.Particles[a]->Alpha		= 0.2;
-			dom.Particles[a]->Beta		= 0.2;
+			dom.Particles[a]->Alpha		= 0.1;
+			dom.Particles[a]->Beta		= 0.1;
 			if (c>0.0)
 			{
 				dom.Particles[a]->TI	= 0.5;
@@ -268,7 +268,7 @@ int main(int argc, char **argv) try
         dom.UserOutput		= & NewUserOutput;
 
 //	dom.WriteXDMF("maz");
-   	dom.Solve(/*tf*/4.0,/*dt*/t,/*dtOut*/0.01,"test",1000);
+   	dom.Solve(/*tf*/4.2,/*dt*/t,/*dtOut*/0.01,"test",1000);
 
         return 0;
 }
