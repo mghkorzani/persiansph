@@ -27,9 +27,19 @@ void UserAcc(SPH::Domain & domi)
 	for (size_t i=0; i<domi.Particles.Size(); i++)
 	{
 		if (domi.Particles[i]->ID == 3)
-			domi.Particles[i]->a = Vec3_t(5.0,0.0,0.0);
+		{
+			domi.Particles[i]->a		= Vec3_t(0.0,0.0,0.0);
+			domi.Particles[i]->v		= Vec3_t(1.0e-2,0.0,0.0);
+			domi.Particles[i]->vb		= Vec3_t(1.0e-2,0.0,0.0);
+//			domi.Particles[i]->VXSPH	= Vec3_t(0.0,0.0,0.0);
+		}
 		if (domi.Particles[i]->ID == 2)
-			domi.Particles[i]->a = Vec3_t(-5.0,0.0,0.0);
+		{
+			domi.Particles[i]->a		= Vec3_t(0.0,0.0,0.0);
+			domi.Particles[i]->v		= Vec3_t(-1.0e-2,0.0,0.0);
+			domi.Particles[i]->vb		= Vec3_t(-1.0e-2,0.0,0.0);
+//			domi.Particles[i]->VXSPH	= Vec3_t(0.0,0.0,0.0);
+		}
 	}
 }
 
@@ -43,29 +53,33 @@ int main(int argc, char **argv) try
 
         dom.Dimension	= 2;
         dom.Nproc	= 24;
-    	dom.KernelType	= 4;
+    	dom.KernelType	= 0;
     	dom.Scheme	= 0;
-     	dom.XSPH	= 0.5; //Very important
+//     	dom.XSPH	= 0.5; //Very important
 
-        double dx,h,rho,K,G,Cs;
+        double dx,h,rho,K,G,Cs,Fy;
     	double H,L,n;
 
     	H	= 0.01;
     	L	= 0.03;
-    	n	= 60.0;
+    	n	= 40.0;
 
     	rho	= 1000.0;
-    	K	= 1.0e6;
-    	G	= 3.0e5;
+    	K	= 3.25e6;
+    	G	= 7.15e5;
+	Fy	= 4000.0;
     	dx	= H / n;
-    	h	= dx*1.5;
+    	h	= dx*1.3; //Very important
         Cs	= sqrt(K/rho);
-    	dom.InitialDist	= dx;
 
         double timestep;
-        timestep = (0.1*h/(Cs));
-        cout<<timestep<<endl;
-        cout<<Cs<<endl;
+        timestep = (0.2*h/(Cs));
+
+        cout<<"t  = "<<timestep<<endl;
+        cout<<"Cs = "<<Cs<<endl;
+        cout<<"K  = "<<K<<endl;
+        cout<<"G  = "<<G<<endl;
+        cout<<"Fy = "<<Fy<<endl;
     	dom.GeneralAfter = & UserAcc;
         dom.DomMax(0) = L;
         dom.DomMin(0) = -L;
@@ -82,9 +96,10 @@ int main(int argc, char **argv) try
     		dom.Particles[a]->Shepard	= false;
     		dom.Particles[a]->Material	= 2;
     		dom.Particles[a]->Fail		= 1;
-    		dom.Particles[a]->Sigmay	= 3000.0;
+    		dom.Particles[a]->Sigmay	= Fy;
     		dom.Particles[a]->Alpha		= 1.0;
     		dom.Particles[a]->TI		= 0.3;
+    		dom.Particles[a]->TIInitDist	= dx;
     		x = dom.Particles[a]->x(0);
     		if (x<-L/2.0)
     			dom.Particles[a]->ID=2;
@@ -93,7 +108,7 @@ int main(int argc, char **argv) try
     	}
 
 //    	dom.WriteXDMF("maz");
-    	dom.Solve(/*tf*/1000.0,/*dt*/timestep,/*dtOut*/0.0005,"test06",5000);
+    	dom.Solve(/*tf*/1000.0,/*dt*/timestep,/*dtOut*/0.001,"test06",999);
         return 0;
 }
 MECHSYS_CATCH
