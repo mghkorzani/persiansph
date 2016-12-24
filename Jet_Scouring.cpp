@@ -97,7 +97,7 @@ int main(int argc, char **argv) try
 	RhoF	= 1000.0;
 	CsW	= 10.0*sqrt(2.0*g*H)*2.0;
 	Muw	= 1.0e-3;
-        t1	= (0.25*h/(CsW));
+        t1	= (0.2*h/(CsW));
 
 
 
@@ -158,7 +158,7 @@ int main(int argc, char **argv) try
     			dom.Particles[a]->IsFree	= false;
 //    			dom.Particles[a]->NoSlip	= true;
     		}
-    		if (xb<(0.7+4.0*dx) && xb>0.7 && yb>0.05 && yb<0.1  && dom.Particles[a]->ID==3)
+    		if (xb<(0.7+4.0*dx) && xb>0.7 && yb>0.05 && yb<(0.1+h)  && dom.Particles[a]->ID==3)
 		{
     			dom.Particles[a]->ID		= 4;
     			dom.Particles[a]->IsFree	= true;
@@ -169,7 +169,7 @@ int main(int argc, char **argv) try
     			dom.Particles[a]->ID		= 10;
     		if (yb>H && dom.Particles[a]->ID==1)
     			dom.Particles[a]->ID		= 10;
-    		if (xb>(0.7+4.0*dx) && yb>0.05 && dom.Particles[a]->ID==1)
+    		if (xb>(0.7+4.0*dx) && yb>(0.05-h) && dom.Particles[a]->ID==1)
     			dom.Particles[a]->ID		= 10;
     		if (xb>(1.15+4.0*dx) && yb<(0.05-4.0*dx) && dom.Particles[a]->ID==1)
     			dom.Particles[a]->ID		= 10;
@@ -184,8 +184,8 @@ int main(int argc, char **argv) try
     		}
     		if (dom.Particles[a]->ID==2)
   		{
-	    		dom.Particles[a]->Density	= RhoF*pow((1+7.0*g*(0.05-yb)/(CsW*CsW)),(1.0/7.0));
-    			dom.Particles[a]->Densityb	= RhoF*pow((1+7.0*g*(0.05-yb)/(CsW*CsW)),(1.0/7.0));
+	    		dom.Particles[a]->Density	= RhoF*pow((1+7.0*g*(0.05-dx-yb)/(CsW*CsW)),(1.0/7.0));
+    			dom.Particles[a]->Densityb	= RhoF*pow((1+7.0*g*(0.05-dx-yb)/(CsW*CsW)),(1.0/7.0));
     		}
 
    	}
@@ -205,7 +205,7 @@ int main(int argc, char **argv) try
 	Phi	= 35.0;
 	Psi	= 0.0;
 	d	= 0.00085;
-        t2	= (0.025*h/CsS);
+        t2	= (0.2*h/CsS);
 
         std::cout<<"CsS  = "<<CsS<<std::endl;
         std::cout<<"RhoS = "<<RhoS<<std::endl;
@@ -229,7 +229,7 @@ int main(int argc, char **argv) try
 			dom.Particles[a]->TIInitDist	= dx;
 			dom.Particles[a]->d		= d;
 //	    		dom.Particles[a]->Shepard	= true;
-			dom.Particles[a]->VarPorosity	= true;
+//			dom.Particles[a]->VarPorosity	= true;
 			dom.Particles[a]->SeepageType	= 1;	
 			dom.Particles[a]->n0		= n;
 			dom.Particles[a]->n		= n;

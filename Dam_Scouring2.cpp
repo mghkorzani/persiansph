@@ -175,7 +175,7 @@ int main(int argc, char **argv) try
 	double Nu,E,K,G,CsS,RhoS,c,Phi,Psi,n,d;
 
 	Nu	= 0.3;
-	E	= 25.0e6;
+	E	= 5.0e6;
 	K	= E/(3.0*(1.0-2.0*Nu));
 	G	= E/(2.0*(1.0+Nu));
 	n	= 0.42;
