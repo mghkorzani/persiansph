@@ -27,6 +27,7 @@ INCLUDE ($ENV{SPH}/Modules/FindPKG.cmake)
 SET(EXES
 #	Drag_LES
 #	Poiseuille
+	Couette
 #	Oscillating-Plate
 #	Plate-Yield
 #	Dam_Scouring
@@ -35,7 +36,7 @@ SET(EXES
 #	Overtopping2
 #	Hydraulic_Heave
 #	Current-flow_elastoplastic
-	Jet_Scouring
+#	Jet_Scouring
 #	Fluidization
 )
 
