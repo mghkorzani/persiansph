@@ -1122,7 +1122,7 @@ inline void Domain::StartAcceleration (Vec3_t const & a)
 	    	else
 	    	{
 	       		// Reset the pressure and the induced velocity for solid boundaries
-	    		Particles[i]->vb = 0.0;
+	    		Particles[i]->NSv = 0.0;
 	    		Particles[i]->Pressure = 0.0;
 	        	set_to_zero(Particles[i]->Sigma);
 	        	set_to_zero(Particles[i]->ShearStress);
@@ -1174,7 +1174,7 @@ inline void Domain::PrimaryComputeAcceleration ()
 										Particles[P1]->SumKernel+= K;
 					if (Particles[P1]->Material < 3)	Particles[P1]->Pressure	+= Particles[P2]->Pressure * K + dot(Gravity,xij)*Particles[P2]->Density*K;
 					if (Particles[P1]->Material > 1)	Particles[P1]->Sigma 	 = Particles[P1]->Sigma + K * Particles[P2]->Sigma;
-					if (Particles[P1]->NoSlip)		Particles[P1]->vb 	+= Particles[P2]->v * K;
+					if (Particles[P1]->NoSlip)		Particles[P1]->NSv 	+= Particles[P2]->v * K;
 				omp_unset_lock(&Particles[P1]->my_lock);
 			}
 			else
@@ -1183,7 +1183,7 @@ inline void Domain::PrimaryComputeAcceleration ()
 										Particles[P2]->SumKernel+= K;
 					if (Particles[P2]->Material < 3)	Particles[P2]->Pressure	+= Particles[P1]->Pressure * K + dot(Gravity,xij)*Particles[P1]->Density*K;
 					if (Particles[P2]->Material > 1)	Particles[P2]->Sigma	 = Particles[P2]->Sigma + K * Particles[P1]->Sigma;
-					if (Particles[P2]->NoSlip)		Particles[P2]->vb 	+= Particles[P1]->v * K;
+					if (Particles[P2]->NoSlip)		Particles[P2]->NSv 	+= Particles[P1]->v * K;
 				omp_unset_lock(&Particles[P2]->my_lock);
 			}
 		}
@@ -1228,7 +1228,7 @@ inline void Domain::PrimaryComputeAcceleration ()
 			size_t a = FixedParticles[i];
 			if (Particles[a]->Material < 3)	Particles[a]->Pressure	= Particles[a]->Pressure/Particles[a]->SumKernel;
 			if (Particles[a]->Material > 1) Particles[a]->Sigma	= 1.0/Particles[a]->SumKernel*Particles[a]->Sigma;
-			if (Particles[a]->NoSlip)	Particles[a]->vb	= Particles[a]->vb/Particles[a]->SumKernel;
+			if (Particles[a]->NoSlip)	Particles[a]->NSv	= Particles[a]->NSv/Particles[a]->SumKernel;
 
 			// Tensile Instability for fixed soil and solid particles
 			if (Particles[a]->Material > 1 && Particles[a]->TI > 0.0)

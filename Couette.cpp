@@ -72,8 +72,8 @@ int main(int argc, char **argv) try
     		{
     			dom.Particles[a]->ID		= 4;
     			dom.Particles[a]->IsFree	= false;
-    			dom.Particles[a]->v			= 2.5e-5,0.0,0.0;
-    			dom.Particles[a]->vb		= 2.5e-5,0.0,0.0;
+    			dom.Particles[a]->v		= 2.5e-5,0.0,0.0;
+//    			dom.Particles[a]->vb		= 2.5e-5,0.0,0.0;
     			dom.Particles[a]->NoSlip	= true;
    		}
     		if (yb<0.0)

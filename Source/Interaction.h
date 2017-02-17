@@ -115,7 +115,7 @@ inline void Domain::CalcForce11(Particle * P1, Particle * P2)
 			else
 			{
 				// No-Slip velocity correction
-				if (P1->IsFree)	vab = P1->v - (2.0*P2->v-P2->vb); else vab = (2.0*P1->v-P1->vb) - P2->v;
+				if (P1->IsFree)	vab = P1->v - (2.0*P2->v-P2->NSv); else vab = (2.0*P1->v-P1->NSv) - P2->v;
 				if (!P1->IsFree) Mu = P2->Mu;
 				if (!P2->IsFree) Mu = P1->Mu;
 			}
@@ -298,7 +298,7 @@ inline void Domain::CalcForce2233(Particle * P1, Particle * P2)
 			if (P1->NoSlip || P2->NoSlip)
 			{
 				// No-Slip velocity correction
-				if (P1->IsFree)	vab = P1->v - (2.0*P2->v-P2->vb); else vab = (2.0*P1->v-P1->vb) - P2->v;
+				if (P1->IsFree)	vab = P1->v - (2.0*P2->v-P2->NSv); else vab = (2.0*P1->v-P1->NSv) - P2->v;
 			}
 			// Please check
 			if (!(P1->NoSlip || P2->NoSlip))

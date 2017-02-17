@@ -62,7 +62,8 @@ public:
     Vec3_t	x;		///< Position of the particle n
     Vec3_t	vb;		///< Velocity of the particle n-1 (Modified Verlet)
     Vec3_t	va;		///< Velocity of the particle n+1/2 (Leapfrog)
-    Vec3_t	v;		///< Velocity of the particle n+1,
+    Vec3_t	v;		///< Velocity of the particle n+1
+    Vec3_t	NSv;		///< Velocity of the fixed particle for no-slip BC
     Vec3_t	VXSPH;		///< Mean Velocity of neighbor particles for updating the particle position (XSPH)
     Vec3_t	a;		///< Acceleration of the particle n
 
@@ -175,6 +176,7 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
 
     va = 0.0;
     vb = 0.0;
+    NSv = 0.0;
     v = v0;
     VXSPH = 0.0;
     TI		= 0.0;
