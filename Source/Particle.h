@@ -64,6 +64,7 @@ public:
     Vec3_t	va;		///< Velocity of the particle n+1/2 (Leapfrog)
     Vec3_t	v;		///< Velocity of the particle n+1
     Vec3_t	NSv;		///< Velocity of the fixed particle for no-slip BC
+    Vec3_t	FSINSv;		///< Velocity of the fixed particle for no-slip BC in FSI
     Vec3_t	VXSPH;		///< Mean Velocity of neighbor particles for updating the particle position (XSPH)
     Vec3_t	a;		///< Acceleration of the particle n
 
@@ -71,6 +72,7 @@ public:
     double	Cs;		///< Speed of sound
     double	P0;		///< background pressure for equation of state
     double 	Pressure;	///< Pressure of the particle n+1
+    double 	FSIPressure;	///< Pressure of the particle n+1 in FSI
 
     double	Density;	///< Density of the particle n+1
     double 	Densitya;	///< Density of the particle n+1/2 (Leapfrog)
@@ -90,6 +92,7 @@ public:
     Mat3_t	ShearStressb;	///< Deviatoric shear stress tensor (deviatoric part of the Cauchy stress tensor) n-1 (Modified Verlet)
 
     Mat3_t	Sigma;		///< Cauchy stress tensor (Total Stress) n+1
+//    Mat3_t	FSISigma;	///< Cauchy stress tensor (Total Stress) n+1 in FSI
     Mat3_t	Sigmaa;		///< Cauchy stress tensor (Total Stress) n+1/2 (Leapfrog)
     Mat3_t	Sigmab;		///< Cauchy stress tensor (Total Stress) n-1 (Modified Verlet)
 
@@ -137,6 +140,7 @@ public:
     int    	CC[3];		///< Current cell No for the particle (linked-list)
     int		ct;		///< Correction step for the Modified Verlet Algorithm
     double	SumKernel;	///< Summation of the kernel value for neighbour particles
+    double	FSISumKernel;	///< Summation of the kernel value for neighbour particles in FSI
     bool	FirstStep;	///< to initialize the integration scheme
 
     omp_lock_t my_lock;		///< Open MP lock
@@ -177,6 +181,7 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
     va = 0.0;
     vb = 0.0;
     NSv = 0.0;
+    FSINSv = 0.0;
     v = v0;
     VXSPH = 0.0;
     TI		= 0.0;
@@ -193,6 +198,7 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
     IsFree = !Fixed;
     h = h0;
     Pressure=0.0;
+    FSIPressure=0.0;
     ID = Tag;
     CC[0]= CC[1] = CC[2] = 0;
     LL=0;
@@ -205,6 +211,7 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
     T0 = 0.0;
     m = 300.0;
     SumKernel = 0.0;
+    FSISumKernel = 0.0;
     G = 0.0;
     K = 0.0;
     Material = 0;
@@ -238,6 +245,7 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
     set_to_zero(Strain);
     set_to_zero(Sigmab);
     set_to_zero(Sigma);
+//    set_to_zero(FSISigma);
     set_to_zero(Sigmaa);
     set_to_zero(ShearStress);
     set_to_zero(ShearStressb);

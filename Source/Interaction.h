@@ -395,6 +395,162 @@ inline void Domain::CalcForce2233(Particle * P1, Particle * P2)
 	}
 }
 
+inline void Domain::CalcForce12(Particle * P1, Particle * P2)
+{
+	double h	= (P1->h+P2->h)/2;
+	Vec3_t xij	= P1->x - P2->x;
+
+	// Correction of xij for Periodic BC
+	if (DomSize(0)>0.0) {if (xij(0)>2*Cellfac*h || xij(0)<-2*Cellfac*h) {(P1->CC[0]>P2->CC[0]) ? xij(0) -= DomSize(0) : xij(0) += DomSize(0);}}
+	if (DomSize(1)>0.0) {if (xij(1)>2*Cellfac*h || xij(1)<-2*Cellfac*h) {(P1->CC[1]>P2->CC[1]) ? xij(1) -= DomSize(1) : xij(1) += DomSize(1);}}
+	if (DomSize(2)>0.0) {if (xij(2)>2*Cellfac*h || xij(2)<-2*Cellfac*h) {(P1->CC[2]>P2->CC[2]) ? xij(2) -= DomSize(2) : xij(2) += DomSize(2);}}
+
+	double rij	= norm(xij);
+
+	if ((rij/h)<=Cellfac)
+	{
+		double di=0.0,dj=0.0,mi=0.0,mj=0.0;
+		double Alpha	= (P1->Alpha + P2->Alpha)/2.0;
+		double Beta	= (P1->Beta + P2->Beta)/2.0;
+		Vec3_t vij	= P1->v - P2->v;
+		double GK	= GradKernel(Dimension, KernelType, rij, h);
+		double K	= Kernel(Dimension, KernelType, rij, h);
+
+		if (P1->Material == 1)
+		{
+			di = P1->Density;
+			mi = P1->Mass;
+			dj = DensitySolid(P1->PresEq, P1->Cs, P1->P0,P2->FSIPressure, P1->RefDensity);
+			mj = P1->Mass;
+		}
+		else
+		{
+			di = DensitySolid(P2->PresEq, P2->Cs, P2->P0,P1->FSIPressure, P2->RefDensity);
+			mi = P2->Mass;
+			dj = P2->Density;
+			mj = P2->Mass;
+		}
+
+		// Artificial Viscosity
+		double PIij = 0.0;
+		if (Alpha!=0.0 || Beta!=0.0)
+		{
+			double Ci,Cj;
+			if (P1->Material == 1)
+			{
+				Ci = SoundSpeed(P1->PresEq, P1->Cs, di, P1->RefDensity);
+				Cj = SoundSpeed(P1->PresEq, P1->Cs, dj, P1->RefDensity);
+			}
+			else
+			{
+				Ci = SoundSpeed(P2->PresEq, P2->Cs, di, P2->RefDensity);
+				Cj = SoundSpeed(P2->PresEq, P2->Cs, dj, P2->RefDensity);
+			}
+			double MUij = h*dot(vij,xij)/(rij*rij+0.01*h*h);						///<(2.75) Li, Liu Book
+			if (dot(vij,xij)<0) PIij = (-Alpha*0.5*(Ci+Cj)*MUij+Beta*MUij*MUij)/(0.5*(di+dj));		///<(2.74) Li, Liu Book
+		}
+
+		// Real Viscosity
+		Mat3_t StrainRate;
+		set_to_zero(StrainRate);
+		Vec3_t VI = 0.0;
+		Vec3_t vab=0.0;
+		double Mu = 0.0;
+		if (P1->Material == 1)
+		{
+			vab = P1->v - (2.0*P2->v-P2->FSINSv);
+			Mu = P1->Mu;
+		}
+		else
+		{
+			vab = (2.0*P1->v-P1->FSINSv) - P2->v;
+			Mu = P2->Mu;
+		}
+		if ((P1->T0>0.0 || P2->T0>0.0) || (P1->LES || P2->LES))
+		{		
+			StrainRate =	2.0*vab(0)*xij(0)            , vab(0)*xij(1)+vab(1)*xij(0) , vab(0)*xij(2)+vab(2)*xij(0) ,
+					vab(0)*xij(1)+vab(1)*xij(0)  , 2.0*vab(1)*xij(1)           , vab(1)*xij(2)+vab(2)*xij(1) ,
+					 vab(0)*xij(2)+vab(2)*xij(0) , vab(1)*xij(2)+vab(2)*xij(1) , 2.0*vab(2)*xij(2)           ;
+			StrainRate = -GK * StrainRate;
+		}
+			if (VisEq==0) VI =  2.0*Mu / (di*dj)          * GK*vab;								//Morris et al 1997
+		if (VisEq==1) VI =  8.0*Mu / ((di+dj)*(di+dj))* GK*vab;								//Shao et al 2003
+		if (VisEq==2) VI = -Mu     / (di*dj)          * LaplaceKernel(Dimension, KernelType, rij, h)*vab;		//Real Viscosity (considering incompressible fluid)
+		if (VisEq==3) VI = -Mu     / (di*dj)          * ( LaplaceKernel(Dimension, KernelType, rij, h)*vab +
+					1.0/3.0*(GK*vij + dot(vij,xij) * xij / (rij*rij) * 
+					(-GK+SecDerivativeKernel(Dimension, KernelType, rij, h) ) ) );				//Takeda et al 1994
+		if ((VisEq<0 || VisEq>3))
+		{
+			std::cout << "Viscosity Equation No is out of range. Please correct it and run again" << std::endl;
+			std::cout << "0 => Morris et al 1997" << std::endl;
+			std::cout << "1 => Shao et al 2003" << std::endl;
+			std::cout << "2 => Real viscosity for incompressible fluids" << std::endl;
+			std::cout << "3 => Takeda et al 1994 (Real viscosity for compressible fluids)" << std::endl;
+			abort();
+		}
+
+		// XSPH Monaghan
+		if (XSPH != 0.0)
+		{
+			omp_set_lock(&P1->my_lock);
+			P1->VXSPH		+= XSPH*mj/(0.5*(di+dj))*K*-vij;
+			omp_unset_lock(&P1->my_lock);
+
+			omp_set_lock(&P2->my_lock);
+			P2->VXSPH		+= XSPH*mi/(0.5*(di+dj))*K*vij;
+			omp_unset_lock(&P2->my_lock);
+		}
+
+		// Calculating the forces for the particle 1 & 2				
+		Vec3_t temp	= 0.0;
+		double temp1	= 0.0;
+		if (P1->Material == 1)
+		{
+//			temp		= -1.0*( P1->Pressure/(di*di) + P2->FSIPressure/(dj*dj) + PIij ) * GK*xij + VI;
+			temp		= -1.0*( (P1->Pressure + P2->FSIPressure)/(di*dj)       + PIij ) * GK*xij + VI;
+			if (Dimension == 2) temp(2) = 0.0;
+			temp1		= dot( vij , GK*xij );
+
+			omp_set_lock(&P1->my_lock);
+				P1->a		+= mj * temp;
+				P1->dDensity	+= mj * (di/dj) * temp1;
+				if (P1->T0>0.0 || P1->LES)	P1->StrainRate	 = P1->StrainRate + mj/dj*StrainRate; 
+				P1->ZWab	+= mj/dj* K;
+				if (P1->Shepard)
+					if (P1->ShepardCounter == P1->ShepardStep)
+						P1->SumDen += mj*    K;
+			omp_unset_lock(&P1->my_lock);
+
+			omp_set_lock(&P2->my_lock);
+				P2->a		-= mi * temp;
+			omp_unset_lock(&P2->my_lock);
+		}
+		else
+		{
+//			temp		= -1.0*( P1->FSIPressure/(di*di) + P2->Pressure/(dj*dj) + PIij ) * GK*xij + VI;
+			temp		= -1.0*( (P1->FSIPressure + P2->Pressure)/(di*dj)       + PIij ) * GK*xij + VI;
+			if (Dimension == 2) temp(2) = 0.0;
+			temp1		= dot( vij , GK*xij );
+
+			omp_set_lock(&P1->my_lock);
+				P1->a		+= mj * temp;
+			omp_unset_lock(&P1->my_lock);
+
+
+			omp_set_lock(&P2->my_lock);
+				P2->a		-= mi * temp;
+				P2->dDensity	+= mi * (dj/di) * temp1;
+				if (P2->T0>0.0 || P2->LES)	P2->StrainRate	 = P2->StrainRate + mi/di*StrainRate; 
+				P2->ZWab	+= mi/di* K;
+				if (P2->Shepard)
+					if (P2->ShepardCounter == P2->ShepardStep)
+						P2->SumDen += mi*    K;
+			omp_unset_lock(&P2->my_lock);
+		}
+
+    }
+}
+
 inline void Domain::CalcForce13(Particle * P1, Particle * P2)
 {
 	double h	= std::min(P1->h,P2->h);

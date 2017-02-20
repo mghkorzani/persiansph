@@ -112,9 +112,10 @@ public:
     void StartAcceleration			(Vec3_t const & a = Vec3_t(0.0,0.0,0.0));						///< Add a fixed acceleration such as the Gravity
     void PrimaryComputeAcceleration		();											///< Compute the solid boundary properties
     void LastComputeAcceleration		();											///< Compute the acceleration due to the other particles
-    void CalcForce11				(Particle * P1, Particle * P2);								///< Calculates the contact force between particles
-    void CalcForce2233				(Particle * P1, Particle * P2);								///< Calculates the contact force between particles
-    void CalcForce13				(Particle * P1, Particle * P2);								///< Calculates the contact force between particles
+    void CalcForce11				(Particle * P1, Particle * P2);								///< Calculates the contact force between fluid-fluid particles
+    void CalcForce2233				(Particle * P1, Particle * P2);								///< Calculates the contact force between soil-soil/solid-solid particles
+    void CalcForce12				(Particle * P1, Particle * P2);								///< Calculates the contact force between fluid-solid particles
+    void CalcForce13				(Particle * P1, Particle * P2);								///< Calculates the contact force between fluid-soil particles
     void Move					(double dt);										///< Move particles
 
     void Solve					(double tf, double dt, double dtOut, char const * TheFileKey, size_t maxidx);		///< The solving function
@@ -167,6 +168,7 @@ public:
     size_t					VisEq;		///< Selecting variable to choose an equation for viscosity
     size_t					KernelType;	///< Selecting variable to choose a kernel
     size_t					SWIType;	///< Selecting variable to choose Soil-Water Interaction type
+    bool					FSI;		///< Selecting variable to choose Fluid-Structure Interaction
 
     double 					XSPH;		///< Velocity correction factor
     double 					InitialDist;	///< Initial distance of particles for Inflow BC
@@ -191,6 +193,8 @@ public:
     Array<Array<std::pair<size_t,size_t> > >	NSMPairs;
     Array<Array<std::pair<size_t,size_t> > >	FSMPairs;
     Array< size_t > 				FixedParticles;
+    Array< size_t >				FreeFSIParticles;
+
     Array<std::pair<size_t,size_t> >		Initial;
     Mat3_t I;
     String					OutputName[3];
@@ -243,6 +247,7 @@ inline Domain::Domain ()
 
     KernelType	= 0;
     SWIType	= 0;
+    FSI		= false;
     VisEq	= 0;
     Scheme	= 0;
 
@@ -1138,6 +1143,10 @@ inline void Domain::StartAcceleration (Vec3_t const & a)
 		Particles[i]->ZWab	= 0.0;
 		Particles[i]->SumDen	= 0.0;
 		Particles[i]->SumKernel	= 0.0;
+		Particles[i]->FSISumKernel	= 0.0;
+		Particles[i]->FSINSv		= 0.0;
+		Particles[i]->FSIPressure	= 0.0;
+//	        set_to_zero(Particles[i]->FSISigma);
 		if (Dimension == 2) Particles[i]->v(2) = 0.0;
 		set_to_zero(Particles[i]->StrainRate);
 		set_to_zero(Particles[i]->RotationRate);
@@ -1193,7 +1202,7 @@ inline void Domain::PrimaryComputeAcceleration ()
 			{
 				P1 = NSMPairs[k][a].first;
 				P2 = NSMPairs[k][a].second;
-				if (Particles[P1]->Material == 3)
+				if (Particles[P1]->Material == 3 && Particles[P1]->Material*Particles[P2]->Material == 3)
 				{
 					if (!Particles[P1]->SatCheck)
 						if (Particles[P2]->CC[1] >= Particles[P1]->CC[1])
@@ -1204,7 +1213,7 @@ inline void Domain::PrimaryComputeAcceleration ()
 								omp_unset_lock(&Particles[P1]->my_lock);
 							}
 				}
-				if (Particles[P2]->Material == 3)
+				if (Particles[P2]->Material == 3  && Particles[P1]->Material*Particles[P2]->Material == 3)
 				{
 					if (!Particles[P2]->SatCheck)
 						if (Particles[P1]->CC[1] >= Particles[P2]->CC[1])
@@ -1217,8 +1226,74 @@ inline void Domain::PrimaryComputeAcceleration ()
 				}
 			}
 		}
+		if (FSI)
+		{
+			for (size_t a=0; a<NSMPairs[k].Size();a++)
+			{
+				P1 = NSMPairs[k][a].first;
+				P2 = NSMPairs[k][a].second;
+				if (Particles[P1]->Material*Particles[P2]->Material == 2 && (Particles[P1]->IsFree*Particles[P2]->IsFree))
+				{
+
+					xij	= Particles[P1]->x-Particles[P2]->x;
+					h	= (Particles[P1]->h+Particles[P2]->h)/2.0;
+
+					// Correction of xij for Periodic BC
+					if (DomSize(0)>0.0) {if (xij(0)>2*Cellfac*h || xij(0)<-2*Cellfac*h) {(Particles[P1]->CC[0]>Particles[P2]->CC[0]) ? xij(0) -= DomSize(0) : xij(0) += DomSize(0);}}
+					if (DomSize(1)>0.0) {if (xij(1)>2*Cellfac*h || xij(1)<-2*Cellfac*h) {(Particles[P1]->CC[1]>Particles[P2]->CC[1]) ? xij(1) -= DomSize(1) : xij(1) += DomSize(1);}}
+					if (DomSize(2)>0.0) {if (xij(2)>2*Cellfac*h || xij(2)<-2*Cellfac*h) {(Particles[P1]->CC[2]>Particles[P2]->CC[2]) ? xij(2) -= DomSize(2) : xij(2) += DomSize(2);}}
+
+					K	= Kernel(Dimension, KernelType, norm(xij), h);
+
+					if (Particles[P1]->Material == 1)
+					{
+						omp_set_lock(&dom_lock);
+							FreeFSIParticles.Push(P2);
+						omp_unset_lock(&dom_lock);
+						Particles[P2]->FSISumKernel	+= K;
+						Particles[P2]->NSv 		+= Particles[P1]->v * K;
+						Particles[P2]->FSIPressure	+= Particles[P1]->Pressure * K + dot(Gravity,xij)*Particles[P1]->Density*K;
+
+//						Particles[P1]->FSISumKernel	+= K;
+//						Particles[P1]->NSv 		+= Particles[P2]->v * K;
+//						Particles[P1]->FSIPressure	+= Particles[P2]->Pressure * K + dot(Gravity,xij)*Particles[P2]->Density*K;
+//						Particles[P1]->FSISigma	 	 = Particles[P1]->FSISigma + K * Particles[P2]->Sigma;
+					}
+					else
+					{
+						omp_set_lock(&dom_lock);
+							FreeFSIParticles.Push(P1);
+						omp_unset_lock(&dom_lock);
+//						Particles[P2]->FSISumKernel	+= K;
+//						Particles[P2]->FSINSv 		+= Particles[P1]->v * K;
+//						Particles[P2]->FSIPressure	+= Particles[P1]->Pressure * K + dot(Gravity,xij)*Particles[P1]->Density*K;
+//						Particles[P2]->FSISigma	 	 = Particles[P2]->FSISigma + K * Particles[P1]->Sigma;
+
+						Particles[P1]->FSISumKernel	+= K;
+						Particles[P1]->FSINSv 		+= Particles[P2]->v * K;
+						Particles[P1]->FSIPressure	+= Particles[P2]->Pressure * K + dot(Gravity,xij)*Particles[P2]->Density*K;
+					}
+	
+				}
+			}
+		}
 
 	}
+
+	if (FSI)
+	{
+		// Calculateing the finala value of the smoothed pressure, velocity and stress for fixed particles
+		#pragma omp parallel for schedule (static) num_threads(Nproc)
+		for (size_t i=0; i<FreeFSIParticles.Size(); i++)
+		{
+			size_t a = FreeFSIParticles[i];
+			Particles[a]->FSIPressure	= Particles[a]->FSIPressure/Particles[a]->FSISumKernel;
+//			Particles[a]->FSISigma		= 1.0/Particles[a]->FSISumKernel*Particles[a]->FSISigma;
+			Particles[a]->FSINSv		= Particles[a]->FSINSv/Particles[a]->FSISumKernel;
+
+		}
+	}
+
 
 	// Calculateing the finala value of the smoothed pressure, velocity and stress for fixed particles
 	#pragma omp parallel for schedule (static) num_threads(Nproc)
@@ -1320,6 +1395,8 @@ inline void Domain::LastComputeAcceleration ()
 		{
 			if (Particles[NSMPairs[k][i].first]->Material*Particles[NSMPairs[k][i].second]->Material == 3)
 				CalcForce13(Particles[NSMPairs[k][i].first],Particles[NSMPairs[k][i].second]);
+			else if (Particles[NSMPairs[k][i].first]->Material*Particles[NSMPairs[k][i].second]->Material == 2)
+				CalcForce12(Particles[NSMPairs[k][i].first],Particles[NSMPairs[k][i].second]);
 			else
 			{
 				std::cout<<"Out of Interaction types"<<std::endl;
