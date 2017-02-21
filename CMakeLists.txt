@@ -25,9 +25,10 @@ PROJECT                (New_Test)
 INCLUDE ($ENV{SPH}/Modules/FindPKG.cmake)
 
 SET(EXES
+	FSI_ElasticGate
 #	Drag_LES
 #	Poiseuille
-	Couette
+#	Couette
 #	Oscillating-Plate
 #	Plate-Yield
 #	Dam_Scouring
