@@ -145,7 +145,7 @@ inline void Domain::CalcForce11(Particle * P1, Particle * P2)
 		}
 
 		// XSPH Monaghan
-		if (XSPH != 0.0)
+		if (XSPH != 0.0 && (P1->IsFree*P2->IsFree))
 		{
 			omp_set_lock(&P1->my_lock);
 			P1->VXSPH		+= XSPH*mj/(0.5*(di+dj))*K*-vij;
@@ -334,7 +334,7 @@ inline void Domain::CalcForce2233(Particle * P1, Particle * P2)
 		RotationRate	  = -0.5 * GK * RotationRate;
 
 		// XSPH Monaghan
-		if (XSPH != 0.0)
+		if (XSPH != 0.0  && (P1->IsFree*P2->IsFree))
 		{
 			omp_set_lock(&P1->my_lock);
 			P1->VXSPH += XSPH*mj/(0.5*(di+dj))*K*-vij;
@@ -398,6 +398,7 @@ inline void Domain::CalcForce2233(Particle * P1, Particle * P2)
 inline void Domain::CalcForce12(Particle * P1, Particle * P2)
 {
 	double h	= (P1->h+P2->h)/2;
+//	double h	= std::max(P1->h,P2->h);
 	Vec3_t xij	= P1->x - P2->x;
 
 	// Correction of xij for Periodic BC
@@ -410,11 +411,8 @@ inline void Domain::CalcForce12(Particle * P1, Particle * P2)
 	if ((rij/h)<=Cellfac)
 	{
 		double di=0.0,dj=0.0,mi=0.0,mj=0.0;
-		double Alpha	= (P1->Alpha + P2->Alpha)/2.0;
-		double Beta	= (P1->Beta + P2->Beta)/2.0;
 		Vec3_t vij	= P1->v - P2->v;
 		double GK	= GradKernel(Dimension, KernelType, rij, h);
-		double K	= Kernel(Dimension, KernelType, rij, h);
 
 		if (P1->Material == 1)
 		{
@@ -432,19 +430,25 @@ inline void Domain::CalcForce12(Particle * P1, Particle * P2)
 		}
 
 		// Artificial Viscosity
-		double PIij = 0.0;
+		double PIij	= 0.0;
+		double Alpha	= 0.0;
+		double Beta	= 0.0;
 		if (Alpha!=0.0 || Beta!=0.0)
 		{
 			double Ci,Cj;
 			if (P1->Material == 1)
 			{
-				Ci = SoundSpeed(P1->PresEq, P1->Cs, di, P1->RefDensity);
-				Cj = SoundSpeed(P1->PresEq, P1->Cs, dj, P1->RefDensity);
+				Alpha	= P1->Alpha;
+				Beta	= P1->Beta;
+				Ci	= SoundSpeed(P1->PresEq, P1->Cs, di, P1->RefDensity);
+				Cj	= SoundSpeed(P1->PresEq, P1->Cs, dj, P1->RefDensity);
 			}
 			else
 			{
-				Ci = SoundSpeed(P2->PresEq, P2->Cs, di, P2->RefDensity);
-				Cj = SoundSpeed(P2->PresEq, P2->Cs, dj, P2->RefDensity);
+				Alpha	= P2->Alpha;
+				Beta	= P2->Beta;
+				Ci 	= SoundSpeed(P2->PresEq, P2->Cs, di, P2->RefDensity);
+				Cj 	= SoundSpeed(P2->PresEq, P2->Cs, dj, P2->RefDensity);
 			}
 			double MUij = h*dot(vij,xij)/(rij*rij+0.01*h*h);						///<(2.75) Li, Liu Book
 			if (dot(vij,xij)<0) PIij = (-Alpha*0.5*(Ci+Cj)*MUij+Beta*MUij*MUij)/(0.5*(di+dj));		///<(2.74) Li, Liu Book
@@ -489,17 +493,6 @@ inline void Domain::CalcForce12(Particle * P1, Particle * P2)
 			abort();
 		}
 
-		// XSPH Monaghan
-		if (XSPH != 0.0)
-		{
-			omp_set_lock(&P1->my_lock);
-			P1->VXSPH		+= XSPH*mj/(0.5*(di+dj))*K*-vij;
-			omp_unset_lock(&P1->my_lock);
-
-			omp_set_lock(&P2->my_lock);
-			P2->VXSPH		+= XSPH*mi/(0.5*(di+dj))*K*vij;
-			omp_unset_lock(&P2->my_lock);
-		}
 
 		// Calculating the forces for the particle 1 & 2				
 		Vec3_t temp	= 0.0;
@@ -515,10 +508,6 @@ inline void Domain::CalcForce12(Particle * P1, Particle * P2)
 				P1->a		+= mj * temp;
 				P1->dDensity	+= mj * (di/dj) * temp1;
 				if (P1->T0>0.0 || P1->LES)	P1->StrainRate	 = P1->StrainRate + mj/dj*StrainRate; 
-				P1->ZWab	+= mj/dj* K;
-				if (P1->Shepard)
-					if (P1->ShepardCounter == P1->ShepardStep)
-						P1->SumDen += mj*    K;
 			omp_unset_lock(&P1->my_lock);
 
 			omp_set_lock(&P2->my_lock);
@@ -541,10 +530,6 @@ inline void Domain::CalcForce12(Particle * P1, Particle * P2)
 				P2->a		-= mi * temp;
 				P2->dDensity	+= mi * (dj/di) * temp1;
 				if (P2->T0>0.0 || P2->LES)	P2->StrainRate	 = P2->StrainRate + mi/di*StrainRate; 
-				P2->ZWab	+= mi/di* K;
-				if (P2->Shepard)
-					if (P2->ShepardCounter == P2->ShepardStep)
-						P2->SumDen += mi*    K;
 			omp_unset_lock(&P2->my_lock);
 		}
 

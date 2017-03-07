@@ -36,27 +36,28 @@ int main(int argc, char **argv) try
         SPH::Domain	dom;
 
         dom.Dimension	= 2;
-        dom.Nproc	= 12;
+        dom.Nproc	= 24;
     	dom.VisEq	= 0;
     	dom.KernelType	= 0;
     	dom.Scheme	= 0;
     	dom.Gravity	= 0.0 , -9.81 , 0.0 ;
+	dom.XSPH	= 0.5;
 
 
     	double	h,dx,g;
     	dx	= 0.001;
-    	h	= dx*1.3;
+    	h	= dx*1.4;
 	g	= norm(dom.Gravity);
 
 	double	L,L1,H,H1,RhoF,CsW,MuW,t1,Tr;
-	L	= 0.3;
+	L	= 0.25;
 	L1	= 0.1;
 	H	= 0.14;
-	H1	= 0.079;
+	H1	= 0.079+2.0*dx;
 	Tr	= 0.005;
 	RhoF	= 1000.0;
-	CsW	= 10.0*sqrt(2.0*g*H)*1.0;
-	MuW	= 1.0e-3;
+	CsW	= 10.0*sqrt(2.0*g*H)*2.0;
+	MuW	= 1.3e-3;
         t1	= (0.2*h/(CsW));
 	cout<<"CsW = "<<CsW<<endl;
 	cout<<"t1  = "<<t1<<endl;
@@ -73,9 +74,9 @@ int main(int argc, char **argv) try
     		yb				= dom.Particles[a]->x(1);
 
     		dom.Particles[a]->Cs		= CsW;
-    		dom.Particles[a]->Alpha		= 0.05;
-    		dom.Particles[a]->Beta		= 0.05;
-    		dom.Particles[a]->PresEq	= 1;
+    		dom.Particles[a]->Alpha		= 0.1;
+    		dom.Particles[a]->Beta		= 0.1;
+    		dom.Particles[a]->PresEq	= 0;
     		dom.Particles[a]->Mu		= MuW;
     		dom.Particles[a]->MuRef		= MuW;
     		dom.Particles[a]->Material	= 1;
@@ -102,8 +103,8 @@ int main(int argc, char **argv) try
 //    		if (dom.Particles[a]->ID == 1)
 //		{
 //	    		dom.Particles[a]->Density	= RhoF*pow((1+7.0*g*(H-yb)/(CsW*CsW)),(1.0/7.0));
-//    			dom.Particles[a]->Densityb	= RhoF*pow((1+7.0*g*(H-yb)/(CsW*CsW)),(1.0/7.0));
-//    		}
+//  			dom.Particles[a]->Densityb	= RhoF*pow((1+7.0*g*(H-yb)/(CsW*CsW)),(1.0/7.0));
+//		}
    	}
 	
 	dom.DelParticles(3);
@@ -116,7 +117,7 @@ int main(int argc, char **argv) try
     	K	= 2.00e7;
     	G	= 4.27e6;
         CsR	= sqrt(K/RhoR);
-	CsR	= 70.0;
+//	CsR	= 100.0;
         t2	= (0.2*h/(CsR));
 	cout<<"CsR = "<<CsR<<endl;
 	cout<<"t2  = "<<t2<<endl;
@@ -148,7 +149,7 @@ int main(int argc, char **argv) try
 	    		if (xb>(L1+Tr) && yb<=H1)
 	      			dom.Particles[a]->ID	= 5;
 
-	    		if (yb<1.0*dx)
+	    		if (yb<2.0*dx)
 	      			dom.Particles[a]->ID	= 5;
 		}
     	}

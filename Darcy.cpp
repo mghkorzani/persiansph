@@ -18,8 +18,8 @@
 * PersianSPH; if not, see <http://www.gnu.org/licenses/>                           *
 ************************************************************************************/
 
-#include "./Source/Domain.h"
-#include "./Source/Interaction.h"
+#include "Domain.h"
+#include "Interaction.h"
 
 
 using std::cout;
@@ -33,9 +33,10 @@ int main(int argc, char **argv) try
 	dom.Dimension	= 2;
 	dom.KernelType	= 0;
 	dom.Nproc	= 24;
+    	dom.VisEq	= 0;
+	dom.SWIType	= 0;
 	dom.Scheme	= 0;
 	dom.Gravity	= 0.0,-9.81,0.0;
-	dom.SeepageType	= 0;
 	dom.BC.Periodic[0] = true;
 	dom.BC.Periodic[1] = true;
 
@@ -81,10 +82,11 @@ int main(int argc, char **argv) try
 			dom.Particles[a]->k		= k;
 			dom.Particles[a]->Material	= 3;
 			dom.Particles[a]->IsFree	= false;
+			dom.Particles[a]->SeepageType	= 0;	
 		}
 	}
 
-	dom.Solve(/*tf*/50000.0,/*dt*/T,/*dtOut*/0.1,"test06",10000);
+	dom.Solve(/*tf*/50000.0,/*dt*/T,/*dtOut*/0.001,"test06",999);
 	return 0;
 }
 MECHSYS_CATCH

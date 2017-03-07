@@ -1250,9 +1250,12 @@ inline void Domain::PrimaryComputeAcceleration ()
 						omp_set_lock(&dom_lock);
 							FreeFSIParticles.Push(P2);
 						omp_unset_lock(&dom_lock);
-						Particles[P2]->FSISumKernel	+= K;
-						Particles[P2]->NSv 		+= Particles[P1]->v * K;
-						Particles[P2]->FSIPressure	+= Particles[P1]->Pressure * K + dot(Gravity,xij)*Particles[P1]->Density*K;
+
+						omp_set_lock(&Particles[P2]->my_lock);
+							Particles[P2]->FSISumKernel	+= K;
+							Particles[P2]->NSv 		+= Particles[P1]->v * K;
+							Particles[P2]->FSIPressure	+= Particles[P1]->Pressure * K + dot(Gravity,xij)*Particles[P1]->Density*K;
+						omp_unset_lock(&Particles[P2]->my_lock);
 
 //						Particles[P1]->FSISumKernel	+= K;
 //						Particles[P1]->NSv 		+= Particles[P2]->v * K;
@@ -1264,14 +1267,17 @@ inline void Domain::PrimaryComputeAcceleration ()
 						omp_set_lock(&dom_lock);
 							FreeFSIParticles.Push(P1);
 						omp_unset_lock(&dom_lock);
+
 //						Particles[P2]->FSISumKernel	+= K;
 //						Particles[P2]->FSINSv 		+= Particles[P1]->v * K;
 //						Particles[P2]->FSIPressure	+= Particles[P1]->Pressure * K + dot(Gravity,xij)*Particles[P1]->Density*K;
 //						Particles[P2]->FSISigma	 	 = Particles[P2]->FSISigma + K * Particles[P1]->Sigma;
 
-						Particles[P1]->FSISumKernel	+= K;
-						Particles[P1]->FSINSv 		+= Particles[P2]->v * K;
-						Particles[P1]->FSIPressure	+= Particles[P2]->Pressure * K + dot(Gravity,xij)*Particles[P2]->Density*K;
+						omp_set_lock(&Particles[P1]->my_lock);
+							Particles[P1]->FSISumKernel	+= K;
+							Particles[P1]->FSINSv 		+= Particles[P2]->v * K;
+							Particles[P1]->FSIPressure	+= Particles[P2]->Pressure * K + dot(Gravity,xij)*Particles[P2]->Density*K;
+						omp_unset_lock(&Particles[P1]->my_lock);
 					}
 	
 				}
@@ -1292,6 +1298,7 @@ inline void Domain::PrimaryComputeAcceleration ()
 			Particles[a]->FSINSv		= Particles[a]->FSINSv/Particles[a]->FSISumKernel;
 
 		}
+		FreeFSIParticles.Clear();
 	}
 
 
@@ -1866,6 +1873,7 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
     std::cout << "\n--------------Solving---------------------------------------------------------------" << std::endl;
 
     size_t idx_out = 1;
+    size_t InitOutCount = 0;
     double tout = Time;
     deltat	= dt;
     deltatint	= dt;
@@ -1882,6 +1890,19 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
 
     while (Time<tf && idx_out<=maxidx)
     {
+        if (InitOutCount == 0)
+        {
+            if (TheFileKey!=NULL)
+           	{
+                String fn;
+                fn.Printf    ("%s_Initial", TheFileKey);
+                WriteXDMF    (fn.CStr());
+                std::cout << "\n" << "Initial Condition has been generated" << std::endl;
+		std::cout<<""<<std::endl;
+           	}
+	    InitOutCount = 1;
+        }
+
     	StartAcceleration(Gravity);
 
     	if (BC.InOutFlow>0) InFlowBCFresh();
