@@ -18,8 +18,8 @@
 * PersianSPH; if not, see <http://www.gnu.org/licenses/>                           *
 ************************************************************************************/
 
-#ifndef MECHSYS_SPH_PARTICLE_H
-#define MECHSYS_SPH_PARTICLE_H
+#ifndef SPH_PARTICLE_H
+#define SPH_PARTICLE_H
 
 // Std lib
 #include <iostream>
@@ -936,4 +936,4 @@ inline void Particle::translate(double dt, Vec3_t Domainsize, Vec3_t domainmax, 
 
 }; // namespace SPH
 
-#endif // MECHSYS_SPH_PARTICLE_H
+#endif //SPH_PARTICLE_H

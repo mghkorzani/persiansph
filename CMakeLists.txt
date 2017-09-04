@@ -27,9 +27,9 @@ INCLUDE ($ENV{SPH}/Modules/FindPKG.cmake)
 SET(EXES
 #	hydrostatic-Soil
 #	Darcy
-	FSI_ElasticGate
+#	FSI_ElasticGate
 #	Drag_LES
-#	Poiseuille
+	Poiseuille
 #	Couette
 #	Oscillating-Plate
 #	Plate-Yield

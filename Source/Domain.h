@@ -18,8 +18,8 @@
 * PersianSPH; if not, see <http://www.gnu.org/licenses/>                           *
 ************************************************************************************/
 
-#ifndef MECHSYS_SPH_DOMAIN_H
-#define MECHSYS_SPH_DOMAIN_H
+#ifndef SPH_DOMAIN_H
+#define SPH_DOMAIN_H
 
 // Std Lib
 #include <stdio.h>		/// for NULL
@@ -2477,4 +2477,4 @@ inline void Domain::LoadResults (char const * FileKey, double density)
 
 }; // namespace SPH
 
-#endif // MECHSYS_SPH_DOMAIN_H
+#endif // SPH_DOMAIN_H

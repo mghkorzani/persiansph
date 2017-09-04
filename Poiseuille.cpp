@@ -18,8 +18,8 @@
 * PersianSPH; if not, see <http://www.gnu.org/licenses/>                           *
 ************************************************************************************/
 
-#include "./Source/Domain.h"
-#include "./Source/Interaction.h"
+#include "Domain.h"
+#include "Interaction.h"
 
 void UserAcc(SPH::Domain & domi)
 {

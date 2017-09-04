@@ -18,8 +18,8 @@
 * PersianSPH; if not, see <http://www.gnu.org/licenses/>                           *
 ************************************************************************************/
 
-#ifndef MECHSYS_SPH_SPECIAL_H
-#define MECHSYS_SPH_SPECIAL_H
+#ifndef SPH_SPECIAL_H
+#define SPH_SPECIAL_H
 
 // MechSys
 #include "../External//matvec.h"
@@ -382,4 +382,4 @@ inline void Seepage(size_t ST, double k, double k2, double mu,  double rho, doub
 
 }; // namespace SPH
 
-#endif // MECHSYS_SPH_SPECIAL_H
+#endif // SPH_SPECIAL_H
