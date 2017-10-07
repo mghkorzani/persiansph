@@ -156,7 +156,13 @@ while true; do
 	read -p "Do you have sudo access to install libraries?(y/n)"  yn;
 	case $yn in
 		[Yy]* ) echo "... Installing Blas, Lapack, Gsl and HDF5 libraries ..."
-			sudo apt-get install libblas-dev liblapack-dev libgsl0-dev libhdf5-serial-dev;
+			sudo apt-get install libblas-dev liblapack-dev libgsl0-dev;
+			cd $PKG_Address/hdf5-1.8.16;
+			./configure;
+			make;
+			cd $PKG_Address;
+			rm -f gsl-2.1.tar.gz;
+			rm -f lapack-3.5.0.tgz;
 			break;;
 		[Nn]* ) echo "... Unpacking libraries ...";
 			cd $PKG_Address;
