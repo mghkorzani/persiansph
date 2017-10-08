@@ -109,6 +109,13 @@ inline Domain::~Domain ()
 	for (size_t i=1; i<=Max; i++)  Particles.DelItem(Max-i);
 }
 
+inline void Domain::Periodic_X_Correction(Vec3_t & x, double const & h, Particle * P1, Particle * P2)
+{
+	if (DomSize(0)>0.0) {if (x(0)>2*Cellfac*h || x(0)<-2*Cellfac*h) {(P1->CC[0]>P2->CC[0]) ? x(0) -= DomSize(0) : x(0) += DomSize(0);}}
+	if (DomSize(1)>0.0) {if (x(1)>2*Cellfac*h || x(1)<-2*Cellfac*h) {(P1->CC[1]>P2->CC[1]) ? x(1) -= DomSize(1) : x(1) += DomSize(1);}}
+	if (DomSize(2)>0.0) {if (x(2)>2*Cellfac*h || x(2)<-2*Cellfac*h) {(P1->CC[2]>P2->CC[2]) ? x(2) -= DomSize(2) : x(2) += DomSize(2);}}
+}
+
 inline void Domain::AddSingleParticle(int tag, Vec3_t const & x, double Mass, double Density, double h, bool Fixed)
 {
    	Particles.Push(new Particle(tag,x,Vec3_t(0,0,0),Mass,Density,h,Fixed));
@@ -991,10 +998,8 @@ inline void Domain::PrimaryComputeAcceleration ()
 			xij	= Particles[P1]->x-Particles[P2]->x;
 			h	= (Particles[P1]->h+Particles[P2]->h)/2.0;
 
-			// Correction of xij for Periodic BC
-			if (DomSize(0)>0.0) {if (xij(0)>2*Cellfac*h || xij(0)<-2*Cellfac*h) {(Particles[P1]->CC[0]>Particles[P2]->CC[0]) ? xij(0) -= DomSize(0) : xij(0) += DomSize(0);}}
-			if (DomSize(1)>0.0) {if (xij(1)>2*Cellfac*h || xij(1)<-2*Cellfac*h) {(Particles[P1]->CC[1]>Particles[P2]->CC[1]) ? xij(1) -= DomSize(1) : xij(1) += DomSize(1);}}
-			if (DomSize(2)>0.0) {if (xij(2)>2*Cellfac*h || xij(2)<-2*Cellfac*h) {(Particles[P1]->CC[2]>Particles[P2]->CC[2]) ? xij(2) -= DomSize(2) : xij(2) += DomSize(2);}}
+			Periodic_X_Correction(xij, h, Particles[P1], Particles[P2]);
+
 
 			K	= Kernel(Dimension, KernelType, norm(xij), h);
 
@@ -1059,10 +1064,7 @@ inline void Domain::PrimaryComputeAcceleration ()
 					xij	= Particles[P1]->x-Particles[P2]->x;
 					h	= (Particles[P1]->h+Particles[P2]->h)/2.0;
 
-					// Correction of xij for Periodic BC
-					if (DomSize(0)>0.0) {if (xij(0)>2*Cellfac*h || xij(0)<-2*Cellfac*h) {(Particles[P1]->CC[0]>Particles[P2]->CC[0]) ? xij(0) -= DomSize(0) : xij(0) += DomSize(0);}}
-					if (DomSize(1)>0.0) {if (xij(1)>2*Cellfac*h || xij(1)<-2*Cellfac*h) {(Particles[P1]->CC[1]>Particles[P2]->CC[1]) ? xij(1) -= DomSize(1) : xij(1) += DomSize(1);}}
-					if (DomSize(2)>0.0) {if (xij(2)>2*Cellfac*h || xij(2)<-2*Cellfac*h) {(Particles[P1]->CC[2]>Particles[P2]->CC[2]) ? xij(2) -= DomSize(2) : xij(2) += DomSize(2);}}
+					Periodic_X_Correction(xij, h, Particles[P1], Particles[P2]);
 
 					K	= Kernel(Dimension, KernelType, norm(xij), h);
 

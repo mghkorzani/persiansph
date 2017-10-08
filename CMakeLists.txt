@@ -1,6 +1,6 @@
 #####################################################################################
-# PersianSPH - A C++ library to simulate Mechanical Systems (solids, fluids         # 
-#             and soils) using Smoothed Particle Hydrodynamics method               #   
+# PersianSPH - A C++ library to simulate Mechanical Systems (solids, fluids         #
+#             and soils) using Smoothed Particle Hydrodynamics method               #
 # Copyright (C) 2016 Maziar Gholami Korzani and Sergio Galindo-Torres               #
 #                                                                                   #
 # This file is part of PersianSPH                                                   #
@@ -30,7 +30,7 @@ SET(EXES
 #	FSI_ElasticGate
 #	Drag_LES
 	Poiseuille
-#	Couette
+	Couette
 #	Oscillating-Plate
 #	Plate-Yield
 #	Dam_Scouring
@@ -48,5 +48,3 @@ FOREACH(var ${EXES})
     TARGET_LINK_LIBRARIES (${var} ${LIBS})
     SET_TARGET_PROPERTIES (${var} PROPERTIES COMPILE_FLAGS "${FLAGS}" LINK_FLAGS "${LFLAGS}")
 ENDFOREACH(var)
-
-

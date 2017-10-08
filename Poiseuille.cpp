@@ -28,55 +28,55 @@ void UserAcc(SPH::Domain & domi)
 			domi.Particles[i]->a += Vec3_t(0.002,0.0,0.0);
 }
 
-
 using std::cout;
 using std::endl;
 
 int main(int argc, char **argv) try
 {
-        SPH::Domain		dom;
+	SPH::Domain				dom;
 
-        dom.Dimension		= 2;
-        dom.BC.Periodic[0]	= true;
-        dom.Nproc		= 12;
-    	dom.VisEq		= 3;
-    	dom.KernelType		= 4;
-    	dom.Scheme		= 0;
+	dom.Dimension			= 2;
+	dom.BC.Periodic[0]= true;
+	dom.Nproc					= 4;
+	dom.VisEq					= 3;
+	dom.KernelType		= 4;
+	dom.Scheme				= 0;
 
-        double yb,h,rho;
-    	double dx;
+	double yb,h,Rho,dx,t,Cs,Mu;
 
-    	rho = 998.21;
-    	dx = 2.5e-5;
-    	h = dx*1.1;
-    	dom.InitialDist 	= dx;
+	Rho	= 998.21;
+	Mu	= 1.002e-3;
+	dx	= 2.5e-5;
+	h		= dx*1.1;
+	Cs	= 0.07;
+	t		= (0.2*h/(Cs));
 
-        double maz;
-        maz=(0.2*h/(0.07));
-        std::cout<<maz<<std::endl;
-    	dom.GeneralBefore	= & UserAcc;
+	cout<<"Rho = "<<Rho<<endl;
+	cout<<"Mu  = "<<Mu<<endl;
 
-     	dom.AddBoxLength(1 ,Vec3_t ( 0.0 , -0.0006 , 0.0 ), 0.0005 , 0.00121 ,  0 , dx/2.0 ,rho, h, 1 , 0 , false, false );
+	dom.GeneralBefore	= & UserAcc;
+	dom.InitialDist 	= dx;
 
-    	for (size_t a=0; a<dom.Particles.Size(); a++)
-    	{
-     		dom.Particles[a]->Cs		= 0.07;
-     		dom.Particles[a]->PresEq	= 0;
-     		dom.Particles[a]->Mu		= 1.002e-3;
-    		dom.Particles[a]->MuRef		= 1.002e-3;
-    		dom.Particles[a]->Material	= 1;
+	dom.AddBoxLength(1 ,Vec3_t ( 0.0 , -24.0*dx , 0.0 ), 20.0*dx + dx/10.0 , 48.0*dx + dx/10.0,  0 , dx/2.0 ,Rho, h, 1 , 0 , false, false );
 
-    		yb=dom.Particles[a]->x(1);
-    		if (yb>=0.0005 || yb<=-0.0005)
-    		{
-    			dom.Particles[a]->ID		= 2;
-    			dom.Particles[a]->IsFree	= false;
-    			dom.Particles[a]->NoSlip	= true;
-    		}
-    	}
+	for (size_t a=0; a<dom.Particles.Size(); a++)
+	{
+		dom.Particles[a]->Cs				= Cs;
+		dom.Particles[a]->PresEq		= 0;
+		dom.Particles[a]->Mu				= Mu;
+		dom.Particles[a]->MuRef			= Mu;
+		dom.Particles[a]->Material	= 1;
 
-//    	dom.WriteXDMF("maz");
-    	dom.Solve(/*tf*/100.0,/*dt*/maz,/*dtOut*/0.05,"test06",1000);
-        return 0;
+		yb=dom.Particles[a]->x(1);
+		if (yb>=20.0*dx || yb<=-20.0*dx)
+		{
+			dom.Particles[a]->ID			= 2;
+			dom.Particles[a]->IsFree	= false;
+			dom.Particles[a]->NoSlip	= true;
+		}
+	}
+
+	dom.Solve(/*tf*/20.0,/*dt*/t,/*dtOut*/0.05,"test06",250);
+	return 0;
 }
 MECHSYS_CATCH

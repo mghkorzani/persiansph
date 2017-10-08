@@ -45,44 +45,47 @@ public:
     Domain();
 
     // Destructor
-    ~Domain ();
+    ~Domain();
 
     // Domain Part
-    void AddSingleParticle			(int tag, Vec3_t const & x, double Mass, double Density, double h, bool Fixed);		///< Add one particle
+    void AddSingleParticle	(int tag, Vec3_t const & x, double Mass, double Density, double h, bool Fixed);		//Add one particle
     void AddBoxLength				(int tag, Vec3_t const &V, double Lx, double Ly, double Lz,double r, double Density,
-							double h,int type, int rotation, bool random, bool Fixed);			///< Add a cube of particles with a defined dimensions
-    void AddBoxNo				(int tag, Vec3_t const &V, size_t nx, size_t ny, size_t nz,double r, double Density,
-							double h,int type, int rotation, bool random, bool Fixed);			///< Add a cube of particles with a defined numbers
-    void DelParticles				(int const & Tags);									///< Delete particles by tag
-    void CheckParticleLeave			();											///< Check if any particles leave the domain, they will be deleted
+																	double h,int type, int rotation, bool random, bool Fixed);									//Add a cube of particles with a defined dimensions
+    void AddBoxNo						(int tag, Vec3_t const &V, size_t nx, size_t ny, size_t nz,double r, double Density,
+																	double h,int type, int rotation, bool random, bool Fixed);									//Add a cube of particles with a defined numbers
+    void DelParticles				(int const & Tags);					//Delete particles by tag
+    void CheckParticleLeave	();													//Check if any particles leave the domain, they will be deleted
 
-    void YZPlaneCellsNeighbourSearch		(int q1);										///< Create pairs of particles in cells of XZ plan
-    void MainNeighbourSearch			();											///< Create pairs of particles in the whole domain
-    void StartAcceleration			(Vec3_t const & a = Vec3_t(0.0,0.0,0.0));						///< Add a fixed acceleration such as the Gravity
-    void PrimaryComputeAcceleration		();											///< Compute the solid boundary properties
-    void LastComputeAcceleration		();											///< Compute the acceleration due to the other particles
-    void CalcForce11				(Particle * P1, Particle * P2);								///< Calculates the contact force between fluid-fluid particles
-    void CalcForce2233				(Particle * P1, Particle * P2);								///< Calculates the contact force between soil-soil/solid-solid particles
-    void CalcForce12				(Particle * P1, Particle * P2);								///< Calculates the contact force between fluid-solid particles
-    void CalcForce13				(Particle * P1, Particle * P2);								///< Calculates the contact force between fluid-soil particles
-    void Move					(double dt);										///< Move particles
+    void YZPlaneCellsNeighbourSearch(int q1);						//Create pairs of particles in cells of XZ plan
+    void MainNeighbourSearch				();									//Create pairs of particles in the whole domain
+    void StartAcceleration					(Vec3_t const & a = Vec3_t(0.0,0.0,0.0));	//Add a fixed acceleration such as the Gravity
+    void PrimaryComputeAcceleration	();									//Compute the solid boundary properties
+    void LastComputeAcceleration		();									//Compute the acceleration due to the other particles
+    void CalcForce11		(Particle * P1, Particle * P2);	//Calculates the contact force between fluid-fluid particles
+    void CalcForce2233	(Particle * P1, Particle * P2);	//Calculates the contact force between soil-soil/solid-solid particles
+    void CalcForce12		(Particle * P1, Particle * P2);	//Calculates the contact force between fluid-solid particles
+    void CalcForce13		(Particle * P1, Particle * P2);	//Calculates the contact force between fluid-soil particles
+    void Move						(double dt);										//Move particles
 
     void Solve					(double tf, double dt, double dtOut, char const * TheFileKey, size_t maxidx);		///< The solving function
 
-    void CellInitiate				();											///< Find the size of the domain as a cube, make cells and HOCs
-    void ListGenerate				();											///< Generate linked-list
-    void CellReset				();											///< Reset HOCs and particles' LL to initial value of -1
+    void CellInitiate		();															//Find the size of the domain as a cube, make cells and HOCs
+    void ListGenerate		();															//Generate linked-list
+    void CellReset			();															//Reset HOCs and particles' LL to initial value of -1
 
-    void WriteXDMF				(char const * FileKey);									///< Save a XDMF file for the visualization
-    void Save					(char const * FileKey);									///< Save the domain in a file
-    void Load					(char const * FileKey);									///< Load the domain from the saved file
-    void LoadResults				(char const * FileKey, double density);							///< Load the domain from one of the results
+    void WriteXDMF			(char const * FileKey);					//Save a XDMF file for the visualization
+    void Save						(char const * FileKey);					//Save the domain in a file
+    void Load						(char const * FileKey);					//Load the domain from the saved file
+    void LoadResults		(char const * FileKey, double density);		//Load the domain from one of the results
 
-    void PrintInput				(char const * FileKey);
-    void InFlowBCLeave				();
-    void InFlowBCFresh				();
-    void WholeVelocity				();
-    void InitialChecks				();
+    void PrintInput			(char const * FileKey);
+		void InitialChecks	();
+
+    void InFlowBCLeave	();
+    void InFlowBCFresh	();
+    void WholeVelocity	();
+
+		void Periodic_X_Correction(Vec3_t & x, double const & h, Particle * P1, Particle * P2);
 
     // Data
     Array <Particle*>				Particles; 	///< Array of particles

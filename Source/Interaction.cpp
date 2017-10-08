@@ -24,14 +24,10 @@ namespace SPH {
 
 inline void Domain::CalcForce11(Particle * P1, Particle * P2)
 {
-	double h	= (P1->h+P2->h)/2;
+	double h		= (P1->h+P2->h)/2;
 	Vec3_t xij	= P1->x - P2->x;
 
-	// Correction of xij for Periodic BC
-	if (DomSize(0)>0.0) {if (xij(0)>2*Cellfac*h || xij(0)<-2*Cellfac*h) {(P1->CC[0]>P2->CC[0]) ? xij(0) -= DomSize(0) : xij(0) += DomSize(0);}}
-	if (DomSize(1)>0.0) {if (xij(1)>2*Cellfac*h || xij(1)<-2*Cellfac*h) {(P1->CC[1]>P2->CC[1]) ? xij(1) -= DomSize(1) : xij(1) += DomSize(1);}}
-	if (DomSize(2)>0.0) {if (xij(2)>2*Cellfac*h || xij(2)<-2*Cellfac*h) {(P1->CC[2]>P2->CC[2]) ? xij(2) -= DomSize(2) : xij(2) += DomSize(2);}}
-
+	Periodic_X_Correction(xij, h, P1, P2);
 	double rij	= norm(xij);
 
 	if ((rij/h)<=Cellfac)
@@ -202,10 +198,7 @@ inline void Domain::CalcForce2233(Particle * P1, Particle * P2)
 	double h	= (P1->h+P2->h)/2;
 	Vec3_t xij	= P1->x - P2->x;
 
-	// Correction of xij for Periodic BC
-	if (DomSize(0)>0.0) {if (xij(0)>2*Cellfac*h || xij(0)<-2*Cellfac*h) {(P1->CC[0]>P2->CC[0]) ? xij(0) -= DomSize(0) : xij(0) += DomSize(0);}}
-	if (DomSize(1)>0.0) {if (xij(1)>2*Cellfac*h || xij(1)<-2*Cellfac*h) {(P1->CC[1]>P2->CC[1]) ? xij(1) -= DomSize(1) : xij(1) += DomSize(1);}}
-	if (DomSize(2)>0.0) {if (xij(2)>2*Cellfac*h || xij(2)<-2*Cellfac*h) {(P1->CC[2]>P2->CC[2]) ? xij(2) -= DomSize(2) : xij(2) += DomSize(2);}}
+	Periodic_X_Correction(xij, h, P1, P2);
 
 	double rij	= norm(xij);
 
@@ -395,10 +388,7 @@ inline void Domain::CalcForce12(Particle * P1, Particle * P2)
 //	double h	= std::max(P1->h,P2->h);
 	Vec3_t xij	= P1->x - P2->x;
 
-	// Correction of xij for Periodic BC
-	if (DomSize(0)>0.0) {if (xij(0)>2*Cellfac*h || xij(0)<-2*Cellfac*h) {(P1->CC[0]>P2->CC[0]) ? xij(0) -= DomSize(0) : xij(0) += DomSize(0);}}
-	if (DomSize(1)>0.0) {if (xij(1)>2*Cellfac*h || xij(1)<-2*Cellfac*h) {(P1->CC[1]>P2->CC[1]) ? xij(1) -= DomSize(1) : xij(1) += DomSize(1);}}
-	if (DomSize(2)>0.0) {if (xij(2)>2*Cellfac*h || xij(2)<-2*Cellfac*h) {(P1->CC[2]>P2->CC[2]) ? xij(2) -= DomSize(2) : xij(2) += DomSize(2);}}
+	Periodic_X_Correction(xij, h, P1, P2);
 
 	double rij	= norm(xij);
 
@@ -535,10 +525,7 @@ inline void Domain::CalcForce13(Particle * P1, Particle * P2)
 	double h	= std::min(P1->h,P2->h);
 	Vec3_t xij	= P1->x - P2->x;
 
-	// Correction of xij for Periodic BC
-	if (DomSize(0)>0.0) {if (xij(0)>2*Cellfac*h || xij(0)<-2*Cellfac*h) {(P1->CC[0]>P2->CC[0]) ? xij(0) -= DomSize(0) : xij(0) += DomSize(0);}}
-	if (DomSize(1)>0.0) {if (xij(1)>2*Cellfac*h || xij(1)<-2*Cellfac*h) {(P1->CC[1]>P2->CC[1]) ? xij(1) -= DomSize(1) : xij(1) += DomSize(1);}}
-	if (DomSize(2)>0.0) {if (xij(2)>2*Cellfac*h || xij(2)<-2*Cellfac*h) {(P1->CC[2]>P2->CC[2]) ? xij(2) -= DomSize(2) : xij(2) += DomSize(2);}}
+	Periodic_X_Correction(xij, h, P1, P2);
 
 	double rij	= norm(xij);
 
