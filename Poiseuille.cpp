@@ -1,6 +1,6 @@
 /***********************************************************************************
-* PersianSPH - A C++ library to simulate Mechanical Systems (solids, fluids        * 
-*             and soils) using Smoothed Particle Hydrodynamics method              *   
+* PersianSPH - A C++ library to simulate Mechanical Systems (solids, fluids        *
+*             and soils) using Smoothed Particle Hydrodynamics method              *
 * Copyright (C) 2013 Maziar Gholami Korzani and Sergio Galindo-Torres              *
 *                                                                                  *
 * This file is part of PersianSPH                                                  *
@@ -19,7 +19,6 @@
 ************************************************************************************/
 
 #include "Domain.h"
-#include "Interaction.h"
 
 void UserAcc(SPH::Domain & domi)
 {
