@@ -60,8 +60,8 @@ inline void Domain::CalcForce11(Particle * P1, Particle * P2)
 			mj = P2->Mass;
 		}
 
-		double GK	= GradKernel(Dimension, KernelType, rij, h);
-		double K	= Kernel(Dimension, KernelType, rij, h);
+		double GK	= GradKernel(Dimension, KernelType, rij/h, h);
+		double K	= Kernel(Dimension, KernelType, rij/h, h);
 
 		// Artificial Viscosity
 		double PIij = 0.0;
@@ -86,7 +86,7 @@ inline void Domain::CalcForce11(Particle * P1, Particle * P2)
 				if (P1->Pressure < 0.0) Ri = -P1->Pressure/(di*di);
 				if (P2->Pressure < 0.0) Rj = -P2->Pressure/(dj*dj);
 			}
-			TIij = (P1->TI*Ri + P2->TI*Rj)*pow((K/Kernel(Dimension, KernelType, (P1->TIInitDist + P2->TIInitDist)/2.0, h)),(P1->TIn+P2->TIn)/2.0);
+			TIij = (P1->TI*Ri + P2->TI*Rj)*pow((K/Kernel(Dimension, KernelType, (P1->TIInitDist + P2->TIInitDist)/(2.0*h), h)),(P1->TIn+P2->TIn)/2.0);
 		}
 
 		// Real Viscosity
@@ -119,10 +119,10 @@ inline void Domain::CalcForce11(Particle * P1, Particle * P2)
 
 			if (VisEq==0) VI =  2.0*Mu / (di*dj)          * GK*vab;								//Morris et al 1997
 			if (VisEq==1) VI =  8.0*Mu / ((di+dj)*(di+dj))* GK*vab;								//Shao et al 2003
-			if (VisEq==2) VI = -Mu     / (di*dj)          * LaplaceKernel(Dimension, KernelType, rij, h)*vab;		//Real Viscosity (considering incompressible fluid)
-			if (VisEq==3) VI = -Mu     / (di*dj)          * ( LaplaceKernel(Dimension, KernelType, rij, h)*vab +
+			if (VisEq==2) VI = -Mu     / (di*dj)          * LaplaceKernel(Dimension, KernelType, rij/h, h)*vab;		//Real Viscosity (considering incompressible fluid)
+			if (VisEq==3) VI = -Mu     / (di*dj)          * ( LaplaceKernel(Dimension, KernelType, rij/h, h)*vab +
 						1.0/3.0*(GK*vij + dot(vij,xij) * xij / (rij*rij) *
-						(-GK+SecDerivativeKernel(Dimension, KernelType, rij, h) ) ) );				//Takeda et al 1994
+						(-GK+SecDerivativeKernel(Dimension, KernelType, rij/h, h) ) ) );				//Takeda et al 1994
 			if ((VisEq<0 || VisEq>3))
 			{
 				std::cout << "Viscosity Equation No is out of range. Please correct it and run again" << std::endl;
@@ -238,8 +238,8 @@ inline void Domain::CalcForce2233(Particle * P1, Particle * P2)
 		}
 
 		Vec3_t vij	= P1->v - P2->v;
-		double GK	= GradKernel(Dimension, KernelType, rij, h);
-		double K	= Kernel(Dimension, KernelType, rij, h);
+		double GK	= GradKernel(Dimension, KernelType, rij/h, h);
+		double K	= Kernel(Dimension, KernelType, rij/h, h);
 
 		// Artificial Viscosity
 		Mat3_t PIij;
@@ -272,7 +272,7 @@ inline void Domain::CalcForce2233(Particle * P1, Particle * P2)
 		// Tensile Instability
 		Mat3_t TIij;
 		set_to_zero(TIij);
-		if (P1->TI > 0.0 || P2->TI > 0.0) TIij = pow((K/Kernel(Dimension, KernelType, (P1->TIInitDist + P2->TIInitDist)/2.0, h)),(P1->TIn+P2->TIn)/2.0)*(P1->TIR+P2->TIR);
+		if (P1->TI > 0.0 || P2->TI > 0.0) TIij = pow((K/Kernel(Dimension, KernelType, (P1->TIInitDist + P2->TIInitDist)/(2.0*h), h)),(P1->TIn+P2->TIn)/2.0)*(P1->TIR+P2->TIR);
 
 		// NoSlip BC velocity correction
 		Vec3_t vab = 0.0;
@@ -396,7 +396,7 @@ inline void Domain::CalcForce12(Particle * P1, Particle * P2)
 	{
 		double di=0.0,dj=0.0,mi=0.0,mj=0.0;
 		Vec3_t vij	= P1->v - P2->v;
-		double GK	= GradKernel(Dimension, KernelType, rij, h);
+		double GK	= GradKernel(Dimension, KernelType, rij/h, h);
 
 		if (P1->Material == 1)
 		{
@@ -463,10 +463,10 @@ inline void Domain::CalcForce12(Particle * P1, Particle * P2)
 		}
 			if (VisEq==0) VI =  2.0*Mu / (di*dj)          * GK*vab;								//Morris et al 1997
 		if (VisEq==1) VI =  8.0*Mu / ((di+dj)*(di+dj))* GK*vab;								//Shao et al 2003
-		if (VisEq==2) VI = -Mu     / (di*dj)          * LaplaceKernel(Dimension, KernelType, rij, h)*vab;		//Real Viscosity (considering incompressible fluid)
-		if (VisEq==3) VI = -Mu     / (di*dj)          * ( LaplaceKernel(Dimension, KernelType, rij, h)*vab +
+		if (VisEq==2) VI = -Mu     / (di*dj)          * LaplaceKernel(Dimension, KernelType, rij/h, h)*vab;		//Real Viscosity (considering incompressible fluid)
+		if (VisEq==3) VI = -Mu     / (di*dj)          * ( LaplaceKernel(Dimension, KernelType, rij/h, h)*vab +
 					1.0/3.0*(GK*vij + dot(vij,xij) * xij / (rij*rij) *
-					(-GK+SecDerivativeKernel(Dimension, KernelType, rij, h) ) ) );				//Takeda et al 1994
+					(-GK+SecDerivativeKernel(Dimension, KernelType, rij/h, h) ) ) );				//Takeda et al 1994
 		if ((VisEq<0 || VisEq>3))
 		{
 			std::cout << "Viscosity Equation No is out of range. Please correct it and run again" << std::endl;
@@ -531,7 +531,7 @@ inline void Domain::CalcForce13(Particle * P1, Particle * P2)
 
 	if ((rij/h)<=Cellfac)
 	{
-		double K	= Kernel(Dimension, KernelType, rij, h)/(P1->Density*P2->Density);
+		double K	= Kernel(Dimension, KernelType, rij/h, h)/(P1->Density*P2->Density);
 		double SF1=0.0,SF2=0.0;
 		Vec3_t SFt=0.0,v=0.0;
 		switch(SWIType)
@@ -621,7 +621,7 @@ inline void Domain::CalcForce13(Particle * P1, Particle * P2)
 			case 2:
 				if (P1->Material == 3 )
 				{
-					double GK	= GradKernel(Dimension, KernelType, rij, h)/(P1->Density*P2->Density);
+					double GK	= GradKernel(Dimension, KernelType, rij/h, h)/(P1->Density*P2->Density);
 					v = P2->v-P1->v;
 					Seepage(P1->SeepageType, P1->k, P1->k2, P2->MuRef, P2->RefDensity, SF1, SF2);
 					SFt = (SF1*v + SF2*norm(v)*v) *K;
@@ -637,7 +637,7 @@ inline void Domain::CalcForce13(Particle * P1, Particle * P2)
 				}
 				else
 				{
-					double GK	= GradKernel(Dimension, KernelType, rij, h)/(P1->Density*P2->Density);
+					double GK	= GradKernel(Dimension, KernelType, rij/h, h)/(P1->Density*P2->Density);
 					v = P1->v-P2->v;
 					Seepage(P2->SeepageType, P2->k, P2->k2, P1->MuRef, P1->RefDensity, SF1, SF2);
 					SFt = (SF1*v + SF2*norm(v)*v) *K;

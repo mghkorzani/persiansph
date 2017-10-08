@@ -25,25 +25,25 @@
 
 namespace SPH {
 
-	double Kernel(size_t Dim, size_t KT, double r, double h);
+	double Kernel								(size_t const & Dim, size_t const & KT, double const & q, double const & h);
 
-	double GradKernel(size_t Dim, size_t KT, double r, double h);
+	double GradKernel						(size_t const & Dim, size_t const & KT, double const & q, double const & h);
 
-	double LaplaceKernel(size_t Dim, size_t KT, double r, double h);
+	double LaplaceKernel				(size_t const & Dim, size_t const & KT, double const & q, double const & h);
 
-	double SecDerivativeKernel(size_t Dim, size_t KT, double r, double h);
+	double SecDerivativeKernel	(size_t const & Dim, size_t const & KT, double const & q, double const & h);
 
-	double EOS(size_t EQ, double Cs0, double P00, double Density, double Density0);
+	double EOS									(size_t const & EQ, double const & Cs0, double const & P00, double const & Density, double const & Density0);
 
-	double SoundSpeed(size_t EQ, double Cs0, double Density, double Density0);
+	double SoundSpeed						(size_t const & EQ, double const & Cs0, double const & Density, double const & Density0);
 
-	double DensitySolid(size_t EQ, double Cs0, double P00, double Pressure, double Density0);
+	double DensitySolid					(size_t const & EQ, double const & Cs0, double const & P00, double const & Pressure, double const & Density0);
 
-	void   Seepage(size_t ST, double k, double k2, double mu,  double rho, double& SF1, double& SF2);
+	void   Seepage							(size_t const & ST, double const & k, double const & k2, double const & mu,  double const & rho, double & SF1, double & SF2);
 
-	void   Rotation (Mat3_t Input, Mat3_t & Vectors, Mat3_t & VectorsT, Mat3_t & Values);
+	void   Rotation							(Mat3_t Input, Mat3_t & Vectors, Mat3_t & VectorsT, Mat3_t & Values);
 
-	Mat3_t abab (const Mat3_t & A, const Mat3_t & B);
+	Mat3_t abab									(Mat3_t const & A, Mat3_t const & B);
 
 }; // namespace SPH
 

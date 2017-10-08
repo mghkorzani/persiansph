@@ -22,10 +22,9 @@
 
 namespace SPH {
 
-	inline double Kernel(size_t Dim, size_t KT, double r, double h)
+	inline double Kernel(size_t const & Dim, size_t const & KT, double const & q, double const & h)
 	{
 		double C;
-		double q = r/h;
 
 		switch (KT)
 		{
@@ -63,10 +62,9 @@ namespace SPH {
 		}
 	}
 
-	inline double GradKernel(size_t Dim, size_t KT, double r, double h)
+	inline double GradKernel(size_t const & Dim, size_t const & KT, double const & q, double const & h)
 	{
 		double C;
-		double q = r/h;
 
 		switch (KT)
 		{
@@ -74,8 +72,8 @@ namespace SPH {
 				Dim ==2 ? C = 10.0/(7.0*h*h*h*M_PI) : C = 1.0/(h*h*h*h*M_PI);
 
 				if 			(q==0.0)	return C/h*(-3.0+(9.0/2.0)*q);
-				else if (q<1.0)		return C/r*(-3.0*q+(9.0/4.0)*q*q);
-				else if (q<2.0)		return C/r*((-3.0/4.0)*(2.0-q)*(2.0-q));
+				else if (q<1.0)		return C/q*h*(-3.0*q+(9.0/4.0)*q*q);
+				else if (q<2.0)		return C/q*h*((-3.0/4.0)*(2.0-q)*(2.0-q));
 				else							return 0.0;
 				break;
 
@@ -83,7 +81,7 @@ namespace SPH {
 				Dim ==2 ? C = 7.0/(4.0*h*h*h*M_PI) : C = 7.0/(8.0*h*h*h*h*M_PI);
 
 				if 			(q==0.0)	return C*-5.0/h*(pow((1.0-q/2.0),3.0)-3.0*q/2.0*pow((1.0-q/2.0),2.0));
-				else if (q<2.0)		return C/r*-5.0*q*pow((1.0-q/2.0),3.0);
+				else if (q<2.0)		return C/q*h*-5.0*q*pow((1.0-q/2.0),3.0);
 				else							return 0.0;
 				break;
 
@@ -91,9 +89,9 @@ namespace SPH {
 				Dim ==2 ? C = 7.0/(478.0*h*h*h*M_PI) : C = 1.0/(120.0*h*h*h*h*M_PI);
 
 				if			(q==0.0)	return C/h*(20.0*pow((3.0-q),3.0)-120.0*pow((2.0-q),3.0)+300.0*pow((1.0-q),3.0));
-				else if (q<1.0)		return C/r*(-5.0*pow((3.0-q),4.0)+30.0*pow((2.0-q),4.0)-75.0*pow((1.0-q),4.0));
-				else if (q<2.0)		return C/r*(-5.0*pow((3.0-q),4.0)+30.0*pow((2.0-q),4.0));
-				else if (q<3.0)		return C/r*(-5.0*pow((3.0-q),4.0));
+				else if (q<1.0)		return C/q*h*(-5.0*pow((3.0-q),4.0)+30.0*pow((2.0-q),4.0)-75.0*pow((1.0-q),4.0));
+				else if (q<2.0)		return C/q*h*(-5.0*pow((3.0-q),4.0)+30.0*pow((2.0-q),4.0));
+				else if (q<3.0)		return C/q*h*(-5.0*pow((3.0-q),4.0));
 				else							return 0.0;
 				break;
 
@@ -107,10 +105,9 @@ namespace SPH {
 		}
 	}
 
-	inline double LaplaceKernel(size_t Dim, size_t KT, double r, double h)
+	inline double LaplaceKernel(size_t const & Dim, size_t const & KT, double const & q, double const & h)
 	{
 		double C;
-		double q = r/h;
 
 		switch (KT)
 		{
@@ -148,10 +145,9 @@ namespace SPH {
 		}
 	}
 
-	inline double SecDerivativeKernel(size_t Dim, size_t KT, double r, double h)
+	inline double SecDerivativeKernel(size_t const & Dim, size_t const & KT, double const & q, double const & h)
 	{
 		double C;
-		double q = r/h;
 
 		switch (KT)
 		{
@@ -189,7 +185,7 @@ namespace SPH {
 		}
 	}
 
-	inline double EOS(size_t EQ, double Cs0, double P00, double Density, double Density0)
+	inline double EOS(size_t const & EQ, double const & Cs0, double const & P00, double const & Density, double const & Density0)
 	{
 		switch (EQ)
 		{
@@ -215,7 +211,7 @@ namespace SPH {
 		}
 	}
 
-	inline double SoundSpeed(size_t EQ, double Cs0, double Density, double Density0)
+	inline double SoundSpeed(size_t const & EQ, double const & Cs0, double const & Density, double const & Density0)
 	{
 		switch (EQ)
 		{
@@ -241,7 +237,7 @@ namespace SPH {
 		}
 	}
 
-	inline double DensitySolid(size_t EQ, double Cs0, double P00, double Pressure, double Density0)
+	inline double DensitySolid(size_t const & EQ, double const & Cs0, double const & P00, double const & Pressure, double const & Density0)
 	{
 		switch (EQ)
 		{
@@ -267,7 +263,7 @@ namespace SPH {
 		}
 	}
 
-	inline void Seepage(size_t ST, double k, double k2, double mu,  double rho, double& SF1, double& SF2)
+	inline void Seepage(size_t const & ST, double const & k, double const & k2, double const & mu,  double const & rho, double & SF1, double & SF2)
 	{
 		switch (ST)
 		{
@@ -317,7 +313,7 @@ namespace SPH {
 								0.0   , 0.0   , Val(2);
 	}
 
-	inline Mat3_t abab (const Mat3_t & A, const Mat3_t & B)
+	inline Mat3_t abab (Mat3_t const & A, Mat3_t const & B)
 	{
 		Mat3_t M;
 		M(0,0)=A(0,0)*B(0,0);  M(0,1)=A(0,1)*B(0,1);  M(0,2)=A(0,2)*B(0,2);

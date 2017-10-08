@@ -1001,7 +1001,7 @@ inline void Domain::PrimaryComputeAcceleration ()
 			Periodic_X_Correction(xij, h, Particles[P1], Particles[P2]);
 
 
-			K	= Kernel(Dimension, KernelType, norm(xij), h);
+			K	= Kernel(Dimension, KernelType, norm(xij)/h, h);
 
 			if (!Particles[P1]->IsFree)
 			{
@@ -1066,7 +1066,7 @@ inline void Domain::PrimaryComputeAcceleration ()
 
 					Periodic_X_Correction(xij, h, Particles[P1], Particles[P2]);
 
-					K	= Kernel(Dimension, KernelType, norm(xij), h);
+					K	= Kernel(Dimension, KernelType, norm(xij)/h, h);
 
 					if (Particles[P1]->Material == 1)
 					{
@@ -1644,12 +1644,6 @@ inline void Domain::InitialChecks()
     	std::cout << "Please correct the dimension (2=>2D or 3=>3D) and run again" << std::endl;
 		abort();
     }
-    if (KernelType==1)
-    	if (VisEq>1)
-    	{
-        	std::cout << "Quadratic kernel can not be used with the second order viscosity equations" << std::endl;
-    		abort();
-    	}
 
 	// Initializing the permeability for soil
 	#pragma omp parallel for schedule (static) num_threads(Nproc)
@@ -1822,15 +1816,9 @@ inline void Domain::PrintInput(char const * FileKey)
 			oss << "0 => Qubic Spline\n";
 			break;
 		case 1:
-			oss << "1 => Quadratic\n";
-			break;
-		case 2:
 			oss << "2 => Quintic\n";
 			break;
-		case 3:
-			oss << "3 => Gaussian with compact support of q<2\n";
-			break;
-		case 4:
+		case 2:
 			oss << "4 => Quintic Spline\n";
 			break;
     }
