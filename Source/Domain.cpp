@@ -1630,7 +1630,7 @@ inline void Domain::WholeVelocity()
 
 inline void Domain::InitialChecks()
 {
-    if (KernelType==4) Cellfac = 3.0; else Cellfac = 2.0;
+    if (KernelType==2) Cellfac = 3.0; else Cellfac = 2.0;
     if (Dimension == 2) I(2,2) = 0;
 
     if (BC.InOutFlow>0 && BC.Periodic[0])
