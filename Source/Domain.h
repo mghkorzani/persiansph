@@ -74,9 +74,6 @@ public:
     void CellReset			();															//Reset HOCs and particles' LL to initial value of -1
 
     void WriteXDMF			(char const * FileKey);					//Save a XDMF file for the visualization
-    void Save						(char const * FileKey);					//Save the domain in a file
-    void Load						(char const * FileKey);					//Load the domain from the saved file
-    void LoadResults		(char const * FileKey, double density);		//Load the domain from one of the results
 
     void PrintInput			(char const * FileKey);
 		void InitialChecks	();
