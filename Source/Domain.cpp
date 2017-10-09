@@ -57,7 +57,6 @@ inline Domain::Domain ()
     OutputName[1] = "Property2";
     OutputName[2] = "Property3";
     Time    = 0.0;
-    AutoSaveInt = 0.0;
 
     Dimension = 2;
     DomSize	= 0.0,0.0,0.0;
@@ -85,7 +84,7 @@ inline Domain::Domain ()
     deltat	= 0.0;
     deltatint	= 0.0;
     deltatmin	= 0.0;
-    DtAcc = 0.0025;
+    sqrt_h_a = 0.0025;
 
     TRPR = 0.0;
     BLPF = 0.0;
@@ -100,7 +99,6 @@ inline Domain::Domain ()
     DomMax = -100000000000.0;
     DomMin = 100000000000.0;
     I = OrthoSys::I;
-    TimestepConstrain1 = true;
 }
 
 inline Domain::~Domain ()
@@ -109,12 +107,12 @@ inline Domain::~Domain ()
 	for (size_t i=1; i<=Max; i++)  Particles.DelItem(Max-i);
 }
 
-inline void Domain::Periodic_X_Correction(Vec3_t & x, double const & h, Particle * P1, Particle * P2)
-{
-	if (DomSize(0)>0.0) {if (x(0)>2*Cellfac*h || x(0)<-2*Cellfac*h) {(P1->CC[0]>P2->CC[0]) ? x(0) -= DomSize(0) : x(0) += DomSize(0);}}
-	if (DomSize(1)>0.0) {if (x(1)>2*Cellfac*h || x(1)<-2*Cellfac*h) {(P1->CC[1]>P2->CC[1]) ? x(1) -= DomSize(1) : x(1) += DomSize(1);}}
-	if (DomSize(2)>0.0) {if (x(2)>2*Cellfac*h || x(2)<-2*Cellfac*h) {(P1->CC[2]>P2->CC[2]) ? x(2) -= DomSize(2) : x(2) += DomSize(2);}}
-}
+	inline void Domain::Periodic_X_Correction(Vec3_t & x, double const & h, Particle * P1, Particle * P2)
+	{
+		if (DomSize(0)>0.0) {if (x(0)>2*Cellfac*h || x(0)<-2*Cellfac*h) {(P1->CC[0]>P2->CC[0]) ? x(0) -= DomSize(0) : x(0) += DomSize(0);}}
+		if (DomSize(1)>0.0) {if (x(1)>2*Cellfac*h || x(1)<-2*Cellfac*h) {(P1->CC[1]>P2->CC[1]) ? x(1) -= DomSize(1) : x(1) += DomSize(1);}}
+		if (DomSize(2)>0.0) {if (x(2)>2*Cellfac*h || x(2)<-2*Cellfac*h) {(P1->CC[2]>P2->CC[2]) ? x(2) -= DomSize(2) : x(2) += DomSize(2);}}
+	}
 
 	inline void Domain::Kernel_Set(Kernels_Type const & KT)
 	{
@@ -122,6 +120,26 @@ inline void Domain::Periodic_X_Correction(Vec3_t & x, double const & h, Particle
 		if (KernelType==2) Cellfac = 3.0; else Cellfac = 2.0;
 	}
 
+	inline void Domain::AdaptiveTimeStep(double const & deltatint, double & deltat, double const & deltatmin)
+	{
+		if (deltatint>deltatmin)
+		{
+			if (deltat<deltatmin)
+				deltat		= 2.0*deltat*deltatmin/(deltat+deltatmin);
+			else
+				deltat		= deltatmin;
+		}
+		else
+		{
+			if (deltatint!=deltat)
+				deltat		= 2.0*deltat*deltatint/(deltat+deltatint);
+			else
+				deltat		= deltatint;
+		}
+
+		if (deltat<(deltatint/1.0e5))
+			throw new Fatal("Too small time step, please choose a smaller time step initially to make the simulation more stable");
+	}
 
 inline void Domain::AddSingleParticle(int tag, Vec3_t const & x, double Mass, double Density, double h, bool Fixed)
 {
@@ -1249,9 +1267,7 @@ inline void Domain::LastComputeAcceleration ()
 		NSMPairs[i].Clear();
 	}
 
-//	//Min time step check based on the acceleration
-	if (TimestepConstrain1)
-	{
+		//Min time step check based on the acceleration
 		double test	= 0.0;
 		deltatmin	= deltatint;
 		#pragma omp parallel for schedule (static) private(test) num_threads(Nproc)
@@ -1260,16 +1276,14 @@ inline void Domain::LastComputeAcceleration ()
 			if (Particles[i]->IsFree)
 			{
 				test = sqrt(Particles[i]->h/norm(Particles[i]->a));
-				if (deltatmin > (DtAcc*test))
+				if (deltatmin > (sqrt_h_a*test))
 				{
 					omp_set_lock(&dom_lock);
-						deltatmin = DtAcc*test;
+						deltatmin = sqrt_h_a*test;
 					omp_unset_lock(&dom_lock);
 				}
 			}
 		}
-	}
-
 }
 
 inline void Domain::Move (double dt)
@@ -1698,6 +1712,8 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
     size_t idx_out = 1;
     size_t InitOutCount = 0;
     double tout = Time;
+
+		//Initializing adaptive time step
     deltat	= dt;
     deltatint	= dt;
     deltatmin	= dt;
@@ -1753,26 +1769,7 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
             tout += dtOut;
         }
 
-	if (deltatint>deltatmin)
-	{
-		if (deltat<deltatmin)
-			deltat		= 2.0*deltat*deltatmin/(deltat+deltatmin);
-		else
-			deltat		= deltatmin;
-
-//		std::cout<<"New Time Step = " <<deltat<<std::endl;
-	}
-	else
-	{
-		if (deltatint!=deltat)
-			deltat		= 2.0*deltat*deltatint/(deltat+deltatint);
-		else
-			deltat		= deltatint;
-
-//		if ((deltatint-deltat)>(0.1*deltatint))
-//			std::cout<<"New Time Step = " <<deltat<<std::endl;
-	}
-	if (deltat<(deltatint/1.0e5)) throw new Fatal("Too small time step, please choose a smaller time step initially to make the simulation more stable");
+	AdaptiveTimeStep(deltatint, deltat, deltatmin);
 
 	Move(deltat);
 

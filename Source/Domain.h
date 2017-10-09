@@ -84,18 +84,12 @@ public:
     void InFlowBCFresh	();
     void WholeVelocity	();
 
-		void Periodic_X_Correction(Vec3_t & x, double const & h, Particle * P1, Particle * P2);
 		void Kernel_Set(Kernels_Type const & KT);
     // Data
     Array <Particle*>				Particles; 	///< Array of particles
     double					R;		///< Particle Radius in addrandombox
 
-    double					Time;    	///< The simulation time at each step
-    double					AutoSaveInt;	///< Automatic save interval time step
-    double					deltat;		///< Time Step
-    double					deltatmin;	///< Minimum Time Step
-    double					deltatint;	///< Initial Time Step
-    double					DtAcc;		///< Coefficient for determining Time Step based on acceleration
+		double					sqrt_h_a;				//Coefficient for determining Time Step based on acceleration (can be defined by user)
 
     int 					Dimension;    	///< Dimension of the problem
 
@@ -109,7 +103,6 @@ public:
     Vec3_t                  			BLPF;           ///< Bottom left-hand point at front of the domain as a cube
     Vec3_t                  			CellSize;      	///< Calculated cell size according to (cell size >= 2h)
     int		                		CellNo[3];      ///< No. of cells for linked list
-    double 					Cellfac;	///< Factor which should be multiplied by h to change the size of cells (Min 2)
     double 					hmax;		///< Max of h for the cell size  determination
     Vec3_t                 			DomSize;	///< Each component of the vector is the domain size in that direction if periodic boundary condition is defined in that direction as well
     double					rhomax;
@@ -137,7 +130,6 @@ public:
     PtDom					GeneralBefore;	///< Pointer to a function: to modify particles properties before CalcForce function
     PtDom					GeneralAfter;	///< Pointer to a function: to modify particles properties after CalcForce function
     size_t					Scheme;		///< Integration scheme: 0 = Modified Verlet, 1 = Leapfrog
-    bool					TimestepConstrain1;	///< Acceleration check for timestep size
 
     Array<Array<std::pair<size_t,size_t> > >	SMPairs;
     Array<Array<std::pair<size_t,size_t> > >	NSMPairs;
@@ -148,8 +140,20 @@ public:
     Array<std::pair<size_t,size_t> >		Initial;
     Mat3_t I;
     String					OutputName[3];
+
+
 	private:
-		size_t					KernelType;	///< Selecting variable to choose a kernel
+		void Periodic_X_Correction	(Vec3_t & x, double const & h, Particle * P1, Particle * P2);						//Corrects xij for the periodic boundary condition
+		void AdaptiveTimeStep				(double const & deltatint, double & deltat, double const & deltatmin);	//Uses the minimum time step to smoothly vary the time step
+
+
+		size_t					KernelType;			//Choose a kernel
+		double 					Cellfac;				//Define the compact support of a kernel
+
+		double					Time;    				//Current time of simulation at each solving step
+		double					deltat;					//Time Step
+    double					deltatmin;			//Minimum Time Step
+    double					deltatint;			//Initial Time Step
 
 };
 
