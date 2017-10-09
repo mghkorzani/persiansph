@@ -39,7 +39,7 @@ int main(int argc, char **argv) try
 	dom.BC.Periodic[0]= true;
 	dom.Nproc					= 4;
 	dom.VisEq					= 3;
-	dom.KernelType		= 2;
+	dom.Kernel_Set(Quintic_Spline);
 	dom.Scheme				= 0;
 
 	double yb,h,Rho,dx,t,Cs,Mu;

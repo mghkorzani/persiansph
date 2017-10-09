@@ -116,6 +116,13 @@ inline void Domain::Periodic_X_Correction(Vec3_t & x, double const & h, Particle
 	if (DomSize(2)>0.0) {if (x(2)>2*Cellfac*h || x(2)<-2*Cellfac*h) {(P1->CC[2]>P2->CC[2]) ? x(2) -= DomSize(2) : x(2) += DomSize(2);}}
 }
 
+	inline void Domain::Kernel_Set(Kernels_Type const & KT)
+	{
+		KernelType = KT;
+		if (KernelType==2) Cellfac = 3.0; else Cellfac = 2.0;
+	}
+
+
 inline void Domain::AddSingleParticle(int tag, Vec3_t const & x, double Mass, double Density, double h, bool Fixed)
 {
    	Particles.Push(new Particle(tag,x,Vec3_t(0,0,0),Mass,Density,h,Fixed));
@@ -1630,7 +1637,6 @@ inline void Domain::WholeVelocity()
 
 inline void Domain::InitialChecks()
 {
-    if (KernelType==2) Cellfac = 3.0; else Cellfac = 2.0;
     if (Dimension == 2) I(2,2) = 0;
 
     if (BC.InOutFlow>0 && BC.Periodic[0])

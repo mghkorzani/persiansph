@@ -33,6 +33,8 @@
 #include "Functions.h"
 #include "Boundary_Condition.h"
 
+enum Kernels_Type { Qubic_Spline=0, Quintic=1, Quintic_Spline=2 };
+
 namespace SPH {
 
 class Domain
@@ -83,7 +85,7 @@ public:
     void WholeVelocity	();
 
 		void Periodic_X_Correction(Vec3_t & x, double const & h, Particle * P1, Particle * P2);
-
+		void Kernel_Set(Kernels_Type const & KT);
     // Data
     Array <Particle*>				Particles; 	///< Array of particles
     double					R;		///< Particle Radius in addrandombox
