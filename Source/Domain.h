@@ -144,7 +144,7 @@ public:
 
 	private:
 		void Periodic_X_Correction	(Vec3_t & x, double const & h, Particle * P1, Particle * P2);						//Corrects xij for the periodic boundary condition
-		void AdaptiveTimeStep				(double const & deltatint, double & deltat, double const & deltatmin);	//Uses the minimum time step to smoothly vary the time step
+		void AdaptiveTimeStep				();																																			//Uses the minimum time step to smoothly vary the time step
 
 
 		size_t					KernelType;			//Choose a kernel

@@ -120,7 +120,7 @@ inline Domain::~Domain ()
 		if (KernelType==2) Cellfac = 3.0; else Cellfac = 2.0;
 	}
 
-	inline void Domain::AdaptiveTimeStep(double const & deltatint, double & deltat, double const & deltatmin)
+	inline void Domain::AdaptiveTimeStep()
 	{
 		if (deltatint>deltatmin)
 		{
@@ -1714,7 +1714,7 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
     double tout = Time;
 
 		//Initializing adaptive time step
-    deltat	= dt;
+    deltat		= dt;
     deltatint	= dt;
     deltatmin	= dt;
 
@@ -1769,7 +1769,7 @@ inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheF
             tout += dtOut;
         }
 
-	AdaptiveTimeStep(deltatint, deltat, deltatmin);
+	AdaptiveTimeStep();
 
 	Move(deltat);
 
