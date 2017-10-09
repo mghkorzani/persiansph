@@ -1800,13 +1800,13 @@ inline void Domain::PrintInput(char const * FileKey)
 	switch (KernelType)
     {
 		case 0:
-			oss << "0 => Qubic Spline\n";
+			oss << "Qubic Spline\n";
 			break;
 		case 1:
-			oss << "2 => Quintic\n";
+			oss << "Quintic\n";
 			break;
 		case 2:
-			oss << "4 => Quintic Spline\n";
+			oss << "Quintic Spline\n";
 			break;
     }
 

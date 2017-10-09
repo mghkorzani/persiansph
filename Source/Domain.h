@@ -117,7 +117,6 @@ public:
     int						*** HOC;	///< Array of "Head of Chain" for each cell
 
     size_t					VisEq;		///< Selecting variable to choose an equation for viscosity
-    size_t					KernelType;	///< Selecting variable to choose a kernel
     size_t					SWIType;	///< Selecting variable to choose Soil-Water Interaction type
     bool					FSI;		///< Selecting variable to choose Fluid-Structure Interaction
 
@@ -149,6 +148,9 @@ public:
     Array<std::pair<size_t,size_t> >		Initial;
     Mat3_t I;
     String					OutputName[3];
+	private:
+		size_t					KernelType;	///< Selecting variable to choose a kernel
+
 };
 
 }; // namespace SPH
