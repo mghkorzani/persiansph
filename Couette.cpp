@@ -35,9 +35,9 @@ int main(int argc, char **argv) try
 	dom.Dimension			= 2;
 	dom.BC.Periodic[0]= true;
 	dom.Nproc					= 4;
-	dom.VisEq					= 3;
 	dom.Scheme				= 0;
 	dom.Kernel_Set(Quintic_Spline);
+	dom.Viscosity_Eq_Set(Takeda);
 
 	double yb,h,Rho,dx,t,Cs,Mu,Vint;
 

@@ -117,21 +117,7 @@ inline void Domain::CalcForce11(Particle * P1, Particle * P2)
 				StrainRate = -GK * StrainRate;
 			}
 
-			if (VisEq==0) VI =  2.0*Mu / (di*dj)          * GK*vab;								//Morris et al 1997
-			if (VisEq==1) VI =  8.0*Mu / ((di+dj)*(di+dj))* GK*vab;								//Shao et al 2003
-			if (VisEq==2) VI = -Mu     / (di*dj)          * LaplaceKernel(Dimension, KernelType, rij/h, h)*vab;		//Real Viscosity (considering incompressible fluid)
-			if (VisEq==3) VI = -Mu     / (di*dj)          * ( LaplaceKernel(Dimension, KernelType, rij/h, h)*vab +
-						1.0/3.0*(GK*vij + dot(vij,xij) * xij / (rij*rij) *
-						(-GK+SecDerivativeKernel(Dimension, KernelType, rij/h, h) ) ) );				//Takeda et al 1994
-			if ((VisEq<0 || VisEq>3))
-			{
-				std::cout << "Viscosity Equation No is out of range. Please correct it and run again" << std::endl;
-				std::cout << "0 => Morris et al 1997" << std::endl;
-				std::cout << "1 => Shao et al 2003" << std::endl;
-				std::cout << "2 => Real viscosity for incompressible fluids" << std::endl;
-				std::cout << "3 => Takeda et al 1994 (Real viscosity for compressible fluids)" << std::endl;
-				abort();
-			}
+			Viscous_Force(VisEq, VI, Mu, di, dj, GK, vab, Dimension, KernelType, rij, h, xij, vij);
 		}
 
 		// XSPH Monaghan
@@ -461,21 +447,8 @@ inline void Domain::CalcForce12(Particle * P1, Particle * P2)
 					 vab(0)*xij(2)+vab(2)*xij(0) , vab(1)*xij(2)+vab(2)*xij(1) , 2.0*vab(2)*xij(2)           ;
 			StrainRate = -GK * StrainRate;
 		}
-			if (VisEq==0) VI =  2.0*Mu / (di*dj)          * GK*vab;								//Morris et al 1997
-		if (VisEq==1) VI =  8.0*Mu / ((di+dj)*(di+dj))* GK*vab;								//Shao et al 2003
-		if (VisEq==2) VI = -Mu     / (di*dj)          * LaplaceKernel(Dimension, KernelType, rij/h, h)*vab;		//Real Viscosity (considering incompressible fluid)
-		if (VisEq==3) VI = -Mu     / (di*dj)          * ( LaplaceKernel(Dimension, KernelType, rij/h, h)*vab +
-					1.0/3.0*(GK*vij + dot(vij,xij) * xij / (rij*rij) *
-					(-GK+SecDerivativeKernel(Dimension, KernelType, rij/h, h) ) ) );				//Takeda et al 1994
-		if ((VisEq<0 || VisEq>3))
-		{
-			std::cout << "Viscosity Equation No is out of range. Please correct it and run again" << std::endl;
-			std::cout << "0 => Morris et al 1997" << std::endl;
-			std::cout << "1 => Shao et al 2003" << std::endl;
-			std::cout << "2 => Real viscosity for incompressible fluids" << std::endl;
-			std::cout << "3 => Takeda et al 1994 (Real viscosity for compressible fluids)" << std::endl;
-			abort();
-		}
+
+		Viscous_Force(VisEq, VI, Mu, di, dj, GK, vab, Dimension, KernelType, rij, h, xij, vij);
 
 
 		// Calculating the forces for the particle 1 & 2

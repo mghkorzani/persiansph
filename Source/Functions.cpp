@@ -297,6 +297,40 @@ namespace SPH {
 		}
 	}
 
+	inline void Viscous_Force(size_t const & VisEq, Vec3_t & VI, double const & Mu, double const & di,  double const & dj, double const & GK, Vec3_t const & vab,
+															size_t const & Dimension, double const & KernelType, double const & rij, double const & h, Vec3_t const & xij, Vec3_t const & vij)
+	{
+		switch (VisEq)
+		{
+			case 0:	//Morris et al 1997
+				VI =  2.0*Mu/(di*dj)*GK*vab;
+				break;
+
+			case 1:	//Shao et al 2003
+				VI =  8.0*Mu/((di+dj)*(di+dj))* GK*vab;
+				break;
+
+			case 2:	//Real Viscosity (considering incompressible fluid)
+				VI = -Mu/(di*dj)*LaplaceKernel(Dimension, KernelType, rij/h, h)*vab;
+				break;
+
+			case 3:	//Takeda et al 1994
+				VI = -Mu/(di*dj)*( LaplaceKernel(Dimension, KernelType, rij/h, h)*vab +
+						1.0/3.0*(GK*vij + dot(vij,xij) * xij / (rij*rij) *
+						(-GK+SecDerivativeKernel(Dimension, KernelType, rij/h, h) ) ) );
+				break;
+				
+			default:
+				std::cout << "Viscosity Equation No is out of range. Please correct it and run again" << std::endl;
+				std::cout << "0 => Morris et al 1997" << std::endl;
+				std::cout << "1 => Shao et al 2003" << std::endl;
+				std::cout << "2 => Real viscosity for incompressible fluids" << std::endl;
+				std::cout << "3 => Takeda et al 1994 (Real viscosity for compressible fluids)" << std::endl;
+				abort();
+				break;
+		}
+	}
+
 	inline void Rotation (Mat3_t Input, Mat3_t & Vectors, Mat3_t & VectorsT, Mat3_t & Values)
 	{
 		Vec3_t Val,V0,V1,V2;

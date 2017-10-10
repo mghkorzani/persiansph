@@ -41,6 +41,9 @@ namespace SPH {
 
 	void   Seepage							(size_t const & ST, double const & k, double const & k2, double const & mu,  double const & rho, double & SF1, double & SF2);
 
+	void   Viscous_Force				(size_t const & VisEq, Vec3_t & VI, double const & Mu, double const & di,  double const & dj, double const & GK, Vec3_t const & vab,
+																size_t const & Dimension, double const & KernelType, double const & rij, double const & h, Vec3_t const & xij, Vec3_t const & vij);
+
 	void   Rotation							(Mat3_t Input, Mat3_t & Vectors, Mat3_t & VectorsT, Mat3_t & Values);
 
 	Mat3_t abab									(Mat3_t const & A, Mat3_t const & B);

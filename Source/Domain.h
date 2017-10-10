@@ -34,6 +34,7 @@
 #include "Boundary_Condition.h"
 
 enum Kernels_Type { Qubic_Spline=0, Quintic=1, Quintic_Spline=2 };
+enum Viscosity_Eq_Type { Morris=0, Shao=1, Incompressible_Full=2, Takeda=3 };
 
 namespace SPH {
 
@@ -84,7 +85,8 @@ public:
     void InFlowBCFresh	();
     void WholeVelocity	();
 
-		void Kernel_Set(Kernels_Type const & KT);
+		void Kernel_Set									(Kernels_Type const & KT);
+		void Viscosity_Eq_Set						(Viscosity_Eq_Type const & VQ);
     // Data
     Array <Particle*>				Particles; 	///< Array of particles
     double					R;		///< Particle Radius in addrandombox
@@ -109,7 +111,6 @@ public:
 
     int						*** HOC;	///< Array of "Head of Chain" for each cell
 
-    size_t					VisEq;		///< Selecting variable to choose an equation for viscosity
     size_t					SWIType;	///< Selecting variable to choose Soil-Water Interaction type
     bool					FSI;		///< Selecting variable to choose Fluid-Structure Interaction
 
@@ -146,7 +147,7 @@ public:
 		void Periodic_X_Correction	(Vec3_t & x, double const & h, Particle * P1, Particle * P2);						//Corrects xij for the periodic boundary condition
 		void AdaptiveTimeStep				();																																			//Uses the minimum time step to smoothly vary the time step
 
-
+		size_t					VisEq;					//Choose viscosity Eq based on different SPH discretisation
 		size_t					KernelType;			//Choose a kernel
 		double 					Cellfac;				//Define the compact support of a kernel
 

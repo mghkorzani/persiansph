@@ -120,6 +120,11 @@ inline Domain::~Domain ()
 		if (KernelType==2) Cellfac = 3.0; else Cellfac = 2.0;
 	}
 
+	inline void Domain::Viscosity_Eq_Set(Viscosity_Eq_Type const & VQ)
+	{
+		VisEq = VQ;
+	}
+
 	inline void Domain::AdaptiveTimeStep()
 	{
 		if (deltatint>deltatmin)

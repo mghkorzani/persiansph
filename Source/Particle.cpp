@@ -67,7 +67,7 @@ inline Particle::Particle(int Tag, Vec3_t const & x0, Vec3_t const & v0, double 
     dDensity=0.0;
     ShearRate = 0.0;
     MuRef = Mu = 0.0;
-    VisM = 0;
+		VisM = 0;
     T0 = 0.0;
     m = 300.0;
     SumKernel = 0.0;
