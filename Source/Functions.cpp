@@ -71,9 +71,9 @@ namespace SPH {
 			case 0:	// Qubic Spline
 				Dim ==2 ? C = 10.0/(7.0*h*h*h*M_PI) : C = 1.0/(h*h*h*h*M_PI);
 
-				if 			(q==0.0)	return C/h*(-3.0+(9.0/2.0)*q);
-				else if (q<1.0)		return C/q*h*(-3.0*q+(9.0/4.0)*q*q);
-				else if (q<2.0)		return C/q*h*((-3.0/4.0)*(2.0-q)*(2.0-q));
+				if 			(q==0.0)	return C/h    *(-3.0+(9.0/2.0)*q);
+				else if (q<1.0)		return C/(q*h)*(-3.0*q+(9.0/4.0)*q*q);
+				else if (q<2.0)		return C/(q*h)*((-3.0/4.0)*(2.0-q)*(2.0-q));
 				else							return 0.0;
 				break;
 
@@ -81,17 +81,17 @@ namespace SPH {
 				Dim ==2 ? C = 7.0/(4.0*h*h*h*M_PI) : C = 7.0/(8.0*h*h*h*h*M_PI);
 
 				if 			(q==0.0)	return C*-5.0/h*(pow((1.0-q/2.0),3.0)-3.0*q/2.0*pow((1.0-q/2.0),2.0));
-				else if (q<2.0)		return C/q*h*-5.0*q*pow((1.0-q/2.0),3.0);
+				else if (q<2.0)		return C/(q*h)*-5.0*q*pow((1.0-q/2.0),3.0);
 				else							return 0.0;
 				break;
 
 			case 2:	// Quintic Spline
 				Dim ==2 ? C = 7.0/(478.0*h*h*h*M_PI) : C = 1.0/(120.0*h*h*h*h*M_PI);
 
-				if			(q==0.0)	return C/h*(20.0*pow((3.0-q),3.0)-120.0*pow((2.0-q),3.0)+300.0*pow((1.0-q),3.0));
-				else if (q<1.0)		return C/q*h*(-5.0*pow((3.0-q),4.0)+30.0*pow((2.0-q),4.0)-75.0*pow((1.0-q),4.0));
-				else if (q<2.0)		return C/q*h*(-5.0*pow((3.0-q),4.0)+30.0*pow((2.0-q),4.0));
-				else if (q<3.0)		return C/q*h*(-5.0*pow((3.0-q),4.0));
+				if			(q==0.0)	return C/h*    (20.0*pow((3.0-q),3.0)-120.0*pow((2.0-q),3.0)+300.0*pow((1.0-q),3.0));
+				else if (q<1.0)		return C/(q*h)*(-5.0*pow((3.0-q),4.0)+30.0*pow((2.0-q),4.0)-75.0*pow((1.0-q),4.0));
+				else if (q<2.0)		return C/(q*h)*(-5.0*pow((3.0-q),4.0)+30.0*pow((2.0-q),4.0));
+				else if (q<3.0)		return C/(q*h)*(-5.0*pow((3.0-q),4.0));
 				else							return 0.0;
 				break;
 
