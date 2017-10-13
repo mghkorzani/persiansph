@@ -33,6 +33,8 @@
 #include "Functions.h"
 #include "Boundary_Condition.h"
 
+
+//C++ Enum used for easiness of coding in the input files
 enum Kernels_Type { Qubic_Spline=0, Quintic=1, Quintic_Spline=2 };
 enum Viscosity_Eq_Type { Morris=0, Shao=1, Incompressible_Full=2, Takeda=3 };
 
@@ -78,8 +80,6 @@ public:
 
     void WriteXDMF			(char const * FileKey);					//Save a XDMF file for the visualization
 
-    void PrintInput			(char const * FileKey);
-		void InitialChecks	();
 
     void InFlowBCLeave	();
     void InFlowBCFresh	();
@@ -144,8 +144,12 @@ public:
 
 
 	private:
-		void Periodic_X_Correction	(Vec3_t & x, double const & h, Particle * P1, Particle * P2);						//Corrects xij for the periodic boundary condition
-		void AdaptiveTimeStep				();																																			//Uses the minimum time step to smoothly vary the time step
+		void Periodic_X_Correction	(Vec3_t & x, double const & h, Particle * P1, Particle * P2);		//Corrects xij for the periodic boundary condition
+		void AdaptiveTimeStep				();		//Uses the minimum time step to smoothly vary the time step
+
+		void PrintInput			(char const * FileKey);		//Print out some initial parameters as a file
+		void InitialChecks	();		//Checks some parameter before proceeding to the solution 
+		void TimestepCheck	();		//Checks the user time step with CFL approach
 
 		size_t					VisEq;					//Choose viscosity Eq based on different SPH discretisation
 		size_t					KernelType;			//Choose a kernel

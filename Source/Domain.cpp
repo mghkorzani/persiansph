@@ -1656,45 +1656,48 @@ inline void Domain::WholeVelocity()
 
 inline void Domain::InitialChecks()
 {
-    if (Dimension == 2) I(2,2) = 0;
+	//initializing identity matrix
+	if (Dimension == 2) I(2,2) = 0;
 
-    if (BC.InOutFlow>0 && BC.Periodic[0])
-    {
-    	std::cout << "Periodic BC in the X direction cannot be used with In/Out-Flow BC simultaneously" << std::endl;
+	if (Dimension<=1 || Dimension>3)
+	{
+		std::cout << "Please correct the dimension (2=>2D or 3=>3D) and run again" << std::endl;
 		abort();
-    }
+	}
 
-    if (Dimension<=1 || Dimension>3)
-    {
-    	std::cout << "Please correct the dimension (2=>2D or 3=>3D) and run again" << std::endl;
-		abort();
-    }
+	if (BC.InOutFlow>0 && BC.Periodic[0])
+		throw new Fatal("Periodic BC in the X direction cannot be used with In/Out-Flow BC simultaneously");
 
-	// Initializing the permeability for soil
+
 	#pragma omp parallel for schedule (static) num_threads(Nproc)
 	for (size_t i=0; i<Particles.Size(); i++)
 	{
+		//Initializing pressure of solid and fluid particles
 		if (Particles[i]->Material < 3)
-    				Particles[i]->Pressure = EOS(Particles[i]->PresEq, Particles[i]->Cs, Particles[i]->P0,Particles[i]->Density, Particles[i]->RefDensity);
+			Particles[i]->Pressure = EOS(Particles[i]->PresEq, Particles[i]->Cs, Particles[i]->P0,Particles[i]->Density, Particles[i]->RefDensity);
 
-
+		// Initializing the permeability for soil particles
 		if (Particles[i]->Material == 3)
 		{
 			switch(Particles[i]->SeepageType)
 			{
 				case 0:
 					break;
+
 				case 1:
 					Particles[i]->k = Particles[i]->n0*Particles[i]->n0*Particles[i]->n0*Particles[i]->d*Particles[i]->d/(180.0*(1.0-Particles[i]->n0)*(1.0-Particles[i]->n0));
 					break;
+
 				case 2:
 					Particles[i]->k = Particles[i]->n0*Particles[i]->n0*Particles[i]->n0*Particles[i]->d*Particles[i]->d/(150.0*(1.0-Particles[i]->n0)*(1.0-Particles[i]->n0));
 					Particles[i]->k2= 1.75*(1.0-Particles[i]->n0)/(Particles[i]->n0*Particles[i]->n0*Particles[i]->n0*Particles[i]->d);
 					break;
+
 				case 3:
 					Particles[i]->k = Particles[i]->n0*Particles[i]->n0*Particles[i]->n0*Particles[i]->d*Particles[i]->d/(150.0*(1.0-Particles[i]->n0)*(1.0-Particles[i]->n0));
 					Particles[i]->k2= 0.4/(Particles[i]->n0*Particles[i]->n0*Particles[i]->d);
 					break;
+
 				default:
 					std::cout << "Seepage Type No is out of range. Please correct it and run again" << std::endl;
 					std::cout << "0 => Darcy's Law" << std::endl;
@@ -1704,192 +1707,158 @@ inline void Domain::InitialChecks()
 					abort();
 					break;
 			}
+
 			Particles[i]->n = Particles[i]->n0;
 		}
 	}
 }
 
+inline void Domain::TimestepCheck ()
+{
+	// Check the time step
+	double t1,t2;
+	t1 = 0.25*hmax/(CsMax);
+	if (MuMax>0.0) t2 = 0.125*hmax*hmax*rhomax/MuMax; else t2 =1000000.0;
+
+	std::cout << "Max allowable time step using CFL = "<< std::min(t1,t2) << " S" << std::endl;
+	std::cout << "User Time Step = "<< deltatint  << " S" << std::endl;
+
+	if (deltatint > std::min(t1,t2))
+	throw new Fatal("Please decrease the time step to the allowable range");
+}
+
 inline void Domain::Solve (double tf, double dt, double dtOut, char const * TheFileKey, size_t maxidx)
 {
-//    Util::Stopwatch stopwatch;
-    std::cout << "\n--------------Solving---------------------------------------------------------------" << std::endl;
+	std::cout << "\n--------------Solving---------------------------------------------------------------" << std::endl;
 
-    size_t idx_out = 1;
-    size_t InitOutCount = 0;
-    double tout = Time;
+	size_t idx_out = 1;
+	double tout = Time;
 
-		//Initializing adaptive time step
-    deltat		= dt;
-    deltatint	= dt;
-    deltatmin	= dt;
+	//Initializing adaptive time step variables
+	deltat = deltatint = deltatmin	= dt;
 
-    InitialChecks();
-    CellInitiate();
-    ListGenerate();
-    PrintInput(TheFileKey);
-    WholeVelocity();
+	InitialChecks();
+	CellInitiate();
+	ListGenerate();
+	PrintInput(TheFileKey);
+	TimestepCheck();
+	WholeVelocity();
 
-    while (Time<tf && idx_out<=maxidx)
-    {
-        if (InitOutCount == 0)
-        {
-            if (TheFileKey!=NULL)
-           	{
-                String fn;
-                fn.Printf    ("%s_Initial", TheFileKey);
-                WriteXDMF    (fn.CStr());
-                std::cout << "\n" << "Initial Condition has been generated" << std::endl;
-		std::cout<<""<<std::endl;
-           	}
-	    InitOutCount = 1;
-        }
 
-    	StartAcceleration(Gravity);
+	//Initial model output
+	if (TheFileKey!=NULL)
+	{
+		String fn;
+		fn.Printf    ("%s_Initial", TheFileKey);
+		WriteXDMF    (fn.CStr());
+		std::cout << "\nInitial Condition has been generated\n" << std::endl;
+	}
 
-    	if (BC.InOutFlow>0) InFlowBCFresh();
+	while (Time<tf && idx_out<=maxidx)
+	{
+		StartAcceleration(Gravity);
+		if (BC.InOutFlow>0) InFlowBCFresh();
+		MainNeighbourSearch();
+		GeneralBefore(*this);
+		PrimaryComputeAcceleration();
+		LastComputeAcceleration();
+		GeneralAfter(*this);
 
-    	MainNeighbourSearch();
+		// output
+		if (Time>=tout)
+		{
+			if (TheFileKey!=NULL)
+			{
+				String fn;
+				fn.Printf    ("%s_%04d", TheFileKey, idx_out);
+				WriteXDMF    (fn.CStr());
+				std::cout << "\nOutput No. " << idx_out << " at " << Time << " has been generated" << std::endl;
+				std::cout << "Current Time Step = " <<deltat<<std::endl;
+			}
+			idx_out++;
+			tout += dtOut;
+		}
 
-    	GeneralBefore(*this);
+		AdaptiveTimeStep();
+		Move(deltat);
+		Time += deltat;
+		if (BC.InOutFlow>0) InFlowBCLeave(); else CheckParticleLeave ();
+		CellReset();
+		ListGenerate();
+	}
 
-    	PrimaryComputeAcceleration();
-
-    	LastComputeAcceleration();
-
-    	GeneralAfter(*this);
-
-        // output
-        if (Time>=tout)
-        {
-            if (TheFileKey!=NULL)
-           	{
-                String fn;
-                fn.Printf    ("%s_%04d", TheFileKey, idx_out);
-                WriteXDMF    (fn.CStr());
-                std::cout << "\n" << "Output No. " << idx_out << " at " << Time << " has been generated" << std::endl;
-		std::cout<<"Time Step = " <<deltat<<std::endl;
-		std::cout<<""<<std::endl;
-           	}
-            idx_out++;
-            tout += dtOut;
-        }
-
-	AdaptiveTimeStep();
-
-	Move(deltat);
-
-	Time += deltat;
-
-	if (BC.InOutFlow>0) InFlowBCLeave(); else CheckParticleLeave ();
-
-       CellReset();
-
-       ListGenerate();
-    }
-    std::cout << "\n--------------Solving is finished---------------------------------------------------" << std::endl;
+	std::cout << "\n--------------Solving is finished---------------------------------------------------" << std::endl;
 
 }
 
 inline void Domain::PrintInput(char const * FileKey)
 {
-    //Writing Inputs in a Log file
+	//type definition to shorten coding
+	std::ostringstream oss;
+
+	//Writing Inputs in a Log file
 	String fn(FileKey);
-    std::ostringstream oss;
 
-    oss << "Dimension = "<< Dimension << "D\n";
+	oss << "Dimension = "<< Dimension << "D\n";
 
-    oss << "Kernel Type = ";
+	oss << "\nKernel Type = ";
 	switch (KernelType)
-    {
+	{
 		case 0:
-			oss << "Qubic Spline\n";
+		oss << "Qubic Spline\n";
+		break;
+		case 1:
+		oss << "Quintic\n";
+		break;
+		case 2:
+		oss << "Quintic Spline\n";
+		break;
+	}
+
+	oss << "\nViscosity Equation = ";
+	switch (VisEq)
+	{
+		case 0:
+			oss << "0 => Morris et al 1997\n";
 			break;
 		case 1:
-			oss << "Quintic\n";
+			oss << "1 => Shao et al 2003\n";
 			break;
 		case 2:
-			oss << "Quintic Spline\n";
+			oss << "2 => Real viscosity for incompressible fluids\n";
 			break;
-    }
+		case 3:
+			oss << "3 => Takeda et al 1994 (Real viscosity for compressible fluids)\n";
+			break;
+	}
 
-//    oss << "Viscosity Equation = ";
-//    if (Alpha!=0.0 || Beta!=0.0) oss << "Artificial Viscosity by Monaghan\nAlpha = "<<Alpha<<"   Beta = "<<Beta <<"\n";
-//    else
-//	{
-//    	switch (VisEq)
-//		{
-//			case 0:
-//				oss << "0 => Morris et al 1997\n";
-//				break;
-//			case 1:
-//				oss << "1 => Shao et al 2003\n";
-//				break;
-//			case 2:
-//				oss << "2 => Real viscosity for incompressible fluids\n";
-//				break;
-//			case 3:
-//				oss << "3 => Takeda et al 1994 (Real viscosity for compressible fluids)\n";
-//				break;
-//		}
-//	}
+	oss << "\nComputational domain size\n";
+	oss << "Bottom Left-Corner Front = " << BLPF <<" m\n";
+	oss << "Top Right-Corner Rear    = " << TRPR <<" m\n";
 
-//    oss << "Equation of State = ";
-//	switch (PresEq)
-//    {
-//		case 0:
-//			oss << "0 => P0+(Cs*Cs)*(Density-Density0)\n";
-//			break;
-//		case 1:
-//			oss << "1 => P0+(Density0*Cs*Cs/7)*(pow(Density/Density0,7)-1)\n";
-//			break;
-//		case 2:
-//			oss << "2 => (Cs*Cs)*Density\n";
-//			break;
-//    }
-//	oss << "Cs = "<<Cs<<" m/s\n";
-//	oss << "P0 = "<<P0<<" Pa\n";
-	oss << "\n";
+	oss << "\nMax of the smoothing lengths, h = " << hmax << " m\n";
+	oss << "Cell factor in Linked List (based on kernels) = " << Cellfac << "\n";
 
-    oss << "Min domain Point = " << BLPF <<" m\n";
-    oss << "Max domain Point = " << TRPR <<" m\n";
-    oss << "Max of smoothing length, h = " << hmax << " m\n";
-    oss << "Cell factor in Linked List (at least 2) = " << Cellfac << "\n";
-    oss << "Cell Size = " << CellSize <<" m\n";
-    oss << "No of Cells in X Direction = " << CellNo[0] <<"\n" ;
-    oss << "No of Cells in Y Direction = " << CellNo[1] <<"\n" ;
-    oss << "No of Cells in Z Direction = " << CellNo[2] <<"\n" ;
-	oss << "\n";
+	oss << "\nCell Size in XYZ Directions = " << CellSize <<" m\n";
+	oss << "No of Cells in XYZ Directions = ( " << CellNo[0] << CellNo[1] << CellNo[2] <<" )\n" ;
 
-	oss << " Total No of Particles = " << Particles.Size() << "\n" ;
+	oss << "\nInitial No of Particles = " << Particles.Size() << "\n";
 
-    // Check the time step
-    double t1,t2;
-    t1 = 0.25*hmax/(CsMax);
-    if (MuMax>0.0) t2 = 0.125*hmax*hmax*rhomax/MuMax; else t2 =1000000.0;
+	oss << "\nInitial Time Step = "<<deltatint << " S\n";
 
-    oss << "Max time step should be less than Min value of { "<< t1 <<" , "<< t2 <<" } S\n";
-    oss << "Time Step = "<<deltatint << " S\n";
+	oss << "\nExternal Acceleration (Gravity enabled)= "<<Gravity<< " m/s2\n";
 
-    if (deltatint > std::min(t1,t2))
-    {
-        std::cout << "Max time step should be less than Min value of { "<< t1 <<" , "<< t2 <<" }" << std::endl;
-        std::cout << "Time Step = "<<deltatint << std::endl;
-    	std::cout << "Please decrease the time step and run again"<< std::endl;
-    	abort();
-    }
-    oss << "External Acceleration = "<<Gravity<< " m/s2\n";
-    oss << "No of Thread = "<<Nproc<<"\n";
-//    oss << "Shepard Filter for Density = " << (Shepard ? "True" : "False") << "\n";
-    oss << "Periodic Boundary Condition X dir= " << (BC.Periodic[0] ? "True" : "False") << "\n";
-    oss << "Periodic Boundary Condition Y dir= " << (BC.Periodic[1] ? "True" : "False") << "\n";
-    oss << "Periodic Boundary Condition Z dir= " << (BC.Periodic[2] ? "True" : "False") << "\n";
+	oss << "\nNo of Threads = "<<Nproc<<"\n";
 
-    fn = FileKey;
-    fn.append("log.dat");
-    std::ofstream of(fn.CStr(), std::ios::out);
-    of << oss.str();
-    of.close();
+	oss << "\nPeriodic Boundary Condition X dir= " << (BC.Periodic[0] ? "True" : "False") << "\n";
+	oss << "Periodic Boundary Condition Y dir= " << (BC.Periodic[1] ? "True" : "False") << "\n";
+	oss << "Periodic Boundary Condition Z dir= " << (BC.Periodic[2] ? "True" : "False") << "\n";
 
+	fn = FileKey;
+	fn.append("_log.dat");
+	std::ofstream of(fn.CStr(), std::ios::out);
+	of << oss.str();
+	of.close();
 }
 
 inline void Domain::WriteXDMF (char const * FileKey)
