@@ -29,6 +29,7 @@ int main(int argc, char **argv) try
   dom.Scheme			= 0;
 	dom.Viscosity_Eq_Set(Morris);
 	dom.Kernel_Set(Qubic_Spline);
+	dom.Gradient_Approach_Set(Squared_density);
 
   double xb,yb,dx,Cs,h,Rho,H,L,TL,TH,t,res,Mu,g;
 

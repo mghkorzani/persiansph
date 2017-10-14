@@ -25,10 +25,12 @@ int main(int argc, char **argv) try
   SPH::Domain		dom;
 
   dom.Dimension   = 3;
-  dom.Nproc       = 4;
+  dom.Nproc       = 8;
   dom.Scheme			= 0;
 	dom.Viscosity_Eq_Set(Morris);
 	dom.Kernel_Set(Qubic_Spline);
+	dom.Gradient_Approach_Set(Squared_density);
+
 
   double xb,yb,zb,dx,Cs,h,Rho,H,L,TL,TH,t,res,Mu,g,TW,W;
 
