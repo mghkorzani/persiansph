@@ -112,8 +112,8 @@ inline void Domain::CalcForce11(Particle * P1, Particle * P2)
 			if (P1->T0>0.0 || P2->T0>0.0 || (P1->LES*P2->LES))
 			{
 				StrainRate =	2.0*vab(0)*xij(0)            , vab(0)*xij(1)+vab(1)*xij(0) , vab(0)*xij(2)+vab(2)*xij(0) ,
-						vab(0)*xij(1)+vab(1)*xij(0)  , 2.0*vab(1)*xij(1)           , vab(1)*xij(2)+vab(2)*xij(1) ,
-						 vab(0)*xij(2)+vab(2)*xij(0) , vab(1)*xij(2)+vab(2)*xij(1) , 2.0*vab(2)*xij(2)           ;
+											vab(0)*xij(1)+vab(1)*xij(0)  , 2.0*vab(1)*xij(1)           , vab(1)*xij(2)+vab(2)*xij(1) ,
+						 					vab(0)*xij(2)+vab(2)*xij(0)  , vab(1)*xij(2)+vab(2)*xij(1) , 2.0*vab(2)*xij(2)           ;
 				StrainRate = -GK * StrainRate;
 			}
 
@@ -135,46 +135,50 @@ inline void Domain::CalcForce11(Particle * P1, Particle * P2)
 		// Calculating the forces for the particle 1 & 2
 		Vec3_t temp	= 0.0;
 		double temp1	= 0.0;
-//		temp		= -1.0*( P1->Pressure/(di*di) + P2->Pressure/(dj*dj) + PIij + TIij ) * GK*xij + VI;
-		temp		= -1.0*( (P1->Pressure + P2->Pressure)/(di*dj)       + PIij + TIij ) * GK*xij + VI;
+
+		if (GradientType == 0)
+			temp		= -1.0*( P1->Pressure/(di*di) + P2->Pressure/(dj*dj) + PIij + TIij ) * GK*xij + VI;
+		else
+			temp		= -1.0*( (P1->Pressure + P2->Pressure)/(di*dj)       + PIij + TIij ) * GK*xij + VI;
+
 		if (Dimension == 2) temp(2) = 0.0;
 		temp1		= dot( vij , GK*xij );
 
 		omp_set_lock(&P1->my_lock);
-			P1->a		+= mj * temp;
+			P1->a					+= mj * temp;
 			P1->dDensity	+= mj * (di/dj) * temp1;
 
 			if (P1->IsFree)
 			{
-				if (P1->T0>0.0 || P1->LES)	P1->StrainRate	 = P1->StrainRate + mj/dj*StrainRate;
-				if (SWIType == 1)		P1->S		 = P1->S + mj/dj*vab(0)*xij(1)*-GK;
-								P1->ZWab	+= mj/dj* K;
+				if (P1->T0>0.0 || P1->LES)	P1->StrainRate		= P1->StrainRate + mj/dj*StrainRate;
+				if (SWIType == 1)						P1->S							= P1->S + mj/dj*vab(0)*xij(1)*-GK;
+				P1->ZWab	+= mj/dj* K;
 			}
 			else
 				P1->ZWab	= 1.0;
 
 			if (P1->Shepard)
 				if (P1->ShepardCounter == P1->ShepardStep)
-					P1->SumDen += mj*    K;
+					P1->SumDen += mj*K;
 		omp_unset_lock(&P1->my_lock);
 
 
 		omp_set_lock(&P2->my_lock);
-			P2->a		-= mi * temp;
+			P2->a					-= mi * temp;
 			P2->dDensity	+= mi * (dj/di) * temp1;
 
 			if (P2->IsFree)
 			{
-				if (P2->T0>0.0 || P2->LES)	P2->StrainRate	 = P2->StrainRate + mi/di*StrainRate;
-				if (SWIType ==1)		P2->S		 = P2->S + mi/di*vab(0)*xij(1)*-GK;
-								P2->ZWab	+= mi/di* K;
+				if (P2->T0>0.0 || P2->LES)	P2->StrainRate		= P2->StrainRate + mi/di*StrainRate;
+				if (SWIType ==1)						P2->S		 					= P2->S + mi/di*vab(0)*xij(1)*-GK;
+				P2->ZWab	+= mi/di* K;
 			}
 			else
 				P2->ZWab	= 1.0;
 
 			if (P2->Shepard)
 				if (P2->ShepardCounter == P2->ShepardStep)
-					P2->SumDen += mi*    K;
+					P2->SumDen += mi*K;
 		omp_unset_lock(&P2->my_lock);
     }
 }
@@ -321,8 +325,12 @@ inline void Domain::CalcForce2233(Particle * P1, Particle * P2)
 		// Calculating the forces for the particle 1 & 2
 		Vec3_t temp = 0.0;
 		double temp1 = 0.0;
-//		Mult( GK*xij , ( 1.0/(di*di)*Sigmai + 1.0/(dj*dj)*Sigmaj + PIij + TIij ) , temp);
-		Mult( GK*xij , ( 1.0/(di*dj)*(Sigmai + Sigmaj) + PIij + TIij ) , temp);
+
+		if (GradientType == 0)
+			Mult( GK*xij , ( 1.0/(di*di)*Sigmai + 1.0/(dj*dj)*Sigmaj + PIij + TIij ) , temp);
+		else
+			Mult( GK*xij , ( 1.0/(di*dj)*(Sigmai + Sigmaj)           + PIij + TIij ) , temp);
+
 		if (Dimension == 2) temp(2) = 0.0;
 		temp1 = dot( vij , GK*xij );
 
@@ -456,8 +464,11 @@ inline void Domain::CalcForce12(Particle * P1, Particle * P2)
 		double temp1	= 0.0;
 		if (P1->Material == 1)
 		{
-//			temp		= -1.0*( P1->Pressure/(di*di) + P2->FSIPressure/(dj*dj) + PIij ) * GK*xij + VI;
-			temp		= -1.0*( (P1->Pressure + P2->FSIPressure)/(di*dj)       + PIij ) * GK*xij + VI;
+			if (GradientType == 0)
+				temp		= -1.0*( P1->Pressure/(di*di) + P2->FSIPressure/(dj*dj) + PIij ) * GK*xij + VI;
+			else
+				temp		= -1.0*( (P1->Pressure + P2->FSIPressure)/(di*dj)       + PIij ) * GK*xij + VI;
+
 			if (Dimension == 2) temp(2) = 0.0;
 			temp1		= dot( vij , GK*xij );
 
@@ -473,8 +484,10 @@ inline void Domain::CalcForce12(Particle * P1, Particle * P2)
 		}
 		else
 		{
-//			temp		= -1.0*( P1->FSIPressure/(di*di) + P2->Pressure/(dj*dj) + PIij ) * GK*xij + VI;
-			temp		= -1.0*( (P1->FSIPressure + P2->Pressure)/(di*dj)       + PIij ) * GK*xij + VI;
+			if (GradientType == 0)
+				temp		= -1.0*( P1->FSIPressure/(di*di) + P2->Pressure/(dj*dj) + PIij ) * GK*xij + VI;
+			else
+				temp		= -1.0*( (P1->FSIPressure + P2->Pressure)/(di*dj)       + PIij ) * GK*xij + VI;
 			if (Dimension == 2) temp(2) = 0.0;
 			temp1		= dot( vij , GK*xij );
 

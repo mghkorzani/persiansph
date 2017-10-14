@@ -37,6 +37,7 @@
 //C++ Enum used for easiness of coding in the input files
 enum Kernels_Type { Qubic_Spline=0, Quintic=1, Quintic_Spline=2 };
 enum Viscosity_Eq_Type { Morris=0, Shao=1, Incompressible_Full=2, Takeda=3 };
+enum Gradient_Type { Squared_density=0, Multiplied_density=1 };
 
 namespace SPH {
 
@@ -87,6 +88,7 @@ public:
 
 		void Kernel_Set									(Kernels_Type const & KT);
 		void Viscosity_Eq_Set						(Viscosity_Eq_Type const & VQ);
+		void Gradient_Approach_Set			(Gradient_Type const & GT);
     // Data
     Array <Particle*>				Particles; 	///< Array of particles
     double					R;		///< Particle Radius in addrandombox
@@ -148,11 +150,12 @@ public:
 		void AdaptiveTimeStep				();		//Uses the minimum time step to smoothly vary the time step
 
 		void PrintInput			(char const * FileKey);		//Print out some initial parameters as a file
-		void InitialChecks	();		//Checks some parameter before proceeding to the solution 
+		void InitialChecks	();		//Checks some parameter before proceeding to the solution
 		void TimestepCheck	();		//Checks the user time step with CFL approach
 
 		size_t					VisEq;					//Choose viscosity Eq based on different SPH discretisation
 		size_t					KernelType;			//Choose a kernel
+		size_t					GradientType;		//Choose a Gradient approach 1/Rho i^2 + 1/Rho j^2 or 1/(Rho i * Rho j)
 		double 					Cellfac;				//Define the compact support of a kernel
 
 		double					Time;    				//Current time of simulation at each solving step

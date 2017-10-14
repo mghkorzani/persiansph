@@ -20,12 +20,9 @@
 
 #include "Domain.h"
 
-void UserAcc(SPH::Domain & domi)
+void NewUserOutput(SPH::Particle * Particles, double & Prop1, double & Prop2,  double & Prop3)
 {
-	#pragma omp parallel for schedule (static) num_threads(domi.Nproc)
-	for (size_t i=0; i<domi.Particles.Size(); i++)
-		if (domi.Particles[i]->IsFree)
-			domi.Particles[i]->a += Vec3_t(0.002,0.0,0.0);
+	Prop1 = Particles->ShearRate;
 }
 
 using std::cout;
@@ -41,40 +38,55 @@ int main(int argc, char **argv) try
 	dom.Scheme				= 0;
 	dom.Kernel_Set(Quintic_Spline);
 	dom.Viscosity_Eq_Set(Takeda);
+	dom.Gradient_Approach_Set(Squared_density);
 
-	double yb,h,Rho,dx,t,Cs,Mu;
+	double yb,h,Rho,dx,t,Cs,Mu,Vint;
 
 	Rho	= 998.21;
 	Mu	= 1.002e-3;
 	dx	= 2.5e-5;
 	h		= dx*1.1;
-	Cs	= 0.07;
+	Cs	= 0.08;
 	t		= (0.2*h/(Cs));
+	Vint= 2.5e-5;
+
+	dom.InitialDist 	= dx;
 
 	cout<<"Rho = "<<Rho<<endl;
 	cout<<"Mu  = "<<Mu<<endl;
 
-	dom.GeneralBefore	= & UserAcc;
-	dom.InitialDist 	= dx;
-
-	dom.AddBoxLength(1 ,Vec3_t ( 0.0 , -24.0*dx , 0.0 ), 20.0*dx + dx/10.0 , 48.0*dx + dx/10.0,  0 , dx/2.0 ,Rho, h, 1 , 0 , false, false );
+	dom.AddBoxLength(1 ,Vec3_t ( 0.0 , -4.0*dx , 0.0 ), 20.0*dx + dx/10.0 , 48.0*dx + dx/10.0,  0 , dx/2.0 ,Rho, h, 1 , 0 , false, false );
 
 	for (size_t a=0; a<dom.Particles.Size(); a++)
 	{
-		dom.Particles[a]->Cs				= Cs;
-		dom.Particles[a]->PresEq		= 0;
-		dom.Particles[a]->Mu				= Mu;
-		dom.Particles[a]->MuRef			= Mu;
-		dom.Particles[a]->Material	= 1;
+		dom.Particles[a]->LES			= true; //Just used to activate ShearRate calculation
+		dom.Particles[a]->CSmag		= 0.0;  //To deactive LES for the above purpose (No LES used for this simulation)
+
+		dom.Particles[a]->Cs			= Cs;
+		dom.Particles[a]->PresEq	= 0;
+		dom.Particles[a]->Mu			= Mu;
+		dom.Particles[a]->MuRef		= Mu;
+		dom.Particles[a]->Material= 1;
 
 		yb=dom.Particles[a]->x(1);
-		if (yb>=20.0*dx || yb<=-20.0*dx)
+		if (yb>=40.0*dx)
+		{
+			dom.Particles[a]->ID			= 3;
+			dom.Particles[a]->IsFree	= false;
+			dom.Particles[a]->NoSlip	= true;
+			dom.Particles[a]->v				= Vint,0.0,0.0;
+		}
+		if (yb<0.0)
 		{
 			dom.Particles[a]->ID			= 2;
 			dom.Particles[a]->IsFree	= false;
 			dom.Particles[a]->NoSlip	= true;
 		}
 	}
+
+	dom.OutputName[0]	= "ShearRate";
+	dom.UserOutput		= & NewUserOutput;
+
 
 	dom.Solve(/*tf*/20.0,/*dt*/t,/*dtOut*/0.05,"test06",250);
 	return 0;

@@ -70,7 +70,7 @@ inline Domain::Domain ()
     FSI		= false;
     VisEq	= 0;
     Scheme	= 0;
-
+		GradientType = 0;
 
     XSPH	= 0.0;
     InitialDist = 0.0;
@@ -123,6 +123,11 @@ inline Domain::~Domain ()
 	inline void Domain::Viscosity_Eq_Set(Viscosity_Eq_Type const & VQ)
 	{
 		VisEq = VQ;
+	}
+
+	inline void Domain::Gradient_Approach_Set(Gradient_Type const & GT)
+	{
+		GradientType = GT;
 	}
 
 	inline void Domain::AdaptiveTimeStep()
@@ -1840,7 +1845,7 @@ inline void Domain::PrintInput(char const * FileKey)
 	oss << "Cell factor in Linked List (based on kernels) = " << Cellfac << "\n";
 
 	oss << "\nCell Size in XYZ Directions = " << CellSize <<" m\n";
-	oss << "No of Cells in XYZ Directions = ( " << CellNo[0] << CellNo[1] << CellNo[2] <<" )\n" ;
+	oss << "No of Cells in XYZ Directions = ( " << CellNo[0] << " , " << CellNo[1] << " , " << CellNo[2] <<" )\n" ;
 
 	oss << "\nInitial No of Particles = " << Particles.Size() << "\n";
 

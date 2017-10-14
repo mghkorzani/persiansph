@@ -20,74 +20,108 @@
 
 #include "Domain.h"
 
-void NewUserOutput(SPH::Particle * Particles, double & Prop1, double & Prop2,  double & Prop3)
-{
-	Prop1 = Particles->ShearRate;
-}
-
-using std::cout;
-using std::endl;
-
 int main(int argc, char **argv) try
 {
-	SPH::Domain				dom;
+  SPH::Domain		dom;
 
-	dom.Dimension			= 2;
-	dom.BC.Periodic[0]= true;
-	dom.Nproc					= 4;
-	dom.Scheme				= 0;
-	dom.Kernel_Set(Quintic_Spline);
-	dom.Viscosity_Eq_Set(Takeda);
+  dom.Dimension   = 3;
+  dom.Nproc       = 4;
+  dom.Scheme			= 0;
+	dom.Viscosity_Eq_Set(Morris);
+	dom.Kernel_Set(Qubic_Spline);
 
-	double yb,h,Rho,dx,t,Cs,Mu,Vint;
+  double xb,yb,zb,dx,Cs,h,Rho,H,L,TL,TH,t,res,Mu,g,TW,W;
 
-	Rho	= 998.21;
-	Mu	= 1.002e-3;
-	dx	= 2.5e-5;
-	h		= dx*1.1;
-	Cs	= 0.08;
-	t		= (0.2*h/(Cs));
-	Vint= 2.5e-5;
+  H   = 0.5;
+  L   = H;
+  TH  = 1.25*H;
+  TL  = 1.5*H;
+  W   = H/2.0;
+  TW  = H;
+  res = 40.0;
 
-	dom.InitialDist 	= dx;
+  g   = 9.81;
+  Rho = 998.21;
+  Mu	= 1.002e-3;
+  dx  = H/res;
+  h   = dx*1.2;
+  Cs	= 20.0 * sqrt(g*H);
+  t   = (0.2*h/Cs);
 
-	cout<<"Rho = "<<Rho<<endl;
-	cout<<"Mu  = "<<Mu<<endl;
+  dom.InitialDist 	= dx;
+  dom.Gravity	      = 0.0, -g ,0.0 ;
 
-	dom.AddBoxLength(1 ,Vec3_t ( 0.0 , -4.0*dx , 0.0 ), 20.0*dx + dx/10.0 , 48.0*dx + dx/10.0,  0 , dx/2.0 ,Rho, h, 1 , 0 , false, false );
+	dom.AddBoxLength(1 ,Vec3_t ( -3.0*dx , -3.0*dx , -3.0*dx ), 7.0*dx + TL + dx/10.0 , 3.0*dx + TH + dx/10.0,  6.0*dx + TW + dx/10.0 , dx/2.0 ,Rho, h, 1 , 0 , false, false );
 
-	for (size_t a=0; a<dom.Particles.Size(); a++)
-	{
-		dom.Particles[a]->LES			= true; //Just used to activate ShearRate calculation
-		dom.Particles[a]->CSmag		= 0.0;  //To deactive LES for the above purpose (No LES used for this simulation)
+  for (size_t a=0; a<dom.Particles.Size(); a++)
+  {
+    xb=dom.Particles[a]->x(0);
+    yb=dom.Particles[a]->x(1);
+    zb=dom.Particles[a]->x(2);
 
-		dom.Particles[a]->Cs			= Cs;
-		dom.Particles[a]->PresEq	= 0;
+    dom.Particles[a]->Cs      = Cs;
+		dom.Particles[a]->PresEq	= 1;
 		dom.Particles[a]->Mu			= Mu;
 		dom.Particles[a]->MuRef		= Mu;
 		dom.Particles[a]->Material= 1;
+    dom.Particles[a]->Shepard = false;
 
-		yb=dom.Particles[a]->x(1);
-		if (yb>=40.0*dx)
-		{
-			dom.Particles[a]->ID			= 3;
-			dom.Particles[a]->IsFree	= false;
-			dom.Particles[a]->NoSlip	= true;
-			dom.Particles[a]->v				= Vint,0.0,0.0;
-		}
-		if (yb<0.0)
-		{
+
+    if (xb<0.0)
+    {
 			dom.Particles[a]->ID			= 2;
 			dom.Particles[a]->IsFree	= false;
 			dom.Particles[a]->NoSlip	= true;
-		}
-	}
+    }
 
-	dom.OutputName[0]	= "ShearRate";
-	dom.UserOutput		= & NewUserOutput;
+    if (yb<0.0)
+    {
+			dom.Particles[a]->ID			= 2;
+			dom.Particles[a]->IsFree	= false;
+			dom.Particles[a]->NoSlip	= true;
+    }
 
+    if (zb<0.0)
+    {
+			dom.Particles[a]->ID			= 2;
+			dom.Particles[a]->IsFree	= false;
+			dom.Particles[a]->NoSlip	= true;
+    }
 
-	dom.Solve(/*tf*/20.0,/*dt*/t,/*dtOut*/0.05,"test06",250);
-	return 0;
+    if (xb>TL)
+    {
+			dom.Particles[a]->ID			= 2;
+			dom.Particles[a]->IsFree	= false;
+			dom.Particles[a]->NoSlip	= true;
+    }
+
+    if (zb>TW)
+    {
+			dom.Particles[a]->ID			= 2;
+			dom.Particles[a]->IsFree	= false;
+			dom.Particles[a]->NoSlip	= true;
+    }
+
+    if (yb>H && dom.Particles[a]->ID==1)
+      dom.Particles[a]->ID=11;
+
+    if (xb>L && dom.Particles[a]->ID==1)
+      dom.Particles[a]->ID=11;
+
+    if (zb>W && dom.Particles[a]->ID==1)
+      dom.Particles[a]->ID=11;
+
+    if (dom.Particles[a]->ID==1)
+    {
+      dom.Particles[a]->Density	  = Rho*pow((1+7.0*g*(H-yb)/(Cs*Cs)),(1.0/7.0));
+      dom.Particles[a]->Densityb	= Rho*pow((1+7.0*g*(H-yb)/(Cs*Cs)),(1.0/7.0));
+    }
+
+  }
+
+  dom.DelParticles(11);
+
+  dom.Solve(/*tf*/50.0,/*dt*/t,/*dtOut*/0.05,"test06",999);
+  return 0;
 }
 MECHSYS_CATCH

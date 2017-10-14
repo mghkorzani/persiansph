@@ -25,22 +25,10 @@ PROJECT                (New_Test)
 INCLUDE ($ENV{SPH}/Modules/FindPKG.cmake)
 
 SET(EXES
-#	hydrostatic-Soil
-#	Darcy
-#	FSI_ElasticGate
-#	Drag_LES
-	Poiseuille
-	Couette
-#	Oscillating-Plate
-#	Plate-Yield
-#	Dam_Scouring
-#	Dam_Scouring2
-#	Overtopping
-#	Overtopping2
-#	Hydraulic_Heave
-#	Current-flow_elastoplastic
-#	Jet_Scouring
-#	Fluidization
+#	1-Poiseuille
+#	2-Couette
+# 3-DamBreak
+	4-DamBreak3D
 )
 
 FOREACH(var ${EXES})

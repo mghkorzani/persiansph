@@ -340,9 +340,19 @@ inline void Particle::Mat3MVerlet(Mat3_t I, double dt)
 
 	if (Fail>1)
 	{
-		// Drucker-Prager failure criterion for plane strain
-		alpha	= tan(phi) / sqrt(9.0+12.0*tan(phi)*tan(phi));
-		kf	= 3.0 * c  / sqrt(9.0+12.0*tan(phi)*tan(phi));
+		if (I(2,2)==0.0)
+		{
+			// Drucker-Prager failure criterion for plane strain
+			alpha	= tan(phi) / sqrt(9.0+12.0*tan(phi)*tan(phi));
+			kf		= 3.0 * c  / sqrt(9.0+12.0*tan(phi)*tan(phi));
+		}
+		else
+		{
+			// Drucker-Prager failure criterion for 3D
+			alpha	= (2.0*  sin(phi)) / (sqrt(3.0)*(3.0-sin(phi)));
+			kf		= (6.0*c*cos(phi)) / (sqrt(3.0)*(3.0-sin(phi)));
+		}
+
 
 		// Bring back stress to the apex of the failure criteria
 		I1		= Sigma(0,0) + Sigma(1,1) + Sigma(2,2);
@@ -471,13 +481,22 @@ inline void Particle::Mat3MVerlet(Mat3_t I, double dt)
 
 }
 
-inline void Particle::ScalebackMat3(size_t Scheme)
+inline void Particle::ScalebackMat3(size_t Dimension,size_t Scheme)
 {
 	double I1,J2,alpha,kf;
 
-	// Drucker-Prager failure criterion for plane strain
-	alpha	= tan(phi) / sqrt(9.0+12.0*tan(phi)*tan(phi));
-	kf	= 3.0 * c  / sqrt(9.0+12.0*tan(phi)*tan(phi));
+	if (Dimension==0.0)
+	{
+		// Drucker-Prager failure criterion for plane strain
+		alpha	= tan(phi) / sqrt(9.0+12.0*tan(phi)*tan(phi));
+		kf		= 3.0 * c  / sqrt(9.0+12.0*tan(phi)*tan(phi));
+	}
+	else
+	{
+		// Drucker-Prager failure criterion for 3D
+		alpha	= (2.0*  sin(phi)) / (sqrt(3.0)*(3.0-sin(phi)));
+		kf		= (6.0*c*cos(phi)) / (sqrt(3.0)*(3.0-sin(phi)));
+	}
 
 	// Bring back stressb to the apex of the failure criteria
 	I1	= Sigmab(0,0) + Sigmab(1,1) + Sigmab(2,2);
@@ -641,9 +660,18 @@ inline void Particle::Mat3Leapfrog(Mat3_t I, double dt)
 
 	if (Fail>1)
 	{
-		// Drucker-Prager failure criterion for plane strain
-		alpha	= tan(phi) / sqrt(9.0+12.0*tan(phi)*tan(phi));
-		kf		= 3.0 * c  / sqrt(9.0+12.0*tan(phi)*tan(phi));
+		if (I(2,2)==0.0)
+		{
+			// Drucker-Prager failure criterion for plane strain
+			alpha	= tan(phi) / sqrt(9.0+12.0*tan(phi)*tan(phi));
+			kf		= 3.0 * c  / sqrt(9.0+12.0*tan(phi)*tan(phi));
+		}
+		else
+		{
+			// Drucker-Prager failure criterion for 3D
+			alpha	= (2.0*  sin(phi)) / (sqrt(3.0)*(3.0-sin(phi)));
+			kf		= (6.0*c*cos(phi)) / (sqrt(3.0)*(3.0-sin(phi)));
+		}
 
 		// Bring back stress to the apex of the failure criteria
 		I1		= Sigmaa(0,0) + Sigmaa(1,1) + Sigmaa(2,2);

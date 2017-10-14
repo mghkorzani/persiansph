@@ -145,7 +145,7 @@ namespace SPH {
 		void Mat3MVerlet		(Mat3_t I, double dt);
 		void Mat2Leapfrog		(double dt);
 		void Mat3Leapfrog		(Mat3_t I, double dt);
-		void ScalebackMat3	(size_t Scheme);
+		void ScalebackMat3	(size_t Dimension, size_t Scheme);
 	};
 }; // namespace SPH
 
