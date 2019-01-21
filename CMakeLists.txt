@@ -25,9 +25,9 @@ PROJECT                (New_Test)
 INCLUDE ($ENV{SPH}/Modules/FindPKG.cmake)
 
 SET(EXES
-#	1-Poiseuille
-#	2-Couette
-# 3-DamBreak
+	1-Poiseuille
+	2-Couette
+	3-DamBreak
 	4-DamBreak3D
 )
 

@@ -47,7 +47,7 @@ int main(int argc, char **argv) try
   Mu	= 1.002e-3;
   dx  = H/res;
   h   = dx*1.2;
-  Cs	= 20.0 * sqrt(g*H);
+  Cs	= 10.0 * sqrt(g*H);
   t   = (0.2*h/Cs);
 
   dom.InitialDist 	= dx;
@@ -66,7 +66,7 @@ int main(int argc, char **argv) try
 		dom.Particles[a]->Mu			= Mu;
 		dom.Particles[a]->MuRef		= Mu;
 		dom.Particles[a]->Material= 1;
-    dom.Particles[a]->Shepard = false;
+    dom.Particles[a]->Shepard = true;
 
 
     if (xb<0.0)
