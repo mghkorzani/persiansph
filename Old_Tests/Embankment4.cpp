@@ -19,7 +19,6 @@
 ************************************************************************************/
 
 #include "./Source/Domain.h"
-#include "./Source/Interaction.h"
 #include <fstream>
 
 

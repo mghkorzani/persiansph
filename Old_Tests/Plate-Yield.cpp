@@ -19,7 +19,6 @@
 ************************************************************************************/
 
 #include "Domain.h"
-#include "Interaction.h"
 
 void UserAcc(SPH::Domain & domi)
 {

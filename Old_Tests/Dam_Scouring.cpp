@@ -19,7 +19,6 @@
 ************************************************************************************/
 
 #include "Domain.h"
-#include "Interaction.h"
 	double g,dx,RhoF,CsW,DampTime,DampF,DampS,L,H,Hs;
 	int	check=0;
 

@@ -19,7 +19,6 @@
 ************************************************************************************/
 
 #include "Domain.h"
-#include "Interaction.h"
 
 void NewUserOutput(SPH::Particle * Particles, double & Prop1, double & Prop2,  double & Prop3)
 {

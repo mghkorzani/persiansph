@@ -19,8 +19,6 @@
 ************************************************************************************/
 
 #include "Domain.h"
-#include "Interaction.h"
-
 
 using std::cout;
 using std::endl;

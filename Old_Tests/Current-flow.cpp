@@ -19,7 +19,6 @@
 ************************************************************************************/
 
 #include "Domain.h"
-#include "Interaction.h"
 
 double H,U,RhoF,RhoS,g,D,CsW,CsS,DampTime,dx,T0,L,Muw;
 double Z0,U0,Z,Us;

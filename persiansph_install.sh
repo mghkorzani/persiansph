@@ -22,13 +22,13 @@
 
 echo ""
 
-#checking g++ and cmake
-for Compulsory_Software in g++ cmake
+#checking git, gfortran, g++ and cmake
+for Compulsory_Software in g++ cmake git gfortran
 do
-	command -v $Compulsory_Software >/dev/null && 
+	command -v $Compulsory_Software >/dev/null &&
 		echo "$Compulsory_Software has been found." ||
 		{
-		echo "$Compulsory_Software is not installed."; 
+		echo "$Compulsory_Software is not installed.";
 		while true; do
 			read -p "Do you wish to install this program (sudo access required)?(y/n)" yn;
 	    		case $yn in
@@ -47,151 +47,103 @@ echo ""
 #using the current directory as the main installation directory
 Current_Address=$(pwd)
 
-#copying the code on this pc 
-if [ -d "$Current_Address/sph" ]; then
-	echo "PersianSPH code directory already exists at $Current_Address/sph"
+#copying the code on this pc
+if [ -d "$Current_Address/persiansph" ]; then
+	echo "PersianSPH code directory already exists at $Current_Address/persiansph"
 	while true; do
 		read -p "Do you wish to remove it?(y/n)" yn;
     		case $yn in
-			[Yy]* ) rm -rf $Current_Address/sph; break;;
+			[Yy]* ) rm -rf $Current_Address/persiansph;
+				echo "... Downloading PersianSPH code ..."
+				git clone https://github.com/mghkorzani/persiansph.git
+				break;;
 			[Nn]* ) echo "It is probably an older copy of PersianSPH code on this PC!!!"; break;;
 			* ) echo "Please answer yes or no.";;
 		esac
 	done
 else
-
-	#checking Mercurial
-	command -v hg >/dev/null && 
-		echo "Mercurial has been found." ||
-		{
-		echo "Mercurial is not installed."; 
-		while true; do
-			read -p "Do you wish to install this program (sudo access required)?(y/n)" yn;
-	    		case $yn in
-				[Yy]* ) sudo apt-get install mercurial;
-					command -v hg >/dev/null || { echo "You do not have sudo access."; exit; }
-					break;;
-				[Nn]* ) echo "Mercurial is compulsory to download PersianSPH code."; exit;;
-				* ) echo "Please answer yes or no.";;
-			esac
-		done
-		}
-
 	echo "... Downloading PersianSPH code ..."
-	hg clone https://mghkorzani@bitbucket.org/persiansph/sph
+	git clone https://github.com/mghkorzani/persiansph.git
 fi
 
-#setting a permanent environmental variable for the main code 
-if [ $SPH!="$Current_Address/sph" ]; then 
-	SPH_Address="" 
-else 
-	SPH_Address=$SPH 
+#setting a permanent environmental variable for the main code
+if [ $SPH!="$Current_Address/persiansph" ]; then
+	SPH_Address=""
+else
+	SPH_Address=$SPH
 fi
 if [ -z "${SPH_Address}" ]; then
 	echo "Creating an environment variable for the path of the SPH code as \$SPH"
-	echo "export SPH=$Current_Address/sph" >> $HOME/.bashrc
-	SPH_Address="$Current_Address/sph"
+	echo "export SPH=$Current_Address/persiansph" >> $HOME/.bashrc
+	SPH_Address="$Current_Address/persiansph"
 	source $HOME/.bashrc
 fi
 
 echo ""
 
-#copying packages on this pc 
-if [ -d "$Current_Address/pkg" ]; then
-	echo "Libraries' directory already exists at $Current_Address/pkg"
+#copying packages on this pc
+if [ -d "$Current_Address/persiansph-lib" ]; then
+	echo "Libraries' directory already exists at $Current_Address/persiansph-lib"
 	while true; do
 		read -p "Do you wish to remove it?(y/n)" yn;
     		case $yn in
-			[Yy]* ) rm -rf $Current_Address/pkg; break;;
+			[Yy]* ) rm -rf $Current_Address/persiansph-lib;
+				echo "... Downloading required libraries ..."
+				git clone https://github.com/mghkorzani/persiansph-lib.git
+				break;;
 			[Nn]* ) echo "These are probably older copies of required libraries on this PC!!!"; break;;
 			* ) echo "Please answer yes or no.";;
 		esac
 	done
 else
-
-	#checking Mercurial
-	command -v hg >/dev/null && 
-		echo "Mercurial has been found." ||
-		{
-		echo "Mercurial is not installed."; 
-		while true; do
-			read -p "Do you wish to install this program (sudo access required)?(y/n)" yn;
-	    		case $yn in
-				[Yy]* ) sudo apt-get install mercurial;
-					command -v hg >/dev/null || { echo "You do not have sudo access."; exit; }
-					break;;
-				[Nn]* ) echo "Mercurial is compulsory to download PersianSPH code."; exit;;
-				* ) echo "Please answer yes or no.";;
-			esac
-		done
-		}
-
 	echo "... Downloading required libraries ..."
-	hg clone https://mghkorzani@bitbucket.org/persiansph/pkg
+	git clone https://github.com/mghkorzani/persiansph-lib.git
 fi
 
-#setting a permanent environmental variable for the packages 
-if [ $PKG!="$Current_Address/pkg" ]; then 
-	PKG_Address="" 
-else 
-	PKG_Address=$PKG 
+#setting a permanent environmental variable for the packages
+if [ $PKG!="$Current_Address/persiansph-lib" ]; then
+	PKG_Address=""
+else
+	PKG_Address=$PKG
 fi
 if [ -z "${PKG_Address}" ]; then
 	echo "Creating an environment variable for the path of required packages as \$PKG"
-	echo "export PKG=$Current_Address/pkg" >> $HOME/.bashrc
-	PKG_Address="$Current_Address/pkg"
+	echo "export PKG=$Current_Address/persiansph-lib" >> $HOME/.bashrc
+	PKG_Address="$Current_Address/persiansph-lib"
 	source $HOME/.bashrc
 fi
 
-#installing Blitz library
-if [ ! -d "$Current_Address/pkg/blitz-0.9" ]; then
-	echo "... Installing Blitz library ..."
-	cd $PKG_Address
-	tar -xzf blitz-0.9.tar.gz
-	rm -f blitz-0.9.tar.gz
-fi
+echo ""
 
-# installing other libraries
-while true; do
-	read -p "Do you have sudo access to install libraries?(y/n)"  yn;
-	case $yn in
-		[Yy]* ) echo "... Installing Blas, Lapack, Gsl and HDF5 libraries ..."
-			sudo apt-get install libblas-dev liblapack-dev libgsl0-dev;
-			cd $PKG_Address/hdf5-1.8.16;
-			./configure;
-			make;
-			cd $PKG_Address;
-			rm -f gsl-2.1.tar.gz;
-			rm -f lapack-3.5.0.tgz;
-			break;;
-		[Nn]* ) echo "... Unpacking libraries ...";
-			cd $PKG_Address;
-			tar -xzf hdf5-1.8.16.tar.gz;
-			tar -xzf gsl-2.1.tar.gz;
-			tar -xzf lapack-3.5.0.tgz;
-			rm -f hdf5-1.8.16.tar.gz;
-			rm -f gsl-2.1.tar.gz;
-			rm -f lapack-3.5.0.tgz;
-			echo "... Compiling libraries ...";
-			read -p "It takes a few minutes, press any key to continue ..."
-			cd $PKG_Address/hdf5-1.8.16;
-			./configure;
-			make;
-			cd $PKG_Address/gsl-2.1;
-			./configure;
-			make;
-			cd $PKG_Address/lapack-3.5.0;
-			cmake .;
-			make;
-			break;;
-		* ) echo "Please answer yes or no.";;
-	esac
-done
+#installing libraries
+echo "... Installing libraries ..."
+cd $PKG_Address
+tar -xzf blitz-0.9.tar.gz
+tar -xzf hdf5-1.8.16.tar.gz;
+tar -xzf gsl-2.1.tar.gz;
+tar -xzf lapack-3.5.0.tgz;
+rm -f blitz-0.9.tar.gz
+rm -f hdf5-1.8.16.tar.gz;
+rm -f gsl-2.1.tar.gz;
+rm -f lapack-3.5.0.tgz;
+echo "... Compiling libraries ...";
+read -p "It takes a few minutes, press any key to continue ..."
+cd $PKG_Address/hdf5-1.8.16;
+./configure;
+make;
+cd $PKG_Address/gsl-2.1;
+./configure;
+make;
+cd $PKG_Address/lapack-3.5.0;
+cmake .;
+make;
+sudo apt-get install liblapack-dev
+sudo apt-get install libblas-dev
 
 echo ""
 echo ""
 echo "Installation is completed."
-echo "Close all terminal windows and open a new one to take effect the defined environment variables" 
+echo "Close all terminal windows and open a new one to take effect the defined environment variables"
 echo "Please refer to the tutorial to run a simulation."
 echo ""
 echo ""

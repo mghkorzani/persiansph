@@ -19,7 +19,6 @@
 ************************************************************************************/
 
 #include "Domain.h"
-#include "Interaction.h"
 	double g,dx,RhoF,CsW,DampTime,DampF,DampS,L,H,Q,V,q1=0.0,Muw,d;
 	int	check=0;
 void UserInFlowCon(Vec3_t & position, Vec3_t & Vel, double & Den, SPH::Boundary & bdry)
